@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}DB 백업 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<style>
+    .db-backup-panel {
+        border: 1.5px solid #c9b3bb;
+        border-radius: 0.625rem;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(128, 0, 32, 0.06);
+        margin-bottom: 1.25rem;
+    }
+    .db-backup-panel__header {
+        padding: 0.9rem 1.15rem;
+        border-bottom: 1px solid #660019;
+        background-color: #800020 !important;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .db-backup-panel__header h5 {
+        color: #fff !important;
+        font-weight: 600;
+        margin: 0;
+    }
+    .db-backup-panel__body {
+        padding: 1.15rem;
+        background: #fff;
+    }
+    .db-backup-badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .db-backup-badge.is-ok {
+        background: #198754;
+        color: #fff;
+    }
+    .db-backup-badge.is-wait {
+        background: #6c757d;
+        color: #fff;
+    }
+    .db-backup-stat {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 0.85rem 1rem;
+        height: 100%;
+        background: #fafafa;
+    }
+    .db-backup-stat__label {
+        color: #6b7280;
+        font-size: 0.85rem;
+        margin-bottom: 0.35rem;
+    }
+    .db-backup-stat__value {
+        font-weight: 700;
+        color: #111827;
+        word-break: break-all;
+    }
+    .db-backup-table thead th {
+        background-color: #800020 !important;
+        color: #fff !important;
+        border-color: #660019 !important;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .btn-burgundy {
+        background-color: #800020 !important;
+        border-color: #800020 !important;
+        color: #fff !important;
+    }
+    .btn-burgundy:hover {
+        background-color: #660019 !important;
+        border-color: #660019 !important;
+        color: #fff !important;
+    }
+</style>
+
+<div class="container-fluid py-3">
+    <div id="dbBackupAlert" class="alert d-none" role="alert"></div>
+
+    <div class="db-backup-panel">
+        <div class="db-backup-panel__header">
+            <h5>백업 현황 모니터링</h5>
+            <span id="todayBadge" class="db-backup-badge is-wait">확인 중...</span>
+        </div>
+        <div class="db-backup-panel__body">
+            <div class="row g-3 mb-4" id="statusCards">
+                <div class="col-md-4 col-lg-2">
+                    <div class="db-backup-stat">
+                        <div class="db-backup-stat__label">자동 백업</div>
+                        <div class="db-backup-stat__value" id="statEnabled">-</div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="db-backup-stat">
+                        <div class="db-backup-stat__label">매일 실행 시각</div>
+                        <div class="db-backup-stat__value" id="statSchedule">-</div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="db-backup-stat">
+                        <div class="db-backup-stat__label">다음 예정</div>
+                        <div class="db-backup-stat__value" id="statNext">-</div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="db-backup-stat">
+                        <div class="db-backup-stat__label">보관 기간</div>
+                        <div class="db-backup-stat__value" id="statRetention">-</div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="db-backup-stat">
+                        <div class="db-backup-stat__label">최근 성공</div>
+                        <div class="db-backup-stat__value" id="statLastSuccess">-</div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="db-backup-stat">
+                        <div class="db-backup-stat__label">최근 파일</div>
+                        <div class="db-backup-stat__value" id="statLastFile">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border rounded p-3 mb-4" style="background:#fff;">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-lg-auto">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="cfgEnabled">
+                            <label class="form-check-label" for="cfgEnabled">일일 자동 백업 사용</label>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2 col-lg-1">
+                        <label class="form-label" for="cfgHour">시</label>
+                        <input type="number" class="form-control" id="cfgHour" min="0" max="23" value="2">
+                    </div>
+                    <div class="col-6 col-md-2 col-lg-1">
+                        <label class="form-label" for="cfgMinute">분</label>
+                        <input type="number" class="form-control" id="cfgMinute" min="0" max="59" value="0">
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <label class="form-label" for="cfgRetention">보관(일)</label>
+                        <input type="number" class="form-control" id="cfgRetention" min="1" max="3650" value="30">
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-burgundy" id="saveConfigBtn">설정 저장</button>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-outline-secondary" id="manualBackupBtn">지금 수동 백업 실행</button>
+                    </div>
+                    <div class="col-12 col-lg">
+                        <div class="form-text mb-0">
+                            서버가 켜져 있는 동안 매일 지정 시각에 <code>db_backups/daily/</code> 로 자동 저장합니다.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="fw-semibold mb-2" style="color:#800020;">보관 중인 백업 파일</h6>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle db-backup-table mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width:110px;">구분</th>
+                            <th>파일</th>
+                            <th style="width:100px;">크기</th>
+                            <th style="width:170px;">저장 시각</th>
+                            <th style="width:260px;">작업</th>
+                        </tr>
+                    </thead>
+                    <tbody id="backupTableBody">
+                        <tr><td colspan="5" class="text-center text-muted py-4">불러오는 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    function showAlert(message, type) {
+        const el = document.getElementById('dbBackupAlert');
+        if (!el) return;
+        el.textContent = message;
+        el.className = 'alert alert-' + (type || 'info');
+        el.classList.remove('d-none');
+        window.setTimeout(function () { el.classList.add('d-none'); }, 5000);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+
+    function pad2(n) {
+        return String(n).padStart(2, '0');
+    }
+
+    function renderStatus(data) {
+        document.getElementById('statEnabled').textContent = data.enabled ? '사용' : '중지';
+        document.getElementById('statSchedule').textContent = pad2(data.hour) + ':' + pad2(data.minute);
+        document.getElementById('statNext').textContent = data.next_scheduled_at || '-';
+        document.getElementById('statRetention').textContent = (data.retention_days || 0) + '일';
+        document.getElementById('statLastSuccess').textContent = data.last_success_at || '-';
+        document.getElementById('statLastFile').textContent = data.last_file || '-';
+
+        const badge = document.getElementById('todayBadge');
+        if (data.today_done) {
+            badge.textContent = '오늘 일일 백업 완료';
+            badge.className = 'db-backup-badge is-ok';
+        } else if (data.enabled) {
+            badge.textContent = '오늘 일일 백업 대기';
+            badge.className = 'db-backup-badge is-wait';
+        } else {
+            badge.textContent = '자동 백업 중지';
+            badge.className = 'db-backup-badge is-wait';
+        }
+
+        document.getElementById('cfgEnabled').checked = !!data.enabled;
+        document.getElementById('cfgHour').value = data.hour;
+        document.getElementById('cfgMinute').value = data.minute;
+        document.getElementById('cfgRetention').value = data.retention_days;
+
+        const tbody = document.getElementById('backupTableBody');
+        const files = data.files || [];
+        if (!files.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">보관 중인 백업 파일이 없습니다.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = files.map(function (f) {
+            const rel = escapeHtml(f.relpath);
+            return '<tr>' +
+                '<td>' + escapeHtml(f.kind_label) + '</td>' +
+                '<td><code>' + rel + '</code></td>' +
+                '<td>' + escapeHtml(f.size_label) + '</td>' +
+                '<td>' + escapeHtml(f.saved_at) + '</td>' +
+                '<td>' +
+                '<div class="d-flex flex-wrap gap-1">' +
+                '<a class="btn btn-sm btn-outline-primary" href="/api/db_backup/download?path=' + encodeURIComponent(f.relpath) + '">다운로드</a>' +
+                '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-backup" data-path="' + rel + '">삭제</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary btn-restore-backup" data-path="' + rel + '">복원</button>' +
+                '</div></td></tr>';
+        }).join('');
+    }
+
+    function loadStatus() {
+        return fetch('/api/db_backup/status', { credentials: 'same-origin' })
+            .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+            .then(function (res) {
+                if (!res.ok || !res.data.success) {
+                    throw new Error((res.data && res.data.error) || '현황을 불러오지 못했습니다.');
+                }
+                renderStatus(res.data);
+            })
+            .catch(function (err) {
+                showAlert(err.message || '현황을 불러오지 못했습니다.', 'danger');
+                document.getElementById('backupTableBody').innerHTML =
+                    '<tr><td colspan="5" class="text-center text-danger py-4">불러오기 실패</td></tr>';
+            });
+    }
+
+    document.getElementById('saveConfigBtn').addEventListener('click', function () {
+        const btn = this;
+        btn.disabled = true;
+        fetch('/api/db_backup/config', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                enabled: document.getElementById('cfgEnabled').checked,
+                hour: Number(document.getElementById('cfgHour').value),
+                minute: Number(document.getElementById('cfgMinute').value),
+                retention_days: Number(document.getElementById('cfgRetention').value)
+            })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.error || '저장 실패');
+                showAlert(data.message || '설정이 저장되었습니다.', 'success');
+                return loadStatus();
+            })
+            .catch(function (err) {
+                showAlert(err.message || '설정 저장 중 오류가 발생했습니다.', 'danger');
+            })
+            .finally(function () { btn.disabled = false; });
+    });
+
+    document.getElementById('manualBackupBtn').addEventListener('click', function () {
+        const btn = this;
+        if (!window.confirm('지금 수동 백업을 실행할까요?')) return;
+        btn.disabled = true;
+        fetch('/api/db_backup/run', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind: 'manual' })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.error || '백업 실패');
+                showAlert(data.message || '수동 백업이 완료되었습니다.', 'success');
+                return loadStatus();
+            })
+            .catch(function (err) {
+                showAlert(err.message || '수동 백업 중 오류가 발생했습니다.', 'danger');
+            })
+            .finally(function () { btn.disabled = false; });
+    });
+
+    document.getElementById('backupTableBody').addEventListener('click', function (e) {
+        const delBtn = e.target.closest('.btn-delete-backup');
+        if (delBtn) {
+            const path = delBtn.getAttribute('data-path');
+            if (!window.confirm('이 백업 파일을 삭제할까요?\n' + path)) return;
+            delBtn.disabled = true;
+            fetch('/api/db_backup/delete', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: path })
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.error || '삭제 실패');
+                    showAlert(data.message || '삭제되었습니다.', 'success');
+                    return loadStatus();
+                })
+                .catch(function (err) {
+                    showAlert(err.message || '삭제 중 오류가 발생했습니다.', 'danger');
+                    delBtn.disabled = false;
+                });
+            return;
+        }
+
+        const restoreBtn = e.target.closest('.btn-restore-backup');
+        if (restoreBtn) {
+            const path = restoreBtn.getAttribute('data-path');
+            const msg = '선택한 백업으로 현재 DB를 덮어씁니다.\n' +
+                '복원 전 현재 DB는 자동으로 안전 백업됩니다.\n\n' +
+                path + '\n\n정말 복원하시겠습니까?';
+            if (!window.confirm(msg)) return;
+            if (!window.confirm('복원 후 서비스가 해당 시점 데이터로 바뀝니다. 계속할까요?')) return;
+            restoreBtn.disabled = true;
+            fetch('/api/db_backup/restore', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: path })
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.error || '복원 실패');
+                    showAlert(data.message || '복원되었습니다.', 'success');
+                    return loadStatus();
+                })
+                .catch(function (err) {
+                    showAlert(err.message || '복원 중 오류가 발생했습니다.', 'danger');
+                    restoreBtn.disabled = false;
+                });
+        }
+    });
+
+    loadStatus();
+})();
+</script>
+{% endblock %}

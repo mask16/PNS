@@ -1,0 +1,785 @@
+{% extends "base.html" %}
+
+{% block title %}Spare Parts List - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/part_diagram_highlight.css') }}">
+<script src="{{ url_for('static', filename='js/part_diagram_highlight.js') }}"></script>
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 id="pageTitle">
+                Spare Parts List
+            </h2>
+            <div>
+                <button type="button" class="btn btn-danger me-2" onclick="downloadSparePartsPdf()">
+                    <i class="fas fa-file-pdf me-1"></i>PDF 다운로드
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="location.href='/'">
+                    <i class="fas fa-home me-1"></i>홈으로
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 이미지 갤러리 섹션 -->
+<div class="row mb-4">
+    <div class="col-12" id="trolleyImageGallery">
+        <div class="col-12 text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">로딩 중...</span>
+            </div>
+            <p class="mt-2">이미지를 불러오는 중...</p>
+        </div>
+    </div>
+</div>
+
+<!-- 이미지 확대 보기 모달 -->
+<div class="modal fade" id="imageViewModal" tabindex="-1" aria-labelledby="imageViewModalLabel" aria-hidden="true" data-bs-backdrop="false">
+    <div class="modal-dialog modal-xl modal-dialog-centered" id="imageViewModalDialog" style="max-width: 90%; width: 90%; min-width: 600px; min-height: 400px; position: relative;">
+        <div class="modal-content" id="imageViewModalContent" style="height: 100%;">
+            <div class="modal-header bg-burgundy" style="cursor: move;">
+                <h5 class="modal-title" id="imageViewModalLabel" style="color: #ffffff !important;">이미지 보기</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-0" style="display: flex; align-items: center; justify-content: center; overflow: auto; flex: 1;">
+                <img id="modalImage" src="" alt="이미지" class="img-fluid" style="max-width: 100%; max-height: 80vh; width: auto; height: auto; object-fit: contain;">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            </div>
+            <!-- 리사이즈 핸들들 -->
+            <div class="modal-resize-handle resize-n" style="position: absolute; top: 0; left: 0; right: 0; height: 5px; cursor: ns-resize; z-index: 1055;"></div>
+            <div class="modal-resize-handle resize-s" style="position: absolute; bottom: 0; left: 0; right: 0; height: 5px; cursor: ns-resize; z-index: 1055;"></div>
+            <div class="modal-resize-handle resize-e" style="position: absolute; top: 0; bottom: 0; right: 0; width: 5px; cursor: ew-resize; z-index: 1055;"></div>
+            <div class="modal-resize-handle resize-w" style="position: absolute; top: 0; bottom: 0; left: 0; width: 5px; cursor: ew-resize; z-index: 1055;"></div>
+            <div class="modal-resize-handle resize-ne" style="position: absolute; top: 0; right: 0; width: 15px; height: 15px; cursor: nesw-resize; z-index: 1055;"></div>
+            <div class="modal-resize-handle resize-nw" style="position: absolute; top: 0; left: 0; width: 15px; height: 15px; cursor: nwse-resize; z-index: 1055;"></div>
+            <div class="modal-resize-handle resize-se" style="position: absolute; bottom: 0; right: 0; width: 15px; height: 15px; cursor: nwse-resize; z-index: 1055;"></div>
+            <div class="modal-resize-handle resize-sw" style="position: absolute; bottom: 0; left: 0; width: 15px; height: 15px; cursor: nesw-resize; z-index: 1055;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+function downloadSparePartsPdf() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const folderId = urlParams.get('folder_id') || '';
+    const subfolderId = urlParams.get('subfolder_id') || '';
+    let category = urlParams.get('category') || '';
+    if (!category) {
+        const path = window.location.pathname;
+        if (path.includes('/cooling_unit')) {
+            category = 'cooling_unit';
+        } else {
+            category = 'trolley';
+        }
+    }
+
+    const params = new URLSearchParams();
+    if (folderId) params.append('folder_id', folderId);
+    if (subfolderId) params.append('subfolder_id', subfolderId);
+    if (category) params.append('category', category);
+
+    fetch(`/api/part_price/spare_parts_pdf?${params.toString()}`)
+        .then(async (response) => {
+            const contentType = (response.headers.get('content-type') || '').toLowerCase();
+
+            if (!response.ok) {
+                const bodyText = await response.text();
+                if (contentType.includes('application/json')) {
+                    try {
+                        const data = JSON.parse(bodyText);
+                        throw new Error(data.error || 'PDF 생성에 실패했습니다.');
+                    } catch (_) {
+                        throw new Error(`PDF 생성 실패 (HTTP ${response.status})`);
+                    }
+                }
+                throw new Error(`PDF 생성 실패 (HTTP ${response.status})`);
+            }
+
+            // 로그인 페이지/에러 HTML이 200으로 오는 경우 방지
+            if (!contentType.includes('application/pdf')) {
+                const bodyText = await response.text();
+                if (bodyText && bodyText.trim().startsWith('<!doctype')) {
+                    throw new Error('PDF 응답 대신 HTML이 반환되었습니다. 로그인 상태 또는 서버 오류를 확인해주세요.');
+                }
+                throw new Error('PDF 응답 형식이 올바르지 않습니다.');
+            }
+
+            const blob = await response.blob();
+            const contentDisposition = response.headers.get('content-disposition') || '';
+            let downloadName = '';
+            const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+            if (utf8Match && utf8Match[1]) {
+                downloadName = decodeURIComponent(utf8Match[1]);
+            } else {
+                const simpleMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+                if (simpleMatch && simpleMatch[1]) {
+                    downloadName = simpleMatch[1];
+                }
+            }
+            return { blob, downloadName };
+        })
+        .then(({ blob, downloadName }) => {
+            const link = document.createElement('a');
+            const fileUrl = window.URL.createObjectURL(blob);
+            link.href = fileUrl;
+            link.download = downloadName || 'Spare_Parts.pdf';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(fileUrl);
+        })
+        .catch(error => {
+            alert('PDF 다운로드 중 오류: ' + error.message);
+        });
+}
+
+// 이미지 목록 로드
+function loadTrolleyImages() {
+    console.log('이미지 목록 로드 시작...');
+    const gallery = document.getElementById('trolleyImageGallery');
+    if (!gallery) {
+        console.error('갤러리 요소를 찾을 수 없습니다.');
+        return;
+    }
+    
+    // URL 파라미터에서 folder_id와 subfolder_id 가져오기
+    const urlParams = new URLSearchParams(window.location.search);
+    const folderId = urlParams.get('folder_id');
+    const subfolderId = urlParams.get('subfolder_id');
+    
+    // 경로에서 category 판단
+    let category = urlParams.get('category');
+    if (!category) {
+        // URL 경로에서 category 추출
+        const path = window.location.pathname;
+        if (path.includes('/cooling_unit')) {
+            category = 'cooling_unit';
+        } else if (path.includes('/trolley')) {
+            category = 'trolley';
+        } else {
+            category = 'trolley'; // 기본값
+        }
+    }
+    
+    // 페이지 제목은 API 응답에서 subfolder_name을 받아서 설정
+    // subfolder_id가 있으면 초기 제목을 중립적으로 설정 (API 응답에서 실제 이름으로 업데이트됨)
+    const pageTitle = document.getElementById('pageTitle');
+    if (pageTitle) {
+        if (subfolderId) {
+            // subfolder_id가 있으면 API 응답을 기다리기 위해 중립적인 제목 사용
+            pageTitle.textContent = 'Spare Parts List';
+        } else {
+            // subfolder_id가 없으면 category에 따라 기본 제목 설정
+            if (category === 'cooling_unit') {
+                pageTitle.textContent = 'Cooling Unit Spare Parts List';
+            } else if (category === 'trolley') {
+                pageTitle.textContent = 'Trolley Spare Parts List';
+            } else {
+                pageTitle.textContent = 'Spare Parts List';
+            }
+        }
+    }
+    
+    // 로딩 표시
+    gallery.innerHTML = `
+        <div class="col-12 text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">로딩 중...</span>
+            </div>
+            <p class="mt-2">이미지를 불러오는 중...</p>
+        </div>
+    `;
+    
+    // 타임아웃 설정 (10초)
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('요청 시간 초과 (10초)')), 10000);
+    });
+    
+    // API URL 구성
+    let apiUrl = '/api/part_price/image/list?';
+    if (subfolderId) {
+        apiUrl += `subfolder_id=${subfolderId}`;
+        if (folderId) {
+            apiUrl += `&folder_id=${folderId}`;
+        }
+        // subfolder_id가 있으면 category는 선택사항이지만 전달
+        if (category) {
+            apiUrl += `&category=${category}`;
+        }
+    } else {
+        // subfolder_id가 없으면 category 필수
+        apiUrl += `category=${category}`;
+        if (folderId) {
+            apiUrl += `&folder_id=${folderId}`;
+        }
+    }
+    
+    console.log('API URL:', apiUrl);
+    
+    const fetchPromise = fetch(apiUrl)
+        .then(response => {
+            console.log('API 응답 상태:', response.status, response.statusText);
+            console.log('응답 헤더:', Object.fromEntries(response.headers.entries()));
+            
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.error('HTTP 오류 응답 본문:', text);
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
+                });
+            }
+            
+            const contentType = response.headers.get('content-type');
+            console.log('Content-Type:', contentType);
+            
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    console.error('JSON이 아닌 응답:', text.substring(0, 500));
+                    throw new Error('서버에서 JSON이 아닌 응답을 받았습니다.');
+                });
+            }
+            
+            return response.text().then(text => {
+                console.log('응답 본문 (처음 500자):', text.substring(0, 500));
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('JSON 파싱 오류:', e);
+                    console.error('파싱 실패한 텍스트:', text);
+                    throw new Error('JSON 파싱 실패: ' + e.message);
+                }
+            });
+        });
+    
+    Promise.race([fetchPromise, timeoutPromise])
+        .then(data => {
+            console.log('API 응답 데이터:', data);
+            const gallery = document.getElementById('trolleyImageGallery');
+            
+            if (!gallery) {
+                console.error('갤러리 요소를 찾을 수 없습니다.');
+                return;
+            }
+            
+            if (data.success) {
+                // API 응답에서 subfolder_name이 있으면 페이지 제목 업데이트
+                const pageTitle = document.getElementById('pageTitle');
+                if (data.subfolder_name && pageTitle) {
+                    pageTitle.textContent = data.subfolder_name;
+                }
+                
+                if (data.images && data.images.length > 0) {
+                    console.log(`이미지 ${data.images.length}개 발견`);
+                    
+                    // 각 이미지의 매칭 정보를 가져오기
+                    const imagePromises = data.images.map(image => {
+                        return fetch(`/api/part_price/image/matches?image_id=${image.id}`)
+                            .then(response => response.json())
+                            .then(matchData => {
+                                return { image, matches: matchData.success ? (matchData.matches || []) : [] };
+                            })
+                            .catch(error => {
+                                console.error(`이미지 ${image.id} 매칭 정보 로드 오류:`, error);
+                                return { image, matches: [] };
+                            });
+                    });
+                    
+                    Promise.all(imagePromises).then(results => {
+                        let html = '';
+                        results.forEach(({ image, matches }) => {
+                            try {
+                                console.log(`이미지 ${image.id} 처리 중`);
+                                
+                                let matchesHtml = '';
+                                if (matches.length > 0) {
+                                    const imageParts = image.parts || [];
+                                    matchesHtml = '<div class="col-md-6"><div class="card"><div class="card-header bg-success text-white"><h6 class="mb-0">매칭된 부품</h6></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-bordered table-sm mb-0" id="matchesTable_' + image.id + '"><thead class="table-dark"><tr><th style="width: 5%;"><input type="checkbox" class="form-check-input" id="checkAll_' + image.id + '" onchange="toggleAllChecks(' + image.id + ')"></th><th style="width: 5%;">번호</th><th>자재코드</th><th>설명</th><th style="width: 90px;">수량</th><th>가격</th></tr></thead><tbody>';
+                                    matches.forEach((match, index) => {
+                                        const part = match.part;
+                                        const partNumber = window.PartDiagramHighlight
+                                            ? window.PartDiagramHighlight.resolvePartNumber(part, index, imageParts)
+                                            : (index + 1);
+                                        matchesHtml += `
+                                            <tr>
+                                                <td class="text-center"><input type="checkbox" class="form-check-input part-checkbox" data-image-id="${image.id}" data-part-id="${part.id}" data-part-number="${partNumber}" data-price="${part.price}" onchange="onPartCheckboxChange(${image.id})"></td>
+                                                <td class="text-center">${partNumber}</td>
+                                                <td>${part.material_code || '-'}</td>
+                                                <td>${part.description || '-'}</td>
+                                                <td class="text-center">
+                                                    <input type="number" min="1" step="1" value="1" class="form-control form-control-sm part-qty-input" data-image-id="${image.id}" oninput="onPartQtyChange(${image.id}, this)" onclick="event.stopPropagation();">
+                                                </td>
+                                                <td class="text-end">€${part.price.toFixed(2)}</td>
+                                            </tr>
+                                        `;
+                                    });
+                                    matchesHtml += '</tbody></table></div><div class="card-footer bg-light"><div class="d-flex justify-content-between align-items-center flex-wrap gap-2"><span><strong>총 수량:</strong> <strong id="qtySum_' + image.id + '" class="text-dark">0</strong></span><span><strong>합계:</strong> <strong id="priceSum_' + image.id + '" class="text-danger">€0.00</strong></span></div></div></div></div></div>';
+                                }
+                                
+                                html += `
+                                    <div class="col-md-12 mb-4">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="card shadow-sm">
+                                                    <div class="card-img-wrapper part-diagram-wrapper" id="diagramWrapper_${image.id}" style="position: relative; min-height: 800px; overflow: hidden; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; cursor: pointer;"
+                                                         onclick="viewImageModal('${image.id}', '${image.filename.replace(/'/g, "\\'")}')">
+                                                        <img id="image-${image.id}" 
+                                                             src="/api/part_price/image/${image.id}" 
+                                                             class="card-img-top part-image" 
+                                                             style="max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; padding: 20px;"
+                                                             alt="${image.filename}"
+                                                             data-image-id="${image.id}">
+                                                        <div class="part-markers-layer" id="partMarkers_${image.id}"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            ${matchesHtml}
+                                        </div>
+                                    </div>
+                                `;
+                            } catch (error) {
+                                console.error(`이미지 ${image.id} 처리 중 오류:`, error);
+                            }
+                        });
+                        
+                        if (html) {
+                            gallery.innerHTML = html;
+                            results.forEach(function ({ image }) {
+                                if (window.PartDiagramHighlight) {
+                                    window.PartDiagramHighlight.buildPartMarkers(image.id, image.parts || []);
+                                }
+                            });
+                            console.log('HTML 렌더링 완료');
+                        } else {
+                            console.warn('생성된 HTML이 비어있습니다.');
+                            gallery.innerHTML = `
+                                <div class="col-12 text-center py-5">
+                                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                                    <p class="text-warning">이미지 데이터 처리 중 오류가 발생했습니다.</p>
+                                </div>
+                            `;
+                        }
+                    });
+                } else {
+                    console.log('업로드된 이미지가 없습니다.');
+                    gallery.innerHTML = `
+                        <div class="col-12 text-center py-5">
+                            <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">업로드된 이미지가 없습니다.</p>
+                            <a href="/part_price_image_upload" class="btn btn-primary">
+                                <i class="fas fa-upload me-2"></i>이미지 업로드하러 가기
+                            </a>
+                        </div>
+                    `;
+                }
+            } else {
+                console.error('API 응답 실패:', data);
+                gallery.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                        <p class="text-danger">이미지를 불러오는 중 오류가 발생했습니다.</p>
+                        <p class="text-muted small">오류 내용: ${data.error || '알 수 없는 오류'}</p>
+                        <button class="btn btn-primary mt-3" onclick="loadTrolleyImages()">
+                            <i class="fas fa-redo me-2"></i>다시 시도
+                        </button>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('이미지 로드 오류:', error);
+            console.error('오류 스택:', error.stack);
+            const gallery = document.getElementById('trolleyImageGallery');
+            if (gallery) {
+                gallery.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                        <p class="text-danger">이미지를 불러오는 중 오류가 발생했습니다.</p>
+                        <p class="text-muted small">오류 내용: ${error.message || '알 수 없는 오류'}</p>
+                        <p class="text-muted small">브라우저 콘솔(F12)에서 자세한 오류 정보를 확인하세요.</p>
+                        <button class="btn btn-primary mt-3" onclick="loadTrolleyImages()">
+                            <i class="fas fa-redo me-2"></i>다시 시도
+                        </button>
+                    </div>
+                `;
+            } else {
+                console.error('갤러리 요소를 찾을 수 없어 오류 메시지를 표시할 수 없습니다.');
+            }
+        });
+}
+
+
+// 이미지 모달로 보기
+function viewImageModal(imageId, filename) {
+    const modalElement = document.getElementById('imageViewModal');
+    const modal = new bootstrap.Modal(modalElement, {
+        backdrop: false,
+        keyboard: true
+    });
+    const modalImage = document.getElementById('modalImage');
+    const modalLabel = document.getElementById('imageViewModalLabel');
+    
+    modalLabel.textContent = filename;
+    modalImage.src = `/api/part_price/image/${imageId}`;
+    modalImage.alt = filename;
+    
+    modal.show();
+    
+    // 모달이 표시된 후 리사이즈 기능 초기화
+    setTimeout(() => {
+        initModalResize();
+    }, 100);
+    
+    // 모달이 닫힐 때 위치와 크기 초기화
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        const modalDialog = document.getElementById('imageViewModalDialog');
+        if (modalDialog) {
+            modalDialog.style.width = '90%';
+            modalDialog.style.height = '';
+            modalDialog.style.left = '';
+            modalDialog.style.top = '';
+            modalDialog.style.margin = '';
+            modalDialog.style.position = '';
+        }
+    }, { once: true });
+}
+
+// 모달 리사이즈 기능 초기화
+function initModalResize() {
+    const modalDialog = document.getElementById('imageViewModalDialog');
+    const modalContent = document.getElementById('imageViewModalContent');
+    const resizeHandles = modalDialog.querySelectorAll('.modal-resize-handle');
+    
+    if (!modalDialog || !resizeHandles.length) return;
+    
+    let isResizing = false;
+    let resizeDirection = '';
+    let startX, startY, startWidth, startHeight, startLeft, startTop;
+    
+    // 모든 리사이즈 핸들에 이벤트 추가
+    resizeHandles.forEach(handle => {
+        handle.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            resizeDirection = handle.classList[1]; // resize-n, resize-s, resize-e, resize-w, resize-ne, resize-nw, resize-se, resize-sw
+            
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            const rect = modalDialog.getBoundingClientRect();
+            startWidth = rect.width;
+            startHeight = rect.height;
+            startLeft = rect.left;
+            startTop = rect.top;
+            
+            // 모달을 fixed 위치로 변경
+            modalDialog.style.margin = '0';
+            modalDialog.style.position = 'fixed';
+            modalDialog.style.left = startLeft + 'px';
+            modalDialog.style.top = startTop + 'px';
+            
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    });
+    
+    // 마우스 이동 이벤트
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        
+        // 최소 크기 제한
+        const minWidth = 600;
+        const minHeight = 400;
+        
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+        let newLeft = startLeft;
+        let newTop = startTop;
+        
+        // 방향에 따라 크기 조절
+        if (resizeDirection.includes('e')) {
+            newWidth = startWidth + deltaX;
+            if (newWidth < minWidth) newWidth = minWidth;
+        }
+        if (resizeDirection.includes('w')) {
+            newWidth = startWidth - deltaX;
+            if (newWidth < minWidth) {
+                newWidth = minWidth;
+                newLeft = startLeft + (startWidth - minWidth);
+            } else {
+                newLeft = startLeft + deltaX;
+            }
+        }
+        if (resizeDirection.includes('s')) {
+            newHeight = startHeight + deltaY;
+            if (newHeight < minHeight) newHeight = minHeight;
+        }
+        if (resizeDirection.includes('n')) {
+            newHeight = startHeight - deltaY;
+            if (newHeight < minHeight) {
+                newHeight = minHeight;
+                newTop = startTop + (startHeight - minHeight);
+            } else {
+                newTop = startTop + deltaY;
+            }
+        }
+        
+        // 크기와 위치 적용
+        modalDialog.style.width = newWidth + 'px';
+        modalDialog.style.height = newHeight + 'px';
+        if (resizeDirection.includes('w')) {
+            modalDialog.style.left = newLeft + 'px';
+        }
+        if (resizeDirection.includes('n')) {
+            modalDialog.style.top = newTop + 'px';
+        }
+        
+        // 이미지 크기 업데이트
+        const modalImage = document.getElementById('modalImage');
+        if (modalImage) {
+            const modalBody = modalContent.querySelector('.modal-body');
+            const bodyHeight = parseInt(window.getComputedStyle(modalBody).height, 10);
+            modalImage.style.maxHeight = (bodyHeight - 40) + 'px';
+        }
+    });
+    
+    // 마우스 업 이벤트
+    document.addEventListener('mouseup', function() {
+        isResizing = false;
+        resizeDirection = '';
+    });
+    
+    // 모달 헤더 드래그로 이동
+    const modalHeader = modalContent.querySelector('.modal-header');
+    let isDragging = false;
+    let dragStartX, dragStartY, dialogStartX, dialogStartY;
+    
+    modalHeader.addEventListener('mousedown', function(e) {
+        if (e.target.classList.contains('btn-close')) return;
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        
+        const rect = modalDialog.getBoundingClientRect();
+        dialogStartX = rect.left;
+        dialogStartY = rect.top;
+        
+        modalDialog.style.margin = '0';
+        modalDialog.style.position = 'fixed';
+        modalDialog.style.left = dialogStartX + 'px';
+        modalDialog.style.top = dialogStartY + 'px';
+        
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        
+        const deltaX = e.clientX - dragStartX;
+        const deltaY = e.clientY - dragStartY;
+        
+        modalDialog.style.left = (dialogStartX + deltaX) + 'px';
+        modalDialog.style.top = (dialogStartY + deltaY) + 'px';
+    });
+    
+    document.addEventListener('mouseup', function() {
+        isDragging = false;
+    });
+}
+
+// 페이지 로드 시 이미지 목록 로드
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded 이벤트 발생');
+    console.log('loadTrolleyImages 함수 호출 시작');
+    try {
+        loadTrolleyImages();
+    } catch (error) {
+        console.error('loadTrolleyImages 호출 중 오류:', error);
+        const gallery = document.getElementById('trolleyImageGallery');
+        if (gallery) {
+            gallery.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                    <p class="text-danger">페이지 로드 중 오류가 발생했습니다.</p>
+                    <p class="text-muted small">오류 내용: ${error.message}</p>
+                    <button class="btn btn-primary mt-3" onclick="loadTrolleyImages()">
+                        <i class="fas fa-redo me-2"></i>다시 시도
+                    </button>
+                </div>
+            `;
+        }
+    }
+});
+
+// 페이지가 이미 로드된 경우를 대비
+if (document.readyState === 'loading') {
+    console.log('문서가 아직 로딩 중입니다. DOMContentLoaded 대기 중...');
+} else {
+    console.log('문서가 이미 로드되었습니다. 즉시 loadTrolleyImages 호출');
+    try {
+        loadTrolleyImages();
+    } catch (error) {
+        console.error('loadTrolleyImages 호출 중 오류:', error);
+    }
+}
+</script>
+
+<style>
+.card-img-wrapper {
+    position: relative;
+    transition: transform 0.2s ease;
+}
+
+.card-img-wrapper:hover {
+    transform: scale(1.02);
+}
+
+.part-image {
+    transition: transform 0.2s ease;
+}
+
+.card:hover .part-image {
+    transform: scale(1.05);
+}
+
+/* 모달 리사이즈 스타일 */
+#imageViewModalDialog {
+    position: relative;
+}
+
+#imageViewModalDialog .modal-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 모달이 열려있어도 뒤쪽 요소 클릭 가능하도록 */
+#imageViewModal.show {
+    pointer-events: none;
+}
+
+#imageViewModal.show .modal-dialog {
+    pointer-events: auto;
+}
+
+/* 매칭된 부품 테이블의 체크박스가 모달 위에 클릭 가능하도록 */
+.part-checkbox,
+#checkAll_ {
+    position: relative;
+    z-index: 1060;
+}
+
+/* 리사이즈 핸들 호버 효과 */
+.modal-resize-handle:hover {
+    background-color: rgba(128, 0, 32, 0.3) !important;
+}
+
+.modal-resize-handle.resize-n:hover,
+.modal-resize-handle.resize-s:hover {
+    background-color: rgba(128, 0, 32, 0.3) !important;
+}
+
+.modal-resize-handle.resize-e:hover,
+.modal-resize-handle.resize-w:hover {
+    background-color: rgba(128, 0, 32, 0.3) !important;
+}
+
+.modal-resize-handle.resize-ne:hover,
+.modal-resize-handle.resize-nw:hover,
+.modal-resize-handle.resize-se:hover,
+.modal-resize-handle.resize-sw:hover {
+    background-color: rgba(128, 0, 32, 0.5) !important;
+}
+
+.part-qty-input {
+    width: 72px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 0.2rem 0.35rem;
+}
+</style>
+
+<script>
+function getPartQtyFromRow(checkbox) {
+    const row = checkbox.closest('tr');
+    const qtyInput = row ? row.querySelector('.part-qty-input') : null;
+    const qty = parseInt(qtyInput && qtyInput.value, 10);
+    return (!qty || qty < 1) ? 1 : qty;
+}
+
+function onPartQtyChange(imageId, inputEl) {
+    let qty = parseInt(inputEl.value, 10);
+    if (!qty || qty < 1) {
+        qty = 1;
+        inputEl.value = '1';
+    }
+    const row = inputEl.closest('tr');
+    const checkbox = row ? row.querySelector('.part-checkbox') : null;
+    if (checkbox && !checkbox.checked) {
+        checkbox.checked = true;
+        if (window.PartDiagramHighlight) {
+            window.PartDiagramHighlight.updatePartHighlights(imageId);
+        }
+    }
+    updatePriceSum(imageId);
+}
+
+function onPartCheckboxChange(imageId) {
+    updatePriceSum(imageId);
+    if (window.PartDiagramHighlight) {
+        window.PartDiagramHighlight.updatePartHighlights(imageId);
+    }
+}
+
+function updatePriceSum(imageId) {
+    const checkboxes = document.querySelectorAll(`input.part-checkbox[data-image-id="${imageId}"]:checked`);
+    let sum = 0;
+    let qtyTotal = 0;
+    
+    checkboxes.forEach(checkbox => {
+        const price = parseFloat(checkbox.getAttribute('data-price')) || 0;
+        const qty = getPartQtyFromRow(checkbox);
+        sum += price * qty;
+        qtyTotal += qty;
+    });
+    
+    const sumElement = document.getElementById('priceSum_' + imageId);
+    if (sumElement) {
+        sumElement.textContent = '€' + sum.toFixed(2);
+    }
+    const qtyElement = document.getElementById('qtySum_' + imageId);
+    if (qtyElement) {
+        qtyElement.textContent = String(qtyTotal);
+    }
+    
+    const allCheckboxes = document.querySelectorAll(`input.part-checkbox[data-image-id="${imageId}"]`);
+    const checkAllBox = document.getElementById('checkAll_' + imageId);
+    if (checkAllBox && allCheckboxes.length > 0) {
+        const checkedCount = document.querySelectorAll(`input.part-checkbox[data-image-id="${imageId}"]:checked`).length;
+        checkAllBox.checked = checkedCount === allCheckboxes.length;
+        checkAllBox.indeterminate = checkedCount > 0 && checkedCount < allCheckboxes.length;
+    }
+}
+
+// 전체 선택/해제 함수
+function toggleAllChecks(imageId) {
+    const checkAllBox = document.getElementById('checkAll_' + imageId);
+    const checkboxes = document.querySelectorAll(`input.part-checkbox[data-image-id="${imageId}"]`);
+    
+    if (checkAllBox) {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = checkAllBox.checked;
+        });
+        updatePriceSum(imageId);
+        if (window.PartDiagramHighlight) {
+            window.PartDiagramHighlight.updatePartHighlights(imageId);
+        }
+    }
+}
+</script>
+{% endblock %}

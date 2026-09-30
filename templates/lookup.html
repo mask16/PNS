@@ -1,0 +1,935 @@
+{% extends "base.html" %}
+
+{% block title %}코드 조회 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>
+            코드 조회
+        </h2>
+        <p class="text-muted">기존에 생성된 코드를 입력하여 해당 코드의 옵션 조합을 확인할 수 있습니다.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-body">
+                <form id="lookupForm">
+                    <div class="mb-3">
+                        <label for="codeInput" class="form-label">
+                            <i class="fas fa-barcode me-2"></i>
+                            조회할 코드
+                        </label>
+                        <input type="text" class="form-control form-control-lg" 
+                               id="codeInput" name="code" 
+                               placeholder="예: P51000001" required>
+                        <div class="form-text">코드를 입력해주세요.</div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-search me-2"></i>
+                            조회하기
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="showCodeList()">
+                            <i class="fas fa-list me-2"></i>
+                            저장된 코드 리스트 보기
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 인증 모달 -->
+<div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title" id="authModalLabel">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    관리자 인증
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <i class="fas fa-lock text-danger" style="font-size: 3rem;"></i>
+                    <h6 class="mt-3 text-muted">삭제 작업을 위해 관리자 인증이 필요합니다</h6>
+                </div>
+                <form id="authForm">
+                    <div class="mb-3">
+                        <label for="authUsername" class="form-label">
+                            <i class="fas fa-user me-2"></i>
+                            관리자 ID
+                        </label>
+                        <input type="text" class="form-control" id="authUsername" placeholder="관리자 ID를 입력하세요" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="authPassword" class="form-label">
+                            <i class="fas fa-key me-2"></i>
+                            비밀번호
+                        </label>
+                        <input type="password" class="form-control" id="authPassword" placeholder="비밀번호를 입력하세요" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    취소
+                </button>
+                <button type="button" class="btn btn-danger" onclick="processAuth()">
+                    <i class="fas fa-check me-2"></i>
+                    인증하기
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 결과 표시 영역 -->
+<div class="row mt-4" id="resultArea" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    조회 결과
+                </h5>
+            </div>
+            <div class="card-body" id="resultContent">
+                <!-- 결과 내용이 여기에 표시됩니다 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 코드 리스트 모달 -->
+<div class="modal fade" id="codeListModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-list me-2"></i>
+                    저장된 코드 리스트
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="codeListContent">
+                    <!-- 코드 리스트가 여기에 표시됩니다 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-primary" onclick="refreshCodeList()">
+                    <i class="fas fa-sync-alt me-1"></i>새로고침
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('lookupForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const code = document.getElementById('codeInput').value.trim();
+    if (!code) {
+        alert('코드를 입력해주세요.');
+        return;
+    }
+    
+    // 결과 영역 초기화
+    const resultArea = document.getElementById('resultArea');
+    const resultContent = document.getElementById('resultContent');
+    resultContent.innerHTML = '';
+    resultArea.style.display = 'none';
+    
+    // API 호출 (로딩 모달 없이)
+    fetch('/api/lookup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            code: code
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('=== 조회 API 응답 ===');
+        console.log('전체 데이터:', data);
+        console.log('set_code:', data.set_code);
+        console.log('call_arc_code:', data.call_arc_code);
+        if (data.success) {
+            if (data.found) {
+                showFoundResult(data);
+            } else {
+                showNotFoundResult(data);
+            }
+        } else {
+            alert('오류가 발생했습니다: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('네트워크 오류가 발생했습니다.');
+    });
+});
+
+function showFoundResult(data) {
+    const resultArea = document.getElementById('resultArea');
+    const resultContent = document.getElementById('resultContent');
+    
+    // 결과 영역 초기화
+    resultContent.innerHTML = '';
+    
+    // 디버깅 로그
+    console.log('=== showFoundResult 함수 ===');
+    console.log('받은 데이터:', data);
+    console.log('data.set_code:', data.set_code);
+    console.log('data.call_arc_code:', data.call_arc_code);
+    console.log('data.code:', data.code);
+    
+    // 안전한 데이터 처리 함수
+    function safeString(value, defaultValue = '') {
+        if (value === null || value === undefined || value === '') return defaultValue;
+        if (typeof value === 'object') {
+            // 객체인 경우 적절한 속성 찾기
+            return value.option_name || value.name || value.item_name || value.title || value.toString() || defaultValue;
+        }
+        return String(value);
+    }
+    
+    let html = `
+        <div class="alert alert-success">
+            <h6><i class="fas fa-check-circle me-2"></i>코드 조회 성공!</h6>
+            <p class="mb-0">코드 <strong>${safeString(data.code)}</strong>에 대한 정보를 찾았습니다.</p>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <h6><i class="fas fa-barcode me-2"></i>세트코드</h6>
+                <p class="fs-4 text-primary"><strong>${safeString(data.set_code || data.code)}</strong></p>
+            </div>
+            <div class="col-md-4">
+                <h6><i class="fas fa-barcode me-2"></i>M코드</h6>
+                <p class="fs-4 text-success"><strong>${safeString((data.call_arc_code !== null && data.call_arc_code !== undefined && data.call_arc_code !== '') ? data.call_arc_code : '-')}</strong></p>
+            </div>
+            <div class="col-md-4">
+                <h6><i class="fas fa-clock me-2"></i>생성일시</h6>
+                <p class="text-muted">${safeString(data.created_at)}</p>
+            </div>
+        </div>
+        
+        <hr>
+        
+        <h6><i class="fas fa-list me-2"></i>선택된 옵션</h6>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead class="table-light">
+                    <tr>
+                        <th>카테고리</th>
+                        <th>선택된 옵션</th>
+                        <th>코드</th>
+                        <th>설명</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    // 선택된 옵션 표시 - 안전한 데이터 처리
+    if (data.options && typeof data.options === 'object') {
+        for (const [categoryNumber, optionDetail] of Object.entries(data.options)) {
+            // optionDetail이 객체인지 확인
+            const isObject = typeof optionDetail === 'object' && optionDetail !== null;
+            
+            // 객체인 경우 상세 정보 추출
+            let categoryName = '카테고리';
+            let optionName = '옵션';
+            let itemCode = '-';
+            let description = '-';
+            
+            if (isObject) {
+                categoryName = safeString(optionDetail.category_name, `카테고리 ${categoryNumber}`);
+                optionName = safeString(optionDetail.option_name, '옵션');
+                itemCode = safeString(optionDetail.item_code, '-');
+                description = safeString(optionDetail.description, '-');
+            } else {
+                // 단순 문자열인 경우
+                optionName = safeString(optionDetail);
+            }
+            
+            html += `
+                <tr>
+                    <td>
+                        <strong>[${categoryNumber}] ${categoryName}</strong>
+                    </td>
+                    <td>
+                        <span class="fw-bold text-primary">${optionName}</span>
+                    </td>
+                    <td>
+                        <code class="bg-light px-2 py-1">${itemCode}</code>
+                    </td>
+                    <td>
+                        <small class="text-muted">${description}</small>
+                    </td>
+                </tr>
+            `;
+        }
+    } else {
+        // options가 없거나 잘못된 형식인 경우
+        html += `
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    옵션 정보를 불러올 수 없습니다.
+                </td>
+            </tr>
+        `;
+    }
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-primary" onclick="downloadExcel('${safeString(data.code)}')">
+                <i class="fas fa-file-excel me-1"></i>엑셀 다운로드
+            </button>
+            <button class="btn btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-redo me-1"></i>다시 조회
+            </button>
+        </div>
+    `;
+    
+    resultContent.innerHTML = html;
+    resultArea.style.display = 'block';
+    
+    // 결과 영역으로 스크롤
+    resultArea.scrollIntoView({ behavior: 'smooth' });
+}
+
+function showNotFoundResult(data) {
+    const resultArea = document.getElementById('resultArea');
+    const resultContent = document.getElementById('resultContent');
+    
+    let html = `
+        <div class="alert alert-warning">
+            <h6><i class="fas fa-exclamation-triangle me-2"></i>코드를 찾을 수 없습니다</h6>
+            <p class="mb-0">${data.message}</p>
+        </div>
+        
+        <div class="text-center">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <p class="text-muted">입력한 코드가 데이터베이스에 존재하지 않습니다.</p>
+            <p class="text-muted">코드를 다시 확인해주세요.</p>
+        </div>
+    `;
+    
+    resultContent.innerHTML = html;
+    resultArea.style.display = 'block';
+    
+    // 결과 영역으로 스크롤
+    resultArea.scrollIntoView({ behavior: 'smooth' });
+}
+
+function showCodeList() {
+    // 코드 리스트 모달 표시
+    const codeListModal = new bootstrap.Modal(document.getElementById('codeListModal'));
+    codeListModal.show();
+    
+    // 코드 리스트 로드
+    loadCodeList();
+}
+
+function loadCodeList() {
+    const codeListContent = document.getElementById('codeListContent');
+    
+    // 로딩 표시
+    codeListContent.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">로딩 중...</span>
+            </div>
+            <p class="mt-2">코드 리스트를 불러오는 중...</p>
+        </div>
+    `;
+    
+    // API 호출
+    fetch('/api/code_list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayCodeList(data);
+            } else {
+                codeListContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        오류가 발생했습니다: ${data.error}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            codeListContent.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    네트워크 오류가 발생했습니다.
+                </div>
+            `;
+        });
+}
+
+function displayCodeList(data) {
+    const codeListContent = document.getElementById('codeListContent');
+    
+    if (data.total_count === 0) {
+        codeListContent.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">저장된 코드가 없습니다</h5>
+                <p class="text-muted">옵션 선택 페이지에서 새로운 코드를 생성해보세요.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const groups = {
+        P51: [],
+        P52: [],
+        P53: [],
+        P54: [],
+        other: []
+    };
+    
+    data.combinations.forEach(combination => {
+        // set_code를 우선 사용, 없으면 combination_code 사용
+        const codeToUse = combination.set_code || combination.code || '';
+        const prefix = codeToUse.substring(0, 3);
+        
+        if (groups[prefix]) {
+            groups[prefix].push(combination);
+        } else {
+            groups.other.push(combination);
+        }
+    });
+    
+    // 각 그룹 내에서 set_code 숫자 오름차순 정렬 (set_code가 없으면 combination_code 사용)
+    Object.keys(groups).forEach(groupKey => {
+        groups[groupKey].sort((a, b) => {
+            const codeA = (a.set_code || a.code || '').substring(2); // P5 이후 숫자 부분
+            const codeB = (b.set_code || b.code || '').substring(2); // P5 이후 숫자 부분
+            const numA = parseInt(codeA) || 0;
+            const numB = parseInt(codeB) || 0;
+            return numA - numB;
+        });
+    });
+    
+    const renderGroupTable = (combinations) => {
+        if (!combinations || combinations.length === 0) {
+            return `
+                <div class="py-4 text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>해당 그룹에 저장된 코드가 없습니다.
+                </div>
+            `;
+        }
+        
+        let rows = '';
+        
+        combinations.forEach(combination => {
+            const optionsText = Object.entries(combination.options)
+                .map(([key, value]) => {
+                    if (typeof value === 'object' && value !== null) {
+                        const optionName = value.option_name || value.name || value.item_name || value.title || '옵션';
+                        return `[${key}] ${optionName}`;
+                    }
+                    return `[${key}] ${String(value)}`;
+                })
+                .join(', ');
+            
+            rows += `
+                <tr>
+                    <td>
+                        <code class="fs-6">${combination.set_code || combination.code}</code>
+                    </td>
+                    <td>
+                        <small>${optionsText}</small>
+                    </td>
+                    <td>
+                        <small class="text-muted">${combination.created_at}</small>
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="lookupCode('${combination.code}')">
+                                <i class="fas fa-search me-1"></i>조회
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="showDeleteModal('${combination.code}')">
+                                <i class="fas fa-trash me-1"></i>삭제
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        return `
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>코드</th>
+                            <th>선택된 옵션</th>
+                            <th>생성일시</th>
+                            <th>액션</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    };
+    
+    const groupOrder = ['P51', 'P52', 'P53', 'P54'];
+    const groupLabels = {
+        'P51': 'Super M',
+        'P52': 'Super C',
+        'P53': 'Super T',
+        'P54': 'Super S'
+    };
+    const hasOthers = groups.other.length > 0;
+    
+    let html = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <h6><i class="fas fa-database me-2"></i>총 저장된 코드 수: <span class="badge bg-burgundy">${data.total_count}</span></h6>
+            </div>
+            <div class="col-md-6 text-end">
+                <small class="text-muted">코드 숫자 오름차순 정렬</small>
+            </div>
+        </div>
+        
+        <ul class="nav nav-tabs" id="codeListTab" role="tablist">
+            ${groupOrder.map((groupKey, index) => {
+                const label = groupLabels[groupKey] || groupKey;
+                return `
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link ${index === 0 ? 'active' : ''}" id="tab-${groupKey}" data-bs-toggle="tab" data-bs-target="#tab-pane-${groupKey}" type="button" role="tab" aria-controls="tab-pane-${groupKey}" aria-selected="${index === 0 ? 'true' : 'false'}">
+                        ${label} <span class="badge bg-secondary ms-1">${groups[groupKey].length}</span>
+                    </button>
+                </li>
+            `;
+            }).join('')}
+            ${hasOthers ? `
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-other" data-bs-toggle="tab" data-bs-target="#tab-pane-other" type="button" role="tab" aria-controls="tab-pane-other" aria-selected="false">
+                        기타 <span class="badge bg-secondary ms-1">${groups.other.length}</span>
+                    </button>
+                </li>
+            ` : ''}
+        </ul>
+        <div class="tab-content pt-3" id="codeListTabContent">
+            ${groupOrder.map((groupKey, index) => `
+                <div class="tab-pane fade ${index === 0 ? 'show active' : ''}" id="tab-pane-${groupKey}" role="tabpanel" aria-labelledby="tab-${groupKey}">
+                    ${renderGroupTable(groups[groupKey])}
+                </div>
+            `).join('')}
+            ${hasOthers ? `
+                <div class="tab-pane fade" id="tab-pane-other" role="tabpanel" aria-labelledby="tab-other">
+                    ${renderGroupTable(groups.other)}
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    codeListContent.innerHTML = html;
+}
+
+function lookupCode(code) {
+    // 코드 리스트 모달 닫기
+    const codeListModal = bootstrap.Modal.getInstance(document.getElementById('codeListModal'));
+    codeListModal.hide();
+    
+    // 코드 입력 필드에 값 설정
+    document.getElementById('codeInput').value = code;
+    
+    // API 호출 (직접 lookup 실행)
+    fetch('/api/lookup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            code: code
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.found) {
+                showFoundResult(data);
+            } else {
+                showNotFoundResult(data);
+            }
+        } else {
+            alert('오류가 발생했습니다: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('네트워크 오류가 발생했습니다.');
+    });
+}
+
+function downloadExcel(code) {
+    console.log('=== 엑셀 다운로드 시작 ===');
+    console.log('코드:', code);
+    
+    // 조회된 데이터를 다시 가져와서 엑셀 생성
+    fetch('/api/lookup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            code: code
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.found) {
+            // 조회된 데이터로 엑셀 생성 요청
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            const apiUrl = protocol + '//' + host + '/api/generate_excel';
+            
+            console.log('API URL:', apiUrl);
+            
+            return fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                },
+                body: JSON.stringify({
+                    code: data.code,
+                    options: data.options,
+                    created_at: data.created_at
+                })
+            });
+        } else {
+            throw new Error('조회된 데이터가 없습니다.');
+        }
+    })
+    .then(response => {
+        console.log('엑셀 생성 응답 상태:', response.status);
+        console.log('엑셀 생성 응답 헤더:', response.headers);
+        
+        if (response.ok) {
+            return response.blob();
+        }
+        
+        // 응답 텍스트도 로그에 출력
+        return response.text().then(text => {
+            console.error('엑셀 생성 실패 응답:', text);
+            throw new Error(`엑셀 생성에 실패했습니다. (${response.status}): ${text}`);
+        });
+    })
+    .then(blob => {
+        // Blob을 파일로 다운로드
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `welding_options_${code}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        console.log('엑셀 다운로드 완료');
+    })
+    .catch(error => {
+        console.error('엑셀 다운로드 오류:', error);
+        alert('엑셀 다운로드 중 오류가 발생했습니다: ' + error.message);
+    });
+}
+
+function refreshCodeList() {
+    loadCodeList();
+}
+
+let deleteTargetCode = '';
+let authenticatedUsername = '';
+let authenticatedPassword = '';
+
+function showDeleteModal(code) {
+    console.log('=== 삭제 모달 호출 ===');
+    console.log('Code to delete:', code);
+    
+    deleteTargetCode = code;
+    
+    // 인증 정보 초기화
+    authenticatedUsername = '';
+    authenticatedPassword = '';
+    
+    // 인증 모달 표시
+    const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+    authModal.show();
+    
+    // 모달이 표시된 후 z-index 설정
+    setTimeout(() => {
+        const modalElement = document.getElementById('authModal');
+        const modalBackdrop = document.querySelector('.modal-backdrop');
+        
+        if (modalElement) {
+            modalElement.style.zIndex = '1060';
+        }
+        if (modalBackdrop) {
+            modalBackdrop.style.zIndex = '1055';
+        }
+    }, 100);
+    
+    // 폼 초기화
+    document.getElementById('authUsername').value = '';
+    document.getElementById('authPassword').value = '';
+    
+    // 포커스 설정
+    setTimeout(() => {
+        document.getElementById('authUsername').focus();
+    }, 500);
+}
+
+function processAuth() {
+    const username = document.getElementById('authUsername').value.trim();
+    const password = document.getElementById('authPassword').value.trim();
+    
+    console.log('=== 인증 처리 ===');
+    console.log('Username:', username);
+    console.log('Password:', password);
+    
+    // 입력 검증
+    if (!username || !password) {
+        alert('ID와 비밀번호를 모두 입력해주세요.');
+        return;
+    }
+    
+    // 인증 확인
+    if (username !== 'pns' || password !== 'pns@123') {
+        // 오류 애니메이션
+        document.getElementById('authUsername').classList.add('is-invalid');
+        document.getElementById('authPassword').classList.add('is-invalid');
+        
+        setTimeout(() => {
+            document.getElementById('authUsername').classList.remove('is-invalid');
+            document.getElementById('authPassword').classList.remove('is-invalid');
+        }, 2000);
+        
+        alert('인증에 실패했습니다.');
+        return;
+    }
+    
+    // 인증된 사용자 정보 저장
+    authenticatedUsername = username;
+    authenticatedPassword = password;
+    console.log('인증 정보 저장됨:', authenticatedUsername);
+    
+    // 인증 성공 - 모달 닫기
+    const authModal = bootstrap.Modal.getInstance(document.getElementById('authModal'));
+    authModal.hide();
+    
+    // 모달이 닫힌 후 모든 화면 활성화
+    setTimeout(() => {
+        console.log('인증 완료 후 모든 화면을 활성화합니다.');
+        
+        // 페이지 전체 활성화
+        document.body.style.pointerEvents = 'auto';
+        document.body.classList.remove('modal-open');
+        
+        // 모든 모달 배경 제거
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // 코드리스트 새로고침
+        loadCodeList();
+        
+        console.log('인증 완료 후 모든 화면이 활성화되었습니다.');
+    }, 300);
+    
+    // 삭제 확인
+    setTimeout(() => {
+        const confirmed = confirm(`정말로 코드 '${deleteTargetCode}'를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`);
+        console.log('User confirmed:', confirmed);
+        
+        if (!confirmed) {
+            console.log('User cancelled deletion');
+            return;
+        }
+        
+        console.log('Proceeding with deletion...');
+        // 인증된 사용자만 삭제 실행
+        confirmDelete();
+    }, 300);
+}
+
+// Enter 키로 인증 처리 및 모달 이벤트
+document.addEventListener('DOMContentLoaded', function() {
+    const authUsername = document.getElementById('authUsername');
+    const authPassword = document.getElementById('authPassword');
+    const authModal = document.getElementById('authModal');
+    
+    if (authUsername && authPassword) {
+        authUsername.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                authPassword.focus();
+            }
+        });
+        
+        authPassword.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                processAuth();
+            }
+        });
+    }
+    
+    // URL 쿼리 파라미터에서 code 가져오기
+    const urlParams = new URLSearchParams(window.location.search);
+    const codeParam = urlParams.get('code');
+    if (codeParam) {
+        const codeInput = document.getElementById('codeInput');
+        if (codeInput) {
+            codeInput.value = codeParam;
+            // 자동으로 조회 수행
+            setTimeout(function() {
+                document.getElementById('lookupForm').dispatchEvent(new Event('submit'));
+            }, 100);
+        }
+    }
+    
+    // 인증 모달이 닫힐 때 모든 화면 활성화
+    if (authModal) {
+        authModal.addEventListener('hidden.bs.modal', function() {
+            console.log('인증 모달이 닫혔습니다. 모든 화면을 활성화합니다.');
+            
+            // 페이지 전체 활성화
+            document.body.style.pointerEvents = 'auto';
+            document.body.classList.remove('modal-open');
+            
+            // 모든 모달 배경 제거
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => backdrop.remove());
+            
+            // 코드리스트 새로고침
+            loadCodeList();
+            
+            console.log('모든 화면이 활성화되었습니다.');
+        });
+    }
+});
+
+function confirmDelete() {
+    if (!deleteTargetCode) {
+        alert('삭제할 코드가 지정되지 않았습니다.');
+        return;
+    }
+    
+    // 인증 정보 확인
+    if (!authenticatedUsername || !authenticatedPassword) {
+        alert('인증 정보가 없습니다. 다시 인증해주세요.');
+        return;
+    }
+    
+    // 현재 서버 주소 사용
+    const currentHost = window.location.hostname;
+    const currentPort = window.location.port || '5000';
+    const deleteUrl = `http://${currentHost}:${currentPort}/api/delete_code`;
+    
+    // 삭제 API 호출 데이터 준비 (인증된 사용자 정보 사용)
+    const requestData = {
+        code: deleteTargetCode,
+        username: authenticatedUsername,
+        password: authenticatedPassword
+    };
+    
+    console.log('=== 삭제 API 호출 정보 ===');
+    console.log('Current hostname:', window.location.hostname);
+    console.log('Current port:', window.location.port);
+    console.log('Current URL:', window.location.href);
+    console.log('Delete API URL:', deleteUrl);
+    console.log('Target Code:', deleteTargetCode);
+    console.log('Username:', authenticatedUsername);
+    console.log('Password:', authenticatedPassword);
+    console.log('Request will be sent to:', deleteUrl);
+    console.log('Request data:', requestData);
+    
+    // 포트가 5000이 아닌 경우 경고
+    if (currentPort !== '5000') {
+        console.warn('⚠️ 현재 포트가 5000이 아닙니다:', currentPort);
+        console.log('🔧 현재 포트로 API 호출을 시도합니다.');
+    }
+    
+    // 삭제 API 직접 호출
+    fetch(deleteUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => {
+        console.log('Delete response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Delete response data:', data);
+        if (data.success) {
+            // 삭제 성공
+            alert(data.message);
+            
+            // 코드 리스트 새로고침
+            loadCodeList();
+        } else {
+            alert('삭제 실패: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('=== 삭제 API 오류 ===');
+        console.error('Error type:', error.constructor.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.error('Current URL:', window.location.href);
+        console.error('API URL:', deleteUrl);
+        
+        // 더 상세한 오류 메시지
+        let errorMessage = '네트워크 오류가 발생했습니다.';
+        
+        if (error.message.includes('Failed to fetch')) {
+            errorMessage = `서버에 연결할 수 없습니다.\n\n확인사항:\n1. 서버가 실행 중인지 확인 (${deleteUrl})\n2. 포트 ${currentPort}번이 사용 가능한지 확인\n3. 방화벽 설정 확인\n4. 브라우저 개발자 도구의 Network 탭에서 요청 상태 확인`;
+        } else if (error.message.includes('HTTP error')) {
+            errorMessage = `서버 오류가 발생했습니다: ${error.message}`;
+        } else {
+            errorMessage = `오류가 발생했습니다: ${error.message}`;
+        }
+        
+        alert(errorMessage);
+    });
+}
+
+</script>
+{% endblock %}

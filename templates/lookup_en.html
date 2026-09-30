@@ -1,0 +1,960 @@
+{% extends "base.html" %}
+
+{% block title %}Code Lookup - Welding Equipment Option System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>
+            Code Lookup
+        </h2>
+        <p class="text-muted">Enter an existing code to view the option combination for that code.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-body">
+                <form id="lookupForm">
+                    <div class="mb-3">
+                        <label for="codeInput" class="form-label">
+                            <i class="fas fa-barcode me-2"></i>
+                            Code to Lookup
+                        </label>
+                        <input type="text" class="form-control form-control-lg" 
+                               id="codeInput" name="code" 
+                               placeholder="e.g., P51000001" required>
+                        <div class="form-text">Please enter a code.</div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-search me-2"></i>
+                            Lookup
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="showCodeList()">
+                            <i class="fas fa-list me-2"></i>
+                            View Saved Code List
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Authentication Modal -->
+<div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title" id="authModalLabel">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Administrator Authentication
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <i class="fas fa-lock text-danger" style="font-size: 3rem;"></i>
+                    <h6 class="mt-3 text-muted">Administrator authentication is required for deletion operations</h6>
+                </div>
+                <form id="authForm">
+                    <div class="mb-3">
+                        <label for="authUsername" class="form-label">
+                            <i class="fas fa-user me-2"></i>
+                            Administrator ID
+                        </label>
+                        <input type="text" class="form-control" id="authUsername" placeholder="Enter administrator ID" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="authPassword" class="form-label">
+                            <i class="fas fa-key me-2"></i>
+                            Password
+                        </label>
+                        <input type="password" class="form-control" id="authPassword" placeholder="Enter password" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="processAuth()">
+                    <i class="fas fa-check me-2"></i>
+                    Authenticate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Result Display Area -->
+<div class="row mt-4" id="resultArea" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Lookup Result
+                </h5>
+            </div>
+            <div class="card-body" id="resultContent">
+                <!-- Result content will be displayed here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Code List Modal -->
+<div class="modal fade" id="codeListModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-list me-2"></i>
+                    Saved Code List
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="codeListContent">
+                    <!-- Code list will be displayed here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="refreshCodeList()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const categoryDisplayNames = {
+    1: "Power Source",
+    2: "Type",
+    3: "Wire Feeder",
+    4: "Torch",
+    5: "Hose Package",
+    6: "Ground",
+    7: "Trolley",
+    8: "Cooler",
+    9: "Coolant",
+    10: "Gas Hose",
+    11: "Electrode Holder",
+    12: "Other"
+};
+
+function getCategoryDisplayName(categoryNumber) {
+    const num = parseInt(categoryNumber, 10);
+    return categoryDisplayNames[num] || `Category ${categoryNumber}`;
+}
+
+document.getElementById('lookupForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const code = document.getElementById('codeInput').value.trim();
+    if (!code) {
+        alert('Please enter a code.');
+        return;
+    }
+    
+    // Initialize result area
+    const resultArea = document.getElementById('resultArea');
+    const resultContent = document.getElementById('resultContent');
+    resultContent.innerHTML = '';
+    resultArea.style.display = 'none';
+    
+    // API call (without loading modal)
+    fetch('/api/lookup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            code: code
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('=== Lookup API Response ===');
+        console.log('Full data:', data);
+        console.log('set_code:', data.set_code);
+        console.log('call_arc_code:', data.call_arc_code);
+        if (data.success) {
+            if (data.found) {
+                showFoundResult(data);
+            } else {
+                showNotFoundResult(data);
+            }
+        } else {
+            alert('An error occurred: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('A network error occurred.');
+    });
+});
+
+function showFoundResult(data) {
+    const resultArea = document.getElementById('resultArea');
+    const resultContent = document.getElementById('resultContent');
+    
+    // Initialize result area
+    resultContent.innerHTML = '';
+    
+    // Debugging log
+    console.log('=== showFoundResult function ===');
+    console.log('Received data:', data);
+    console.log('data.set_code:', data.set_code);
+    console.log('data.call_arc_code:', data.call_arc_code);
+    console.log('data.code:', data.code);
+    
+    // Safe data processing function
+    function safeString(value, defaultValue = '') {
+        if (value === null || value === undefined || value === '') return defaultValue;
+        if (typeof value === 'object') {
+            // If object, find appropriate property
+            return value.option_name || value.name || value.item_name || value.title || value.toString() || defaultValue;
+        }
+        return String(value);
+    }
+    
+    let html = `
+        <div class="alert alert-success">
+            <h6><i class="fas fa-check-circle me-2"></i>Code Lookup Successful!</h6>
+            <p class="mb-0">Information found for code <strong>${safeString(data.code)}</strong>.</p>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <h6><i class="fas fa-barcode me-2"></i>Set Code</h6>
+                <p class="fs-4 text-primary"><strong>${safeString(data.set_code || data.code)}</strong></p>
+            </div>
+            <div class="col-md-4">
+                <h6><i class="fas fa-barcode me-2"></i>M Code</h6>
+                <p class="fs-4 text-success"><strong>${safeString((data.call_arc_code !== null && data.call_arc_code !== undefined && data.call_arc_code !== '') ? data.call_arc_code : '-')}</strong></p>
+            </div>
+            <div class="col-md-4">
+                <h6><i class="fas fa-clock me-2"></i>Created At</h6>
+                <p class="text-muted">${safeString(data.created_at)}</p>
+            </div>
+        </div>
+        
+        <hr>
+        
+        <h6><i class="fas fa-list me-2"></i>Selected Options</h6>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead class="table-light">
+                    <tr>
+                        <th>Category</th>
+                        <th>Selected Option</th>
+                        <th>Code</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    // Display selected options - safe data processing
+    if (data.options && typeof data.options === 'object') {
+        for (const [categoryNumber, optionDetail] of Object.entries(data.options)) {
+            // Check if optionDetail is an object
+            const isObject = typeof optionDetail === 'object' && optionDetail !== null;
+            
+            // Extract detailed information if object
+            let categoryName = 'Category';
+            let optionName = 'Option';
+            let itemCode = '-';
+            let description = '-';
+            
+            if (isObject) {
+                categoryName = getCategoryDisplayName(categoryNumber);
+                optionName = safeString(optionDetail.option_name, 'Option');
+                itemCode = safeString(optionDetail.item_code, '-');
+                description = safeString(optionDetail.description, '-');
+            } else {
+                // If simple string
+                optionName = safeString(optionDetail);
+            }
+            
+            html += `
+                <tr>
+                    <td>
+                        <strong>[${categoryNumber}] ${categoryName}</strong>
+                    </td>
+                    <td>
+                        <span class="fw-bold text-primary">${optionName}</span>
+                    </td>
+                    <td>
+                        <code class="bg-light px-2 py-1">${itemCode}</code>
+                    </td>
+                    <td>
+                        <small class="text-muted">${description}</small>
+                    </td>
+                </tr>
+            `;
+        }
+    } else {
+        // If options is missing or invalid format
+        html += `
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Unable to load option information.
+                </td>
+            </tr>
+        `;
+    }
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-primary" onclick="downloadExcel('${safeString(data.code)}')">
+                <i class="fas fa-file-excel me-1"></i>Download Excel
+            </button>
+            <button class="btn btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-redo me-1"></i>Lookup Again
+            </button>
+        </div>
+    `;
+    
+    resultContent.innerHTML = html;
+    resultArea.style.display = 'block';
+    
+    // Scroll to result area
+    resultArea.scrollIntoView({ behavior: 'smooth' });
+}
+
+function showNotFoundResult(data) {
+    const resultArea = document.getElementById('resultArea');
+    const resultContent = document.getElementById('resultContent');
+    const notFoundCode = data.code || data.search_code || '';
+    const notFoundMessage = `Code '${notFoundCode}' was not found.`;
+    
+    let html = `
+        <div class="alert alert-warning">
+            <h6><i class="fas fa-exclamation-triangle me-2"></i>Code Not Found</h6>
+            <p class="mb-0">${notFoundMessage}</p>
+        </div>
+        
+        <div class="text-center">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <p class="text-muted">The entered code does not exist in the database.</p>
+            <p class="text-muted">Please check the code again.</p>
+        </div>
+    `;
+    
+    resultContent.innerHTML = html;
+    resultArea.style.display = 'block';
+    
+    // Scroll to result area
+    resultArea.scrollIntoView({ behavior: 'smooth' });
+}
+
+function showCodeList() {
+    // Show code list modal
+    const codeListModal = new bootstrap.Modal(document.getElementById('codeListModal'));
+    codeListModal.show();
+    
+    // Load code list
+    loadCodeList();
+}
+
+function loadCodeList() {
+    const codeListContent = document.getElementById('codeListContent');
+    
+    // Show loading
+    codeListContent.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading code list...</p>
+        </div>
+    `;
+    
+    // API call
+    fetch('/api/code_list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayCodeList(data);
+            } else {
+                codeListContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        An error occurred: ${data.error}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            codeListContent.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    A network error occurred.
+                </div>
+            `;
+        });
+}
+
+function displayCodeList(data) {
+    const codeListContent = document.getElementById('codeListContent');
+    
+    if (data.total_count === 0) {
+        codeListContent.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No saved codes</h5>
+                <p class="text-muted">Create a new code from the option selection page.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const groups = {
+        P51: [],
+        P52: [],
+        P53: [],
+        P54: [],
+        other: []
+    };
+    
+    data.combinations.forEach(combination => {
+        // Use set_code first, otherwise use combination_code
+        const codeToUse = combination.set_code || combination.code || '';
+        const prefix = codeToUse.substring(0, 3);
+        
+        if (groups[prefix]) {
+            groups[prefix].push(combination);
+        } else {
+            groups.other.push(combination);
+        }
+    });
+    
+    // Sort each group by set_code number ascending (use combination_code if set_code is missing)
+    Object.keys(groups).forEach(groupKey => {
+        groups[groupKey].sort((a, b) => {
+            const codeA = (a.set_code || a.code || '').substring(2); // Number part after P5
+            const codeB = (b.set_code || b.code || '').substring(2); // Number part after P5
+            const numA = parseInt(codeA) || 0;
+            const numB = parseInt(codeB) || 0;
+            return numA - numB;
+        });
+    });
+    
+    const renderGroupTable = (combinations) => {
+        if (!combinations || combinations.length === 0) {
+            return `
+                <div class="py-4 text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>No saved codes in this group.
+                </div>
+            `;
+        }
+        
+        let rows = '';
+        
+        combinations.forEach(combination => {
+            const optionsText = Object.entries(combination.options)
+                .map(([key, value]) => {
+                    if (typeof value === 'object' && value !== null) {
+                        const optionName = value.option_name || value.name || value.item_name || value.title || 'Option';
+                        return `[${key}] ${optionName}`;
+                    }
+                    return `[${key}] ${String(value)}`;
+                })
+                .join(', ');
+            
+            rows += `
+                <tr>
+                    <td>
+                        <code class="fs-6">${combination.set_code || combination.code}</code>
+                    </td>
+                    <td>
+                        <small>${optionsText}</small>
+                    </td>
+                    <td>
+                        <small class="text-muted">${combination.created_at}</small>
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="lookupCode('${combination.code}')">
+                                <i class="fas fa-search me-1"></i>Lookup
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="showDeleteModal('${combination.code}')">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        return `
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Code</th>
+                            <th>Selected Options</th>
+                            <th>Created At</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    };
+    
+    const groupOrder = ['P51', 'P52', 'P53', 'P54'];
+    const groupLabels = {
+        'P51': 'Super M',
+        'P52': 'Super C',
+        'P53': 'Super T',
+        'P54': 'Super S'
+    };
+    const hasOthers = groups.other.length > 0;
+    
+    let html = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <h6><i class="fas fa-database me-2"></i>Total Saved Codes: <span class="badge bg-burgundy">${data.total_count}</span></h6>
+            </div>
+            <div class="col-md-6 text-end">
+                <small class="text-muted">Sorted by code number ascending</small>
+            </div>
+        </div>
+        
+        <ul class="nav nav-tabs" id="codeListTab" role="tablist">
+            ${groupOrder.map((groupKey, index) => {
+                const label = groupLabels[groupKey] || groupKey;
+                return `
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link ${index === 0 ? 'active' : ''}" id="tab-${groupKey}" data-bs-toggle="tab" data-bs-target="#tab-pane-${groupKey}" type="button" role="tab" aria-controls="tab-pane-${groupKey}" aria-selected="${index === 0 ? 'true' : 'false'}">
+                        ${label} <span class="badge bg-secondary ms-1">${groups[groupKey].length}</span>
+                    </button>
+                </li>
+            `;
+            }).join('')}
+            ${hasOthers ? `
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-other" data-bs-toggle="tab" data-bs-target="#tab-pane-other" type="button" role="tab" aria-controls="tab-pane-other" aria-selected="false">
+                        Other <span class="badge bg-secondary ms-1">${groups.other.length}</span>
+                    </button>
+                </li>
+            ` : ''}
+        </ul>
+        <div class="tab-content pt-3" id="codeListTabContent">
+            ${groupOrder.map((groupKey, index) => `
+                <div class="tab-pane fade ${index === 0 ? 'show active' : ''}" id="tab-pane-${groupKey}" role="tabpanel" aria-labelledby="tab-${groupKey}">
+                    ${renderGroupTable(groups[groupKey])}
+                </div>
+            `).join('')}
+            ${hasOthers ? `
+                <div class="tab-pane fade" id="tab-pane-other" role="tabpanel" aria-labelledby="tab-other">
+                    ${renderGroupTable(groups.other)}
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    codeListContent.innerHTML = html;
+}
+
+function lookupCode(code) {
+    // Close code list modal
+    const codeListModal = bootstrap.Modal.getInstance(document.getElementById('codeListModal'));
+    codeListModal.hide();
+    
+    // Set value in code input field
+    document.getElementById('codeInput').value = code;
+    
+    // API call (direct lookup execution)
+    fetch('/api/lookup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            code: code
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.found) {
+                showFoundResult(data);
+            } else {
+                showNotFoundResult(data);
+            }
+        } else {
+            alert('An error occurred: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('A network error occurred.');
+    });
+}
+
+function downloadExcel(code) {
+    console.log('=== Excel Download Start ===');
+    console.log('Code:', code);
+    
+    // Fetch lookup data again to generate Excel
+    fetch('/api/lookup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            code: code
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.found) {
+            // Request Excel generation with lookup data
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            const apiUrl = protocol + '//' + host + '/api/generate_excel';
+            
+            console.log('API URL:', apiUrl);
+            
+            return fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                },
+                body: JSON.stringify({
+                    code: data.code,
+                    options: data.options,
+                    created_at: data.created_at,
+                    lang: 'eng'
+                })
+            });
+        } else {
+            throw new Error('No lookup data available.');
+        }
+    })
+    .then(response => {
+        console.log('Excel generation response status:', response.status);
+        console.log('Excel generation response headers:', response.headers);
+        
+        if (response.ok) {
+            return response.blob();
+        }
+        
+        // Also output response text to log
+        return response.text().then(text => {
+            console.error('Excel generation failed response:', text);
+            throw new Error(`Excel generation failed. (${response.status}): ${text}`);
+        });
+    })
+    .then(blob => {
+        // Download Blob as file
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `welding_options_${code}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        console.log('Excel download completed');
+    })
+    .catch(error => {
+        console.error('Excel download error:', error);
+        alert('An error occurred during Excel download: ' + error.message);
+    });
+}
+
+function refreshCodeList() {
+    loadCodeList();
+}
+
+let deleteTargetCode = '';
+let authenticatedUsername = '';
+let authenticatedPassword = '';
+
+function showDeleteModal(code) {
+    console.log('=== Delete Modal Call ===');
+    console.log('Code to delete:', code);
+    
+    deleteTargetCode = code;
+    
+    // Initialize authentication info
+    authenticatedUsername = '';
+    authenticatedPassword = '';
+    
+    // Show authentication modal
+    const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+    authModal.show();
+    
+    // Set z-index after modal is shown
+    setTimeout(() => {
+        const modalElement = document.getElementById('authModal');
+        const modalBackdrop = document.querySelector('.modal-backdrop');
+        
+        if (modalElement) {
+            modalElement.style.zIndex = '1060';
+        }
+        if (modalBackdrop) {
+            modalBackdrop.style.zIndex = '1055';
+        }
+    }, 100);
+    
+    // Initialize form
+    document.getElementById('authUsername').value = '';
+    document.getElementById('authPassword').value = '';
+    
+    // Set focus
+    setTimeout(() => {
+        document.getElementById('authUsername').focus();
+    }, 500);
+}
+
+function processAuth() {
+    const username = document.getElementById('authUsername').value.trim();
+    const password = document.getElementById('authPassword').value.trim();
+    
+    console.log('=== Authentication Process ===');
+    console.log('Username:', username);
+    console.log('Password:', password);
+    
+    // Input validation
+    if (!username || !password) {
+        alert('Please enter both ID and password.');
+        return;
+    }
+    
+    // Authentication check
+    if (username !== 'pns' || password !== 'pns@123') {
+        // Error animation
+        document.getElementById('authUsername').classList.add('is-invalid');
+        document.getElementById('authPassword').classList.add('is-invalid');
+        
+        setTimeout(() => {
+            document.getElementById('authUsername').classList.remove('is-invalid');
+            document.getElementById('authPassword').classList.remove('is-invalid');
+        }, 2000);
+        
+        alert('Authentication failed.');
+        return;
+    }
+    
+    // Save authenticated user info
+    authenticatedUsername = username;
+    authenticatedPassword = password;
+    console.log('Authentication info saved:', authenticatedUsername);
+    
+    // Authentication success - close modal
+    const authModal = bootstrap.Modal.getInstance(document.getElementById('authModal'));
+    authModal.hide();
+    
+    // Activate all screens after modal closes
+    setTimeout(() => {
+        console.log('Activating all screens after authentication completion.');
+        
+        // Activate entire page
+        document.body.style.pointerEvents = 'auto';
+        document.body.classList.remove('modal-open');
+        
+        // Remove all modal backdrops
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // Refresh code list
+        loadCodeList();
+        
+        console.log('All screens activated after authentication completion.');
+    }, 300);
+    
+    // Delete confirmation
+    setTimeout(() => {
+        const confirmed = confirm(`Are you sure you want to delete code '${deleteTargetCode}'?\n\nThis action cannot be undone.`);
+        console.log('User confirmed:', confirmed);
+        
+        if (!confirmed) {
+            console.log('User cancelled deletion');
+            return;
+        }
+        
+        console.log('Proceeding with deletion...');
+        // Only authenticated users can execute deletion
+        confirmDelete();
+    }, 300);
+}
+
+// Enter key authentication and modal events
+document.addEventListener('DOMContentLoaded', function() {
+    const authUsername = document.getElementById('authUsername');
+    const authPassword = document.getElementById('authPassword');
+    const authModal = document.getElementById('authModal');
+    
+    if (authUsername && authPassword) {
+        authUsername.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                authPassword.focus();
+            }
+        });
+        
+        authPassword.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                processAuth();
+            }
+        });
+    }
+    
+    // Get code from URL query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const codeParam = urlParams.get('code');
+    if (codeParam) {
+        const codeInput = document.getElementById('codeInput');
+        if (codeInput) {
+            codeInput.value = codeParam;
+            // Automatically perform lookup
+            setTimeout(function() {
+                document.getElementById('lookupForm').dispatchEvent(new Event('submit'));
+            }, 100);
+        }
+    }
+    
+    // Activate all screens when authentication modal closes
+    if (authModal) {
+        authModal.addEventListener('hidden.bs.modal', function() {
+            console.log('Authentication modal closed. Activating all screens.');
+            
+            // Activate entire page
+            document.body.style.pointerEvents = 'auto';
+            document.body.classList.remove('modal-open');
+            
+            // Remove all modal backdrops
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => backdrop.remove());
+            
+            // Refresh code list
+            loadCodeList();
+            
+            console.log('All screens activated.');
+        });
+    }
+});
+
+function confirmDelete() {
+    if (!deleteTargetCode) {
+        alert('No code specified for deletion.');
+        return;
+    }
+    
+    // Check authentication info
+    if (!authenticatedUsername || !authenticatedPassword) {
+        alert('No authentication info. Please authenticate again.');
+        return;
+    }
+    
+    // Use current server address
+    const currentHost = window.location.hostname;
+    const currentPort = window.location.port || '5000';
+    const deleteUrl = `http://${currentHost}:${currentPort}/api/delete_code`;
+    
+    // Prepare delete API call data (use authenticated user info)
+    const requestData = {
+        code: deleteTargetCode,
+        username: authenticatedUsername,
+        password: authenticatedPassword
+    };
+    
+    console.log('=== Delete API Call Info ===');
+    console.log('Current hostname:', window.location.hostname);
+    console.log('Current port:', window.location.port);
+    console.log('Current URL:', window.location.href);
+    console.log('Delete API URL:', deleteUrl);
+    console.log('Target Code:', deleteTargetCode);
+    console.log('Username:', authenticatedUsername);
+    console.log('Password:', authenticatedPassword);
+    console.log('Request will be sent to:', deleteUrl);
+    console.log('Request data:', requestData);
+    
+    // Warning if port is not 5000
+    if (currentPort !== '5000') {
+        console.warn('⚠️ Current port is not 5000:', currentPort);
+        console.log('🔧 Attempting API call with current port.');
+    }
+    
+    // Direct delete API call
+    fetch(deleteUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => {
+        console.log('Delete response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Delete response data:', data);
+        if (data.success) {
+            // Deletion success
+            alert(data.message);
+            
+            // Refresh code list
+            loadCodeList();
+        } else {
+            alert('Deletion failed: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('=== Delete API Error ===');
+        console.error('Error type:', error.constructor.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.error('Current URL:', window.location.href);
+        console.error('API URL:', deleteUrl);
+        
+        // More detailed error message
+        let errorMessage = 'A network error occurred.';
+        
+        if (error.message.includes('Failed to fetch')) {
+            errorMessage = `Unable to connect to server.\n\nPlease check:\n1. Is the server running? (${deleteUrl})\n2. Is port ${currentPort} available?\n3. Check firewall settings\n4. Check request status in browser developer tools Network tab`;
+        } else if (error.message.includes('HTTP error')) {
+            errorMessage = `Server error occurred: ${error.message}`;
+        } else {
+            errorMessage = `An error occurred: ${error.message}`;
+        }
+        
+        alert(errorMessage);
+    });
+}
+
+</script>
+{% endblock %}
+
+

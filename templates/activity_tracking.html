@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}사용자 활동 추적 - PNS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+        <div>
+            <h2 class="h4 mb-1"><i class="fas fa-chart-line me-2 text-danger"></i>고객·수출부 활동 추적 조회</h2>
+            <p class="text-muted mb-0 small">
+                고객(<code>customer</code>) · 수출부(<code>trade</code>) 계정의 체류시간, 관심 제품, 견적 다운로드를 조회합니다.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <select id="filterUserType" class="form-select form-select-sm" style="width:auto;">
+                <option value="">전체 (고객+수출부)</option>
+                <option value="customer">고객 (customer)</option>
+                <option value="export_dept">수출부 (trade)</option>
+            </select>
+            <select id="filterUserId" class="form-select form-select-sm" style="width:auto;">
+                <option value="">ID 전체</option>
+                <option value="customer">customer</option>
+                <option value="trade">trade</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshBtn">
+                <i class="fas fa-sync-alt me-1"></i>새로고침
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4" id="summaryCards">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small">1. 고객 홈페이지 체류</div>
+                    <div class="fs-4 fw-bold" id="summaryCustomer">-</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small">1. 수출부 홈페이지 체류</div>
+                    <div class="fs-4 fw-bold" id="summaryExport">-</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small">3. 견적 다운로드 (세트/용접기/스페어)</div>
+                    <div class="small" id="summaryQuotes">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabSessions">
+                1. 홈페이지 머무는 시간
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabInterests">
+                2. 관심 제품 (장기간 접속)
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabDownloads">
+                3. 견적 다운로드 추적
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="tabSessions">
+            <p class="small text-muted mb-2">로그인 세션별 사이트 체류시간 내역입니다.</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>사용자 ID</th>
+                            <th>유형</th>
+                            <th>접속 시작</th>
+                            <th>마지막 활동</th>
+                            <th>체류시간</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessionsBody"><tr><td colspan="6" class="text-muted text-center py-4">로딩 중...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tabInterests">
+            <p class="small text-muted mb-2">30초 이상 머문 페이지를 관심 제품(장기간 접속)으로 표시합니다.</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>사용자 ID</th>
+                            <th>유형</th>
+                            <th>관심 페이지</th>
+                            <th>페이지 제목</th>
+                            <th>체류시간</th>
+                            <th>시각</th>
+                        </tr>
+                    </thead>
+                    <tbody id="interestsBody"><tr><td colspan="6" class="text-muted text-center py-4">로딩 중...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tabDownloads">
+            <p class="small text-muted mb-2">견적서 다운로드를 세트 / 용접기 / 스페어 부품 등으로 분류해 추적합니다.</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>사용자 ID</th>
+                            <th>유형</th>
+                            <th>분류</th>
+                            <th>출처</th>
+                            <th>제품수</th>
+                            <th>제품코드</th>
+                            <th>파일</th>
+                            <th>시각</th>
+                        </tr>
+                    </thead>
+                    <tbody id="downloadsBody"><tr><td colspan="8" class="text-muted text-center py-4">로딩 중...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const typeLabels = { customer: '고객', export_dept: '수출부', admin: '관리자' };
+    const quoteLabels = {
+        set: '세트',
+        welder: '용접기',
+        spare: '스페어 부품',
+        mixed: '혼합',
+        general: '일반',
+        other: '기타'
+    };
+    const quoteBadge = {
+        set: 'bg-primary',
+        welder: 'bg-success',
+        spare: 'bg-warning text-dark',
+        mixed: 'bg-secondary',
+        general: 'bg-light text-dark',
+        other: 'bg-dark'
+    };
+    const sourceLabels = {
+        export_quotation_staff: '수출견적서(스태프)',
+        export_quotation_customer: '수출견적서(고객)'
+    };
+
+    function fmtSec(sec) {
+        sec = parseInt(sec || 0, 10);
+        if (sec < 60) return sec + '초';
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        if (m < 60) return m + '분 ' + s + '초';
+        return Math.floor(m / 60) + '시간 ' + (m % 60) + '분';
+    }
+
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s == null ? '' : String(s);
+        return d.innerHTML;
+    }
+
+    function parseCodes(raw) {
+        if (!raw) return '-';
+        try {
+            const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            if (Array.isArray(arr) && arr.length) return arr.join(', ');
+        } catch (e) {}
+        return String(raw);
+    }
+
+    function renderSummary(data) {
+        const sm = data.summary || {};
+        const c = sm.customer || { sessions: 0, total_seconds: 0 };
+        const e = sm.export_dept || { sessions: 0, total_seconds: 0 };
+        document.getElementById('summaryCustomer').textContent = c.sessions + '회 / ' + fmtSec(c.total_seconds);
+        document.getElementById('summaryExport').textContent = e.sessions + '회 / ' + fmtSec(e.total_seconds);
+        const qs = data.quote_stats || {};
+        const order = ['set', 'welder', 'spare', 'mixed', 'general', 'other'];
+        const parts = order.filter(function (k) { return qs[k]; }).map(function (k) {
+            return (quoteLabels[k] || k) + ': ' + qs[k];
+        });
+        Object.keys(qs).forEach(function (k) {
+            if (order.indexOf(k) === -1) parts.push((quoteLabels[k] || k) + ': ' + qs[k]);
+        });
+        document.getElementById('summaryQuotes').textContent = parts.length ? parts.join(' · ') : '데이터 없음';
+    }
+
+    function renderSessions(rows) {
+        const tbody = document.getElementById('sessionsBody');
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-muted text-center py-4">데이터 없음</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(function (r) {
+            return '<tr><td><strong>' + esc(r.user_id) + '</strong></td><td>' + esc(typeLabels[r.user_type] || r.user_type) +
+                '</td><td>' + esc(r.started_at) + '</td><td>' + esc(r.last_seen_at) +
+                '</td><td><strong>' + fmtSec(r.total_seconds) + '</strong></td><td>' + esc(r.ip_address || '-') + '</td></tr>';
+        }).join('');
+    }
+
+    function renderInterests(rows) {
+        const tbody = document.getElementById('interestsBody');
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-muted text-center py-4">데이터 없음 (30초 이상 접속 페이지가 없습니다)</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(function (r) {
+            return '<tr><td><strong>' + esc(r.user_id) + '</strong></td><td>' + esc(typeLabels[r.user_type] || r.user_type) +
+                '</td><td><code>' + esc(r.page_path) + '</code></td><td>' + esc(r.page_title) +
+                '</td><td><strong class="text-danger">' + fmtSec(r.duration_seconds) + '</strong></td><td>' + esc(r.entered_at) + '</td></tr>';
+        }).join('');
+    }
+
+    function renderDownloads(rows) {
+        const tbody = document.getElementById('downloadsBody');
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-muted text-center py-4">데이터 없음</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(function (r) {
+            const cat = r.quote_category || 'general';
+            const badge = quoteBadge[cat] || 'bg-secondary';
+            return '<tr><td><strong>' + esc(r.user_id) + '</strong></td><td>' + esc(typeLabels[r.user_type] || r.user_type) +
+                '</td><td><span class="badge ' + badge + '">' + esc(quoteLabels[cat] || cat) +
+                '</span></td><td>' + esc(sourceLabels[r.quote_source] || r.quote_source || '-') +
+                '</td><td>' + esc(r.product_count) +
+                '</td><td class="small">' + esc(parseCodes(r.product_codes)) +
+                '</td><td class="small">' + esc(r.file_name) +
+                '</td><td>' + esc(r.downloaded_at) + '</td></tr>';
+        }).join('');
+    }
+
+    function loadDashboard() {
+        const filter = document.getElementById('filterUserType').value;
+        const userId = document.getElementById('filterUserId').value;
+        const qs = [];
+        if (filter) qs.push('user_type=' + encodeURIComponent(filter));
+        if (userId) qs.push('user_id=' + encodeURIComponent(userId));
+        const url = '/api/tracking/dashboard' + (qs.length ? '?' + qs.join('&') : '');
+        fetch(url, { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.error || '조회 실패');
+                renderSummary(data);
+                renderSessions(data.sessions || []);
+                renderInterests(data.interests || []);
+                renderDownloads(data.downloads || []);
+            })
+            .catch(function (err) {
+                alert('대시보드 로드 실패: ' + err.message);
+            });
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+    document.getElementById('filterUserType').addEventListener('change', loadDashboard);
+    document.getElementById('filterUserId').addEventListener('change', loadDashboard);
+    loadDashboard();
+})();
+</script>
+{% endblock %}

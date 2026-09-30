@@ -1,0 +1,14 @@
+# 웰딩 장비 옵션 선택 시스템 (PNS) - 의존성 패키지
+
+# 웹 프레임워크
+flask>=2.3.0
+
+# Excel 파일 처리
+openpyxl>=3.1.0
+
+# PDF 파일 처리
+reportlab>=4.0.0
+pypdf>=4.0.0
+
+# Word 파일 처리 (EXPORT LABEL)
+python-docx>=1.1.0

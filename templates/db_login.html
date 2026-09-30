@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}데이터베이스 관리 - 인증 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-5">
+            <div class="card border-danger shadow-lg">
+                <div class="card-header bg-danger">
+                    <h4 class="mb-0">
+                        <i class="fas fa-lock me-2"></i>
+                        데이터베이스 관리자 인증
+                    </h4>
+                </div>
+                <div class="card-body p-5">
+                    <div class="alert alert-warning mb-4">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>주의:</strong> 이 페이지는 관리자만 접근 가능합니다.<br>
+                        데이터베이스의 구조를 변경할 수 있으므로 신중하게 사용하세요.
+                    </div>
+
+                    <form id="loginForm" onsubmit="handleLogin(event)" data-redirect="{{ redirect_url|default(url_for('db_management')) }}">
+                        <div class="mb-4">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-user me-2"></i>ID
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="username" placeholder="관리자 ID를 입력하세요" required autofocus>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="password" class="form-label">
+                                <i class="fas fa-key me-2"></i>비밀번호
+                            </label>
+                            <input type="password" class="form-control form-control-lg" id="password" placeholder="비밀번호를 입력하세요" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger btn-lg w-100 mb-3">
+                            <i class="fas fa-sign-in-alt me-2"></i>로그인
+                        </button>
+                    </form>
+
+                    <div id="errorMessage" class="alert alert-danger mt-3" style="display: none;">
+                        <i class="fas fa-times-circle me-2"></i>
+                        <span id="errorText"></span>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i>돌아가기
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-light border-0 mt-4">
+                <div class="card-body">
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>설명:</strong>
+                    </p>
+                    <ul class="small text-muted mb-0">
+                        <li>데이터베이스 테이블 구조 조회</li>
+                        <li>필드 추가 및 삭제</li>
+                        <li>저장된 코드 목록 확인</li>
+                        <li>데이터베이스 통계 조회</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const redirectAfterLogin = {{ redirect_url|default('/db_management')|tojson }};
+function handleLogin(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorMessage = document.getElementById('errorMessage');
+    const errorText = document.getElementById('errorText');
+    
+    if (!username || !password) {
+        errorText.textContent = 'ID와 비밀번호를 입력해주세요.';
+        errorMessage.style.display = 'block';
+        return;
+    }
+    
+    // 로그인 요청
+    fetch('/api/db/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            username: username,
+            password: password
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 로그인 성공 - DB 관리 페이지로 리다이렉트
+            window.location.href = redirectAfterLogin;
+        } else {
+            errorText.textContent = data.error || '인증에 실패했습니다.';
+            errorMessage.style.display = 'block';
+            document.getElementById('password').value = '';
+            document.getElementById('password').focus();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        errorText.textContent = '로그인 중 오류가 발생했습니다: ' + error.message;
+        errorMessage.style.display = 'block';
+    });
+}
+
+// Enter 키로 로그인
+document.getElementById('password').addEventListener('keypress', function(event) {
+    if (event.key === 'Enter') {
+        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+    }
+});
+</script>
+{% endblock %}

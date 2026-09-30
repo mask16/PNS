@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Welding Equipment Option System{% endblock %}
+
+{% block content %}
+<style>
+main.container-fluid {
+    padding-left: 0;
+    padding-right: 0;
+    margin-top: 0 !important;
+    max-width: 100% !important;
+}
+.hero-banner {
+    position: relative;
+    width: 100%;
+    min-height: 60vh;
+    background-image: url('https://images.unsplash.com/photo-1621905251918-48416bd8575a?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');
+    background-size: cover;
+    background-position: center right;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 3rem 1.5rem;
+    transition: background-image 0.5s ease;
+}
+
+.hero-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0.6) 100%);
+    z-index: 1;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    color: white;
+    max-width: 600px;
+    text-align: center;
+    padding: 0 2rem;
+}
+
+.hero-title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
+    color: #ffffff;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.hero-description {
+    font-size: 1.2rem;
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.main-content-section {
+    background-color: #ffffff;
+    margin: 0;
+    padding: 4rem 1.5rem;
+    margin-top: 0;
+}
+
+.main-content-section .container-fluid {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.feature-card {
+    background: #ffffff;
+    border-radius: 15px;
+    padding: 2.5rem;
+    height: 100%;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.feature-card:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
+.feature-card-right {
+    background: transparent;
+    padding: 2.5rem;
+    height: 100%;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.feature-card-right:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
+.feature-card-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 1rem;
+    text-align: center;
+    transition: none;
+}
+
+.feature-card-description {
+    font-size: 1rem;
+    color: #6c757d;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    text-align: center;
+    transition: none;
+}
+
+.feature-card-btn {
+    display: block;
+    width: 100%;
+    padding: 1rem 2rem;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.feature-card-btn:hover {
+    transform: scale(1.05);
+    text-decoration: none;
+}
+
+.feature-card-btn:hover .btn-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.feature-card:hover .feature-card-title {
+    font-size: 1.9rem;
+    color: #800020;
+}
+
+.feature-card:hover .feature-card-description {
+    font-size: 1.1rem;
+    color: #495057;
+}
+
+.feature-card-right:hover .feature-card-title {
+    font-size: 1.9rem;
+    color: #800020;
+}
+
+.feature-card-right:hover .feature-card-description {
+    font-size: 1.1rem;
+    color: #495057;
+}
+
+@media (max-width: 768px) {
+    .hero-banner {
+        min-height: 50vh;
+        margin: 0;
+        padding: 2rem 1rem;
+    }
+    
+    .hero-content {
+        padding: 0 1rem;
+    }
+    
+    .hero-title {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .hero-description {
+        font-size: 1rem;
+    }
+    
+    .main-content-section {
+        margin: 0;
+        padding: 2rem 1rem;
+    }
+    
+    .feature-card,
+    .feature-card-right {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .feature-card-title {
+        font-size: 1.5rem;
+    }
+    
+    .feature-card:hover .feature-card-title,
+    .feature-card-right:hover .feature-card-title {
+        font-size: 1.6rem;
+    }
+    
+    .feature-card:hover .feature-card-description,
+    .feature-card-right:hover .feature-card-description {
+        font-size: 1.05rem;
+    }
+}
+</style>
+
+<div class="hero-banner">
+    <div class="hero-content">
+        <h1 class="hero-title">Welding Equipment Option System</h1>
+        <p class="hero-description">
+            Select options from 11 categories to generate new codes (set codes), and through option selection (for inquiry), you can check existing codes (set codes).
+        </p>
+    </div>
+</div>
+
+<div class="main-content-section">
+    <div class="container-fluid">
+        <div class="row g-4">
+            <div class="col-12 col-md-6">
+                <a href="{{ url_for('select_options', view='true', lang='ENG') }}" class="feature-card">
+                    <h4 class="feature-card-title">Option Selection</h4>
+                    <p class="feature-card-description">
+                        Select options from 11 categories to create a new combination<br>and generate a unique code.
+                    </p>
+                </a>
+            </div>
+            
+            <div class="col-12 col-md-6">
+                <a href="{{ url_for('lookup', lang='ENG') }}" class="feature-card-right">
+                    <h4 class="feature-card-title">Code Inquiry</h4>
+                    <p class="feature-card-description">
+                        Enter an existing generated code<br>to check the option combination for that code.
+                    </p>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-burgundy">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    System Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-database me-2"></i>Database</h6>
+                        <ul class="list-unstyled">
+                            <li>• SQLite database used</li>
+                            <li>• 11 category options stored</li>
+                            <li>• Automatic code generation and duplicate validation</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-file-excel me-2"></i>Excel Export</h6>
+                        <ul class="list-unstyled">
+                            <li>• Generate Excel file for selected options</li>
+                            <li>• Automatic download feature</li>
+                            <li>• Filename: welding_options_[code].xlsx</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+-->
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 페이지 로드 시 배경 이미지 동적 로드
+document.addEventListener('DOMContentLoaded', function() {
+    loadBackgroundImage();
+});
+
+function loadBackgroundImage() {
+    fetch('/api/background_image')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.url) {
+                const heroBanner = document.querySelector('.hero-banner');
+                if (heroBanner) {
+                    // 캐시 방지를 위해 타임스탬프 추가
+                    const imageUrl = data.url + '?t=' + new Date().getTime();
+                    heroBanner.style.backgroundImage = `url('${imageUrl}')`;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('배경 이미지 로드 오류:', error);
+        });
+}
+</script>
+{% endblock %}
+
+
+
+
+

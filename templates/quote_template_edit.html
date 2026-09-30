@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+
+{% block title %}견적서 양식 편집 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block styles %}
+<style>
+.excel-editor {
+    border: 1px solid #d0d0d0;
+    background: #fff;
+    font-family: 'Calibri', 'Arial', sans-serif;
+    font-size: 11pt;
+    overflow-x: auto;
+}
+
+.excel-cell {
+    border: 1px solid #d0d0d0;
+    padding: 4px 8px;
+    min-height: 20px;
+    outline: none;
+    background: white;
+    position: relative;
+}
+
+.excel-cell:focus {
+    background: #fffbe5 !important;
+    border: 2px solid #0078d4 !important;
+    z-index: 10;
+}
+
+.excel-cell[contenteditable="true"]:hover {
+    background: #f5f5f5;
+}
+
+.excel-header {
+    background: #366092 !important;
+    color: white !important;
+    font-weight: bold;
+    text-align: center;
+    border: 1px solid #244061 !important;
+}
+
+.excel-header:focus {
+    background: #4a7ba7 !important;
+}
+
+.excel-info-label {
+    background: #d9e1f2 !important;
+    font-weight: bold;
+    border: 1px solid #b4c6e7 !important;
+}
+
+.excel-info-label:focus {
+    background: #c5d9f1 !important;
+}
+
+.excel-title {
+    background: white !important;
+    font-size: 16pt;
+    font-weight: bold;
+    color: #800020 !important;
+    text-align: center;
+    border: 1px solid #d0d0d0;
+}
+
+.excel-title:focus {
+    background: #fffbe5 !important;
+}
+
+.excel-total {
+    background: #d9e1f2 !important;
+    font-weight: bold;
+    border: 1px solid #b4c6e7 !important;
+}
+
+.excel-total:focus {
+    background: #c5d9f1 !important;
+}
+
+.excel-footer {
+    background: #f2f2f2 !important;
+    font-style: italic;
+    font-size: 9pt;
+    border: 1px solid #d0d0d0;
+}
+
+.excel-footer:focus {
+    background: #fffbe5 !important;
+}
+
+.excel-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    min-width: 800px;
+}
+
+.excel-table td {
+    vertical-align: middle;
+    word-wrap: break-word;
+}
+
+.excel-table .col-1 { width: 30%; }
+.excel-table .col-2 { width: 30%; }
+.excel-table .col-3 { width: 20%; }
+.excel-table .col-4 { width: 20%; }
+
+/* 숫자 정렬 */
+.excel-cell[data-type="number"] {
+    text-align: right;
+}
+
+/* 읽기 전용 셀 */
+.excel-cell[contenteditable="false"] {
+    background: #f9f9f9;
+    cursor: default;
+}
+
+.excel-cell[contenteditable="false"]:hover {
+    background: #f9f9f9;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 style="color: #000000 !important;">
+            <i class="fas fa-file-invoice me-2"></i>
+            견적서 양식 편집
+        </h2>
+        <p style="color: #000000 !important;">견적서 엑셀 파일과 동일한 형태로 직접 편집할 수 있습니다. 셀을 클릭하여 내용을 수정하세요.</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0" style="color: #800020 !important;">
+                        <i class="fas fa-edit me-2"></i>
+                        견적서 양식 편집
+                    </h5>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-info" id="downloadExcelBtn">
+                            <i class="fas fa-file-excel me-1"></i>엑셀 다운로드
+                        </button>
+                        <button type="button" class="btn btn-sm btn-warning" id="uploadExcelBtn">
+                            <i class="fas fa-upload me-1"></i>엑셀 업로드
+                        </button>
+                        <input type="file" id="excelFileInput" accept=".xlsx" style="display: none;">
+                        <button type="button" class="btn btn-sm btn-light" id="resetBtn">
+                            <i class="fas fa-undo me-1"></i>초기화
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success" id="saveBtn">
+                            <i class="fas fa-save me-1"></i>저장
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="alertMessage" class="alert d-none m-3" role="alert"></div>
+                
+                <div class="excel-editor p-3">
+                    <table class="excel-table">
+                        <!-- 회사 정보 행 -->
+                        <tr>
+                            <td colspan="4" class="excel-cell excel-title" contenteditable="true" id="cell-company-name">회사명</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="excel-cell" contenteditable="true" id="cell-company-address">주소</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="excel-cell" contenteditable="true" id="cell-company-contact">전화:  | 이메일: </td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="excel-cell" style="height: 10px;"></td>
+                        </tr>
+                        
+                        <!-- 견적서 제목 -->
+                        <tr>
+                            <td colspan="4" class="excel-cell excel-title" contenteditable="true" id="cell-quote-title">견적서</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="excel-cell" style="height: 10px;"></td>
+                        </tr>
+                        
+                        <!-- 견적서 정보 -->
+                        <tr>
+                            <td class="excel-cell excel-info-label" contenteditable="false">세트코드</td>
+                            <td class="excel-cell" contenteditable="false" id="cell-set-code" style="background: #f9f9f9;">P51000000 (예시)</td>
+                            <td class="excel-cell excel-info-label" contenteditable="false">견적일자</td>
+                            <td class="excel-cell" contenteditable="false" id="cell-quote-date" style="background: #f9f9f9;"></td>
+                        </tr>
+                        <tr>
+                            <td class="excel-cell excel-info-label" contenteditable="false">통화</td>
+                            <td class="excel-cell" contenteditable="false" id="cell-currency" style="background: #f9f9f9;">EUR (예시)</td>
+                            <td class="excel-cell excel-info-label" contenteditable="false">환율 (1 EUR)</td>
+                            <td class="excel-cell" contenteditable="false" id="cell-exchange-rate" style="background: #f9f9f9;">1.16 USD (예시)</td>
+                        </tr>
+                        <tr>
+                            <td class="excel-cell excel-info-label" contenteditable="false">할인율</td>
+                            <td class="excel-cell" contenteditable="false" id="cell-discount-rate" style="background: #f9f9f9;">0% (예시)</td>
+                            <td colspan="2" class="excel-cell" contenteditable="false" style="background: #f9f9f9;"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="excel-cell" style="height: 10px;"></td>
+                        </tr>
+                        
+                        <!-- 옵션별 가격 테이블 헤더 -->
+                        <tr>
+                            <td class="excel-cell excel-header" contenteditable="false">카테고리</td>
+                            <td class="excel-cell excel-header" contenteditable="false">옵션명</td>
+                            <td class="excel-cell excel-header" contenteditable="false">원 가격 (EUR)</td>
+                            <td class="excel-cell excel-header" contenteditable="false">할인 가격 (EUR)</td>
+                        </tr>
+                        
+                        <!-- 안내 메시지 -->
+                        <tr>
+                            <td colspan="4" class="excel-cell" contenteditable="false" style="text-align: center; background: #f9f9f9; font-style: italic; color: #666;">
+                                * 견적서 다운로드 시 실제 옵션 데이터가 자동으로 채워집니다.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="excel-cell" style="height: 10px;"></td>
+                        </tr>
+                        
+                        <!-- 각주/메모 -->
+                        <tr>
+                            <td colspan="4" class="excel-cell excel-footer" contenteditable="true" id="cell-footer-note">본 견적서는 유효기간 30일입니다.</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="excel-cell" style="height: 10px;"></td>
+                        </tr>
+                        
+                        <!-- 조건/약관 -->
+                        <tr>
+                            <td colspan="4" class="excel-cell" contenteditable="true" id="cell-terms-conditions" style="min-height: 100px; white-space: pre-wrap;">조건 및 약관 내용을 입력하세요.</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 오늘 날짜 설정
+    const today = new Date();
+    const dateStr = today.getFullYear() + '-' + 
+                   String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(today.getDate()).padStart(2, '0');
+    document.getElementById('cell-quote-date').textContent = dateStr;
+    
+    loadTemplate();
+    
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const downloadExcelBtn = document.getElementById('downloadExcelBtn');
+    const uploadExcelBtn = document.getElementById('uploadExcelBtn');
+    const excelFileInput = document.getElementById('excelFileInput');
+    
+    saveBtn.addEventListener('click', function() {
+        saveTemplate();
+    });
+    
+    resetBtn.addEventListener('click', function() {
+        if (confirm('정말 초기화하시겠습니까? 변경사항이 저장되지 않습니다.')) {
+            loadTemplate();
+        }
+    });
+    
+    downloadExcelBtn.addEventListener('click', function() {
+        downloadExcelTemplate();
+    });
+    
+    uploadExcelBtn.addEventListener('click', function() {
+        excelFileInput.click();
+    });
+    
+    excelFileInput.addEventListener('change', function(e) {
+        if (e.target.files && e.target.files.length > 0) {
+            uploadExcelTemplate(e.target.files[0]);
+        }
+    });
+    
+    // 숫자 셀에 숫자만 입력되도록
+    const numberCells = document.querySelectorAll('#cell-exchange-rate, #cell-discount-rate');
+    numberCells.forEach(cell => {
+        cell.addEventListener('input', function(e) {
+            let value = e.target.textContent;
+            // 숫자와 소수점만 허용
+            value = value.replace(/[^0-9.]/g, '');
+            e.target.textContent = value;
+        });
+    });
+});
+
+function showAlert(message, type) {
+    const alertDiv = document.getElementById('alertMessage');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.textContent = message;
+    alertDiv.classList.remove('d-none');
+    
+    setTimeout(() => {
+        alertDiv.classList.add('d-none');
+    }, 5000);
+}
+
+function loadTemplate() {
+    fetch('/api/quote_template')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.template) {
+                const template = data.template;
+                
+                // 회사명
+                document.getElementById('cell-company-name').textContent = template.company_name || '회사명';
+                
+                // 주소
+                document.getElementById('cell-company-address').textContent = template.company_address || '주소';
+                
+                // 연락처
+                let contact = [];
+                if (template.company_phone) {
+                    contact.push(`전화: ${template.company_phone}`);
+                }
+                if (template.company_email) {
+                    contact.push(`이메일: ${template.company_email}`);
+                }
+                document.getElementById('cell-company-contact').textContent = contact.join(' | ') || '전화:  | 이메일: ';
+                
+                // 견적서 제목
+                document.getElementById('cell-quote-title').textContent = template.quote_title || '견적서';
+                
+                // 각주
+                document.getElementById('cell-footer-note').textContent = template.footer_note || '본 견적서는 유효기간 30일입니다.';
+                
+                // 조건/약관
+                document.getElementById('cell-terms-conditions').textContent = template.terms_conditions || '조건 및 약관 내용을 입력하세요.';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading template:', error);
+            showAlert('양식 정보를 불러오는 중 오류가 발생했습니다.', 'danger');
+        });
+}
+
+function downloadExcelTemplate() {
+    window.location.href = '/api/quote_template/excel';
+}
+
+function uploadExcelTemplate(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const uploadBtn = document.getElementById('uploadExcelBtn');
+    const originalText = uploadBtn.innerHTML;
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>업로드 중...';
+    
+    fetch('/api/quote_template/excel', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = originalText;
+        
+        if (data.success) {
+            showAlert('견적서 양식이 업로드되었습니다.', 'success');
+            // 업로드된 양식 정보로 화면 업데이트
+            loadTemplate();
+        } else {
+            showAlert(data.error || '양식 업로드에 실패했습니다.', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error uploading template:', error);
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = originalText;
+        showAlert('양식 업로드 중 오류가 발생했습니다.', 'danger');
+    });
+}
+
+function saveTemplate() {
+    // 셀에서 데이터 추출
+    const companyName = document.getElementById('cell-company-name').textContent.trim();
+    const companyAddress = document.getElementById('cell-company-address').textContent.trim();
+    const companyContact = document.getElementById('cell-company-contact').textContent.trim();
+    const quoteTitle = document.getElementById('cell-quote-title').textContent.trim();
+    const footerNote = document.getElementById('cell-footer-note').textContent.trim();
+    const termsConditions = document.getElementById('cell-terms-conditions').textContent.trim();
+    
+    // 연락처에서 전화번호와 이메일 추출
+    let companyPhone = '';
+    let companyEmail = '';
+    
+    const phoneMatch = companyContact.match(/전화:\s*([^|]+)/);
+    if (phoneMatch) {
+        companyPhone = phoneMatch[1].trim();
+    }
+    
+    const emailMatch = companyContact.match(/이메일:\s*([^|]+)/);
+    if (emailMatch) {
+        companyEmail = emailMatch[1].trim();
+    }
+    
+    const data = {
+        company_name: companyName,
+        company_address: companyAddress,
+        company_phone: companyPhone,
+        company_email: companyEmail,
+        company_logo: '',
+        quote_title: quoteTitle,
+        footer_note: footerNote,
+        terms_conditions: termsConditions
+    };
+    
+    fetch('/api/quote_template', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('견적서 양식이 저장되었습니다.', 'success');
+        } else {
+            showAlert(data.error || '양식 저장에 실패했습니다.', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving template:', error);
+        showAlert('양식 저장 중 오류가 발생했습니다.', 'danger');
+    });
+}
+</script>
+{% endblock %}
+
+

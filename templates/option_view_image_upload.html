@@ -1,0 +1,652 @@
+{% extends "base.html" %}
+
+{% block title %}옵션조회 이미지 등록 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<style>
+    .option-view-image-panel {
+        border: 1.5px solid #c9b3bb;
+        border-radius: 0.625rem;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(128, 0, 32, 0.06);
+    }
+    .option-view-image-panel__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.9rem 1.15rem;
+        border-bottom: 1px solid #660019;
+        background-color: #800020;
+    }
+    .option-view-image-panel__header h5 {
+        color: #fff !important;
+        font-weight: 600;
+        margin: 0;
+    }
+    .option-view-image-panel__header .btn-outline-light {
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.75);
+    }
+    .option-view-image-panel__header .btn-outline-light:hover {
+        color: #800020;
+        background-color: #fff;
+        border-color: #fff;
+    }
+    .option-view-image-panel__body {
+        padding: 1.15rem;
+    }
+    .folder-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 0.85rem;
+    }
+    .folder-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 0.9rem 1rem;
+        background: #fff;
+        cursor: pointer;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        min-height: 96px;
+    }
+    .folder-card:hover {
+        border-color: #800020;
+        box-shadow: 0 4px 12px rgba(128, 0, 32, 0.08);
+    }
+    .folder-card__title {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 0.35rem;
+        word-break: break-word;
+    }
+    .folder-card__meta {
+        font-size: 0.8125rem;
+        color: #6b7280;
+    }
+    .folder-card__count {
+        display: inline-block;
+        margin-top: 0.5rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: #fdf2f5;
+        color: #800020;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 0.85rem;
+    }
+    .image-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        background: #fff;
+    }
+    .image-card img {
+        width: 100%;
+        height: 140px;
+        object-fit: contain;
+        background: #f9fafb;
+        display: block;
+    }
+    .image-card__body {
+        padding: 0.65rem 0.75rem;
+    }
+    .image-card__name {
+        font-size: 0.8125rem;
+        color: #374151;
+        word-break: break-all;
+        margin-bottom: 0.5rem;
+    }
+    .image-card__actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+    .region-mapper-canvas-wrap {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        background: #f9fafb;
+        padding: 0.5rem;
+        min-height: 320px;
+        max-height: calc(100vh - 210px);
+        overflow: auto;
+    }
+    .region-mapper-stage {
+        position: relative;
+        display: inline-block;
+        line-height: 0;
+        max-width: 100%;
+    }
+    .region-mapper-stage img {
+        display: block;
+        max-width: min(100%, calc(100vw - 420px));
+        max-height: calc(100vh - 240px);
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        user-select: none;
+        pointer-events: none;
+    }
+    #regionMapperSvg {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+    }
+    .region-mapper-loading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(249, 250, 251, 0.92);
+        color: #6b7280;
+        font-size: 0.875rem;
+        z-index: 2;
+    }
+    .region-mapper-stage.is-ready .region-mapper-loading {
+        display: none;
+    }
+    #regionMapperSvg.is-pencil-tool {
+        cursor: crosshair;
+    }
+    #regionMapperSvg.is-magic-tool {
+        cursor: cell;
+    }
+    #regionMapperSvg.is-eraser-tool {
+        cursor: crosshair;
+    }
+    #regionMapperSvg.is-eraser-tool .region-mapper-shape {
+        pointer-events: auto;
+        cursor: pointer;
+    }
+    .region-mapper-shape {
+        fill: rgba(128, 0, 32, 0.15);
+        stroke: #800020;
+        stroke-width: 4;
+        vector-effect: non-scaling-stroke;
+        pointer-events: none;
+    }
+    .region-mapper-draft {
+        fill: rgba(128, 0, 32, 0.08);
+        stroke: #800020;
+        stroke-dasharray: 6 4;
+        stroke-width: 4;
+        vector-effect: non-scaling-stroke;
+    }
+    .region-mapper-draft--pencil {
+        fill: none;
+        stroke: #800020;
+        stroke-width: 6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        vector-effect: non-scaling-stroke;
+    }
+    .region-mapper-draft--eraser {
+        fill: none;
+        stroke: #dc3545;
+        stroke-width: 6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        vector-effect: non-scaling-stroke;
+        opacity: 0.85;
+    }
+    .region-mapper-draft-fill {
+        fill: rgba(128, 0, 32, 0.12);
+        stroke: none;
+        pointer-events: none;
+    }
+    .region-mapper-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 0.875rem;
+    }
+    .type-section {
+        border: 1.5px solid #c9b3bb;
+        border-radius: 0.625rem;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+    .type-section__header {
+        padding: 0.75rem 1rem;
+        background-color: #800020;
+        border-bottom: 1px solid #660019;
+        color: #fff !important;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .type-section__header,
+    .type-section__header * {
+        color: #fff !important;
+    }
+    .type-section__body {
+        padding: 1rem;
+        background: #fff;
+    }
+    .type-badge {
+        display: inline-block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.15rem 0.45rem;
+        border-radius: 0.25rem;
+        background: #800020;
+        color: #fff;
+        margin-bottom: 0.35rem;
+    }
+    .type-badge--legacy {
+        background: #6c757d;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12">
+            <h2 style="color: #000000 !important;">옵션조회 이미지 등록 및 영역 매핑</h2>
+            <p class="text-muted mb-0">[1] 파워소스별로 [2] 타입(AIR / WATER) 도면 이미지를 등록하고, [1]~[12] 옵션 카테고리별 영역을 매핑합니다.</p>
+        </div>
+    </div>
+
+    <div id="alertMessage" class="alert d-none" role="alert"></div>
+
+    <div class="option-view-image-panel mb-4" id="folderPanel">
+        <div class="option-view-image-panel__header">
+            <h5>[1] 파워소스 폴더</h5>
+        </div>
+        <div class="option-view-image-panel__body">
+            <div id="folderGrid" class="folder-grid">
+                <div class="text-muted">불러오는 중...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="option-view-image-panel" id="uploadPanel" style="display:none;">
+        <div class="option-view-image-panel__header">
+            <h5 id="currentFolderTitle">이미지 등록</h5>
+            <button type="button" class="btn btn-sm btn-outline-light" id="backToFoldersBtn">폴더 목록</button>
+        </div>
+        <div class="option-view-image-panel__body">
+            <div class="type-section" data-type-code="AIR">
+                <div class="type-section__header">
+                    <span>[2] AIR</span>
+                    <span class="small" id="airCountLabel">0개</span>
+                </div>
+                <div class="type-section__body">
+                    <div class="row g-3 align-items-end mb-3">
+                        <div class="col-12 col-md-8">
+                            <label for="imageFilesAir" class="form-label">AIR 이미지 파일</label>
+                            <input type="file" class="form-control" id="imageFilesAir" accept="image/*" multiple>
+                            <div class="form-text">.png, .jpg, .jpeg, .gif, .webp</div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <button type="button" class="btn btn-primary w-100 btn-upload-type" data-type-code="AIR">AIR 업로드</button>
+                        </div>
+                    </div>
+                    <div id="imageGridAir" class="image-grid"></div>
+                </div>
+            </div>
+            <div class="type-section" data-type-code="WATER">
+                <div class="type-section__header">
+                    <span>[2] WATER</span>
+                    <span class="small" id="waterCountLabel">0개</span>
+                </div>
+                <div class="type-section__body">
+                    <div class="row g-3 align-items-end mb-3">
+                        <div class="col-12 col-md-8">
+                            <label for="imageFilesWater" class="form-label">WATER 이미지 파일</label>
+                            <input type="file" class="form-control" id="imageFilesWater" accept="image/*" multiple>
+                            <div class="form-text">.png, .jpg, .jpeg, .gif, .webp</div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <button type="button" class="btn btn-primary w-100 btn-upload-type" data-type-code="WATER">WATER 업로드</button>
+                        </div>
+                    </div>
+                    <div id="imageGridWater" class="image-grid"></div>
+                </div>
+            </div>
+            <div id="legacyImageSection" class="type-section" style="display:none;">
+                <div class="type-section__header">
+                    <span>타입 미지정 (기존)</span>
+                    <span class="small" id="legacyCountLabel">0개</span>
+                </div>
+                <div class="type-section__body">
+                    <div class="form-text mb-2">이전 등록 이미지입니다. 삭제 후 AIR/WATER로 다시 등록해 주세요.</div>
+                    <div id="imageGridLegacy" class="image-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="regionMapperModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen-lg-down modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#800020;">
+                <h5 class="modal-title" style="color:#fff;">영역 매핑</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12 col-lg-4">
+                        <label for="regionMapperCategory" class="form-label">매핑할 옵션 카테고리</label>
+                        <select id="regionMapperCategory" class="form-select mb-2"></select>
+                        <div class="btn-group w-100 mb-2" role="group" aria-label="매핑 도구">
+                            <input type="radio" class="btn-check" name="regionTool" id="regionToolMagic" value="magic" checked>
+                            <label class="btn btn-outline-primary btn-sm" for="regionToolMagic">자동 누끼</label>
+                            <input type="radio" class="btn-check" name="regionTool" id="regionToolPencil" value="pencil">
+                            <label class="btn btn-outline-secondary btn-sm" for="regionToolPencil">연필</label>
+                            <input type="radio" class="btn-check" name="regionTool" id="regionToolRect" value="rect">
+                            <label class="btn btn-outline-secondary btn-sm" for="regionToolRect">사각형</label>
+                            <input type="radio" class="btn-check" name="regionTool" id="regionToolEraser" value="eraser">
+                            <label class="btn btn-outline-danger btn-sm" for="regionToolEraser">지우개</label>
+                        </div>
+                        <div id="regionMapperToleranceWrap" class="mb-2">
+                            <label for="regionMapperTolerance" class="form-label mb-1">자동 누끼 허용 범위</label>
+                            <input type="range" class="form-range" id="regionMapperTolerance" min="8" max="80" step="1" value="32">
+                            <div class="form-text">값이 클수록 비슷한 색을 더 넓게 포함합니다. (기본 32)</div>
+                        </div>
+                        <div id="regionMapperEraserWrap" class="mb-2" style="display:none;">
+                            <label for="regionMapperEraserSize" class="form-label mb-1">지우개 크기</label>
+                            <input type="range" class="form-range" id="regionMapperEraserSize" min="8" max="64" step="1" value="24">
+                            <div class="form-text">값이 클수록 더 넓게 지웁니다.</div>
+                        </div>
+                        <div class="form-text mb-3" id="regionMapperToolHelp">카테고리 선택 후 부품 안쪽을 클릭하면 자동으로 누끼 영역이 생성됩니다.</div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary w-100 mb-3" id="regionMapperClearCategoryBtn">현재 카테고리 선택 초기화</button>
+                        <div id="regionMapperList"></div>
+                    </div>
+                    <div class="col-12 col-lg-8">
+                        <div class="region-mapper-canvas-wrap">
+                            <div class="region-mapper-stage" id="regionMapperStage">
+                                <div class="region-mapper-loading" id="regionMapperLoading">이미지 불러오는 중...</div>
+                                <img id="regionMapperImage" src="" alt="">
+                                <svg id="regionMapperSvg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-primary" id="regionMapperSaveBtn">매핑 저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+window.OPTION_VIEW_CATEGORIES = {{ categories|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/option_view_region_magic_wand.js') }}"></script>
+<script src="{{ url_for('static', filename='js/option_view_region_mapper.js') }}"></script>
+
+<script>
+(function () {
+    let currentFolder = null;
+
+    function showAlert(message, type) {
+        const el = document.getElementById('alertMessage');
+        if (!el) return;
+        el.textContent = message;
+        el.className = 'alert alert-' + type;
+        el.classList.remove('d-none');
+        window.setTimeout(function () { el.classList.add('d-none'); }, 5000);
+    }
+
+    function loadFolders() {
+        fetch('/api/option_view_images/folders', { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                const grid = document.getElementById('folderGrid');
+                if (!data.success) {
+                    grid.innerHTML = '<div class="text-danger">' + (data.error || '폴더 목록을 불러오지 못했습니다.') + '</div>';
+                    return;
+                }
+                const folders = data.folders || [];
+                if (!folders.length) {
+                    grid.innerHTML = '<div class="text-muted">등록된 파워소스 옵션이 없습니다.</div>';
+                    return;
+                }
+                grid.innerHTML = folders.map(function (folder) {
+                    return '<div class="folder-card" data-option-item-id="' + folder.option_item_id + '" data-folder-label="' + escapeHtml(folder.folder_label) + '">' +
+                        '<div class="folder-card__title">' + escapeHtml(folder.folder_label) + '</div>' +
+                        '<div class="folder-card__meta">' + escapeHtml(folder.item_code || '') + '</div>' +
+                        '<span class="folder-card__count">AIR ' + (folder.air_count || 0) + ' / WATER ' + (folder.water_count || 0) + '</span>' +
+                        '</div>';
+                }).join('');
+            })
+            .catch(function () {
+                document.getElementById('folderGrid').innerHTML = '<div class="text-danger">폴더 목록을 불러오지 못했습니다.</div>';
+            });
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+
+    function openFolder(optionItemId, folderLabel) {
+        currentFolder = { option_item_id: optionItemId, folder_label: folderLabel };
+        document.getElementById('folderPanel').style.display = 'none';
+        document.getElementById('uploadPanel').style.display = '';
+        document.getElementById('currentFolderTitle').textContent = folderLabel;
+        const airInput = document.getElementById('imageFilesAir');
+        const waterInput = document.getElementById('imageFilesWater');
+        if (airInput) airInput.value = '';
+        if (waterInput) waterInput.value = '';
+        loadImages();
+    }
+
+    function backToFolders() {
+        currentFolder = null;
+        document.getElementById('uploadPanel').style.display = 'none';
+        document.getElementById('folderPanel').style.display = '';
+        loadFolders();
+    }
+
+    function renderImageCards(images, typeLabel) {
+        if (!images.length) {
+            return '<div class="text-muted">등록된 이미지가 없습니다.</div>';
+        }
+        return images.map(function (image) {
+            const badgeClass = typeLabel === '미지정' ? 'type-badge type-badge--legacy' : 'type-badge';
+            let actions =
+                '<button type="button" class="btn btn-sm btn-outline-primary w-100 btn-map-regions" data-image-id="' + image.id + '" data-image-url="' + escapeHtml(image.url) + '">영역 매핑</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-danger w-100 btn-delete-image" data-image-id="' + image.id + '">삭제</button>';
+            if (typeLabel === '미지정') {
+                actions =
+                    '<button type="button" class="btn btn-sm btn-outline-secondary w-100 btn-assign-type" data-image-id="' + image.id + '" data-type-code="AIR">AIR로 지정</button>' +
+                    '<button type="button" class="btn btn-sm btn-outline-secondary w-100 btn-assign-type" data-image-id="' + image.id + '" data-type-code="WATER">WATER로 지정</button>' +
+                    actions;
+            }
+            return '<div class="image-card">' +
+                '<img src="' + escapeHtml(image.url) + '" alt="' + escapeHtml(image.filename) + '">' +
+                '<div class="image-card__body">' +
+                '<span class="' + badgeClass + '">' + escapeHtml(typeLabel) + '</span>' +
+                '<div class="image-card__name">' + escapeHtml(image.filename) + '</div>' +
+                '<div class="image-card__actions">' + actions + '</div></div></div>';
+        }).join('');
+    }
+
+    function loadImages() {
+        if (!currentFolder) return;
+        const airGrid = document.getElementById('imageGridAir');
+        const waterGrid = document.getElementById('imageGridWater');
+        const legacyGrid = document.getElementById('imageGridLegacy');
+        const legacySection = document.getElementById('legacyImageSection');
+        airGrid.innerHTML = '<div class="text-muted">불러오는 중...</div>';
+        waterGrid.innerHTML = '<div class="text-muted">불러오는 중...</div>';
+        fetch('/api/option_view_images?option_item_id=' + encodeURIComponent(currentFolder.option_item_id), { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) {
+                    const err = '<div class="text-danger">' + (data.error || '이미지 목록을 불러오지 못했습니다.') + '</div>';
+                    airGrid.innerHTML = err;
+                    waterGrid.innerHTML = err;
+                    return;
+                }
+                const images = data.images || [];
+                const airImages = images.filter(function (img) { return (img.type_code || '').toUpperCase() === 'AIR'; });
+                const waterImages = images.filter(function (img) { return (img.type_code || '').toUpperCase() === 'WATER'; });
+                const legacyImages = images.filter(function (img) {
+                    const code = (img.type_code || '').toUpperCase();
+                    return code !== 'AIR' && code !== 'WATER';
+                });
+                airGrid.innerHTML = renderImageCards(airImages, 'AIR');
+                waterGrid.innerHTML = renderImageCards(waterImages, 'WATER');
+                document.getElementById('airCountLabel').textContent = airImages.length + '개';
+                document.getElementById('waterCountLabel').textContent = waterImages.length + '개';
+                if (legacyImages.length) {
+                    legacySection.style.display = '';
+                    legacyGrid.innerHTML = renderImageCards(legacyImages, '미지정');
+                    document.getElementById('legacyCountLabel').textContent = legacyImages.length + '개';
+                } else {
+                    legacySection.style.display = 'none';
+                    legacyGrid.innerHTML = '';
+                }
+            })
+            .catch(function () {
+                airGrid.innerHTML = '<div class="text-danger">이미지 목록을 불러오지 못했습니다.</div>';
+                waterGrid.innerHTML = '<div class="text-danger">이미지 목록을 불러오지 못했습니다.</div>';
+            });
+    }
+
+    function uploadTypeImages(typeCode) {
+        if (!currentFolder) return;
+        const inputId = typeCode === 'WATER' ? 'imageFilesWater' : 'imageFilesAir';
+        const fileInput = document.getElementById(inputId);
+        if (!fileInput || !fileInput.files || !fileInput.files.length) {
+            showAlert(typeCode + ' 이미지를 선택해 주세요.', 'warning');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('option_item_id', currentFolder.option_item_id);
+        formData.append('type_code', typeCode);
+        Array.from(fileInput.files).forEach(function (file) {
+            formData.append('files', file);
+        });
+        const btn = document.querySelector('.btn-upload-type[data-type-code="' + typeCode + '"]');
+        if (btn) btn.disabled = true;
+        fetch('/api/option_view_images/upload', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.error || '업로드 실패');
+                showAlert(data.message || '업로드되었습니다.', 'success');
+                fileInput.value = '';
+                loadImages();
+            })
+            .catch(function (err) {
+                showAlert(err.message || '업로드 중 오류가 발생했습니다.', 'danger');
+            })
+            .finally(function () {
+                if (btn) btn.disabled = false;
+            });
+    }
+
+    document.getElementById('folderGrid').addEventListener('click', function (e) {
+        const card = e.target.closest('.folder-card');
+        if (!card) return;
+        openFolder(card.getAttribute('data-option-item-id'), card.getAttribute('data-folder-label'));
+    });
+
+    document.getElementById('backToFoldersBtn').addEventListener('click', backToFolders);
+
+    document.querySelectorAll('.btn-upload-type').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            uploadTypeImages(btn.getAttribute('data-type-code'));
+        });
+    });
+
+    function handleImageGridClick(e) {
+        const assignBtn = e.target.closest('.btn-assign-type');
+        if (assignBtn) {
+            const imageId = assignBtn.getAttribute('data-image-id');
+            const typeCode = assignBtn.getAttribute('data-type-code');
+            assignBtn.disabled = true;
+            fetch('/api/option_view_images/' + encodeURIComponent(imageId) + '/type', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ type_code: typeCode })
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.error || '타입 지정 실패');
+                    showAlert(data.message || '타입이 지정되었습니다.', 'success');
+                    loadImages();
+                })
+                .catch(function (err) {
+                    showAlert(err.message || '타입 지정 중 오류가 발생했습니다.', 'danger');
+                    assignBtn.disabled = false;
+                });
+            return;
+        }
+        const mapBtn = e.target.closest('.btn-map-regions');
+        if (mapBtn) {
+            const imageId = mapBtn.getAttribute('data-image-id');
+            const imageUrl = mapBtn.getAttribute('data-image-url');
+            fetch('/api/option_view_images/' + encodeURIComponent(imageId) + '/regions', { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.error || '영역 정보를 불러오지 못했습니다.');
+                    OptionViewRegionMapper.open({
+                        imageId: parseInt(imageId, 10),
+                        imageUrl: imageUrl,
+                        categories: window.OPTION_VIEW_CATEGORIES || [],
+                        regions: data.regions || []
+                    });
+                })
+                .catch(function (err) {
+                    showAlert(err.message || '영역 정보를 불러오지 못했습니다.', 'danger');
+                });
+            return;
+        }
+        const btn = e.target.closest('.btn-delete-image');
+        if (!btn) return;
+        if (!window.confirm('이 이미지를 삭제하시겠습니까?')) return;
+        const imageId = btn.getAttribute('data-image-id');
+        btn.disabled = true;
+        fetch('/api/option_view_images/' + encodeURIComponent(imageId), {
+            method: 'DELETE',
+            credentials: 'same-origin'
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.error || '삭제 실패');
+                showAlert(data.message || '삭제되었습니다.', 'success');
+                loadImages();
+            })
+            .catch(function (err) {
+                showAlert(err.message || '삭제 중 오류가 발생했습니다.', 'danger');
+                btn.disabled = false;
+            });
+    }
+
+    ['imageGridAir', 'imageGridWater', 'imageGridLegacy'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', handleImageGridClick);
+    });
+
+    loadFolders();
+})();
+</script>
+{% endblock %}

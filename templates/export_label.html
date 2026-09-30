@@ -1,0 +1,1142 @@
+{% extends "base.html" %}
+
+{% block title %}EXPORT LABEL - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<style>
+    .export-label-history-panel {
+        border: 1.5px solid #c9b3bb;
+        border-radius: 0.625rem;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(128, 0, 32, 0.06);
+    }
+    .export-label-upload-panel {
+        border: 1.5px solid #c9b3bb;
+        border-radius: 0.625rem;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(128, 0, 32, 0.06);
+    }
+    .export-label-upload-panel__header {
+        padding: 0.9rem 1.15rem;
+        border-bottom: 1px solid #660019;
+        background-color: #800020 !important;
+    }
+    .export-label-upload-panel__header h5 {
+        color: #fff !important;
+        font-weight: 600;
+        margin: 0;
+    }
+    .export-label-upload-panel__body {
+        padding: 1.15rem;
+        background: #fff;
+    }
+    .export-label-history-panel__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.9rem 1.15rem;
+        border-bottom: 1px solid #660019;
+        background-color: #800020 !important;
+    }
+    .export-label-history-panel__header h5 {
+        color: #fff !important;
+        font-weight: 600;
+        margin: 0;
+    }
+    .export-label-history-panel__header .btn-outline-light {
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.75);
+    }
+    .export-label-history-panel__header .btn-outline-light:hover {
+        color: #800020;
+        background-color: #fff;
+        border-color: #fff;
+    }
+    .export-label-history-panel__body {
+        background: #fff;
+    }
+    .export-label-history-search {
+        background: #fcfafb;
+        border-bottom: 1px solid #ece3e6;
+    }
+    .export-label-history-search .search-panel-title {
+        color: #800020;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+    .export-label-history-search .form-control-lg-search {
+        border: 1.5px solid #d9c5cc;
+        border-radius: 0.5rem 0 0 0.5rem;
+        font-size: 1rem;
+        padding-top: 0.65rem;
+        padding-bottom: 0.65rem;
+    }
+    .export-label-history-search .form-control-lg-search:focus {
+        border-color: #800020;
+        box-shadow: 0 0 0 0.2rem rgba(128, 0, 32, 0.12);
+    }
+    .export-label-history-search .btn-search-submit {
+        background-color: #800020;
+        border-color: #800020;
+        color: #fff;
+        padding-left: 1.1rem;
+        padding-right: 1.1rem;
+    }
+    .export-label-history-search .btn-search-submit:hover {
+        background-color: #660019;
+        border-color: #660019;
+        color: #fff;
+    }
+    .history-search-status {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        min-height: 2rem;
+    }
+    .history-search-status .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.8125rem;
+        background: #f3f4f6;
+        color: #374151;
+    }
+    .history-search-status .status-pill.is-filtered {
+        background: #fff7ed;
+        color: #9a3412;
+        border: 1px solid #fdba74;
+    }
+    .history-search-status .status-pill.is-empty {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+    .history-active-filter {
+        display: none;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .history-active-filter.is-visible {
+        display: flex;
+    }
+    .history-active-filter .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        background: #800020;
+        color: #fff;
+        font-size: 0.8125rem;
+        font-weight: 500;
+    }
+    .history-active-filter .filter-chip button {
+        border: 0;
+        background: transparent;
+        color: #fff;
+        line-height: 1;
+        padding: 0;
+        opacity: 0.85;
+    }
+    .history-active-filter .filter-chip button:hover {
+        opacity: 1;
+    }
+    .history-quick-codes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        align-items: center;
+    }
+    .history-quick-codes .quick-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-right: 0.15rem;
+        white-space: nowrap;
+    }
+    .history-quick-codes .quick-code-chip {
+        border: 1px solid #d1d5db;
+        background: #fff;
+        color: #374151;
+        border-radius: 999px;
+        padding: 0.2rem 0.65rem;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .history-quick-codes .quick-code-chip:hover,
+    .history-quick-codes .quick-code-chip.is-active {
+        border-color: #800020;
+        background: #fdf2f5;
+        color: #800020;
+    }
+    .history-autocomplete {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        z-index: 20;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+        max-height: 220px;
+        overflow-y: auto;
+        display: none;
+    }
+    .history-autocomplete.is-open {
+        display: block;
+    }
+    .history-autocomplete button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 0;
+        background: transparent;
+        padding: 0.55rem 0.85rem;
+        font-size: 0.875rem;
+    }
+    .history-autocomplete button:hover,
+    .history-autocomplete button.is-active {
+        background: #fdf2f5;
+        color: #800020;
+    }
+    .history-autocomplete .autocomplete-meta {
+        float: right;
+        font-size: 0.75rem;
+        color: #9ca3af;
+    }
+    .stock-code-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        max-width: 420px;
+    }
+    .stock-code-badge {
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .stock-code-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    }
+    .stock-code-badge.is-match {
+        background-color: #f59e0b !important;
+        color: #1f2937 !important;
+    }
+    .stock-code-badge.is-dim {
+        opacity: 0.45;
+    }
+    .stock-code-count-badge {
+        font-size: 0.72rem;
+        background: #eef2ff;
+        color: #4338ca;
+    }
+    .history-table thead th {
+        background-color: #800020 !important;
+        color: #fff !important;
+        border-color: #660019 !important;
+        font-weight: 600;
+        font-size: 0.8125rem;
+        white-space: nowrap;
+    }
+    .history-table tbody td {
+        border-color: #ece3e6;
+    }
+    .history-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+    .history-row-filtered {
+        background-color: #fffbeb;
+    }
+    .history-no-result-box {
+        padding: 2.5rem 1rem;
+        text-align: center;
+        color: #6b7280;
+    }
+    .history-no-result-box i {
+        font-size: 2rem;
+        color: #d1d5db;
+        margin-bottom: 0.75rem;
+    }
+</style>
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 style="color: #000000 !important;">
+                EXPORT LABEL
+            </h2>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <div class="export-label-upload-panel">
+                <div class="export-label-upload-panel__header">
+                    <h5>
+                        {% if lang == 'ENG' %}Word Upload{% else %}워드 파일 업로드{% endif %}
+                    </h5>
+                </div>
+                <div class="export-label-upload-panel__body">
+                    <div id="alertMessage" class="alert d-none" role="alert"></div>
+
+                    {% if template_info %}
+                    <div class="alert alert-light border mb-4">
+                        <div class="d-flex align-items-start gap-3">
+                            <i class="fas fa-file-word fa-2x text-primary mt-1"></i>
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <strong>{% if lang == 'ENG' %}Current file{% else %}현재 사용 파일{% endif %}</strong>
+                                    <span class="badge bg-success">{% if lang == 'ENG' %}Active{% else %}활성{% endif %}</span>
+                                </div>
+                                <div class="text-muted small mt-1">
+                                    {{ template_info.filename }}
+                                    · {{ template_info.size_kb }} KB
+                                    · {% if lang == 'ENG' %}Updated{% else %}업로드{% endif %} {{ template_info.updated_at }}
+                                </div>
+                                {% if template_info.stock_codes and template_info.stock_codes|length > 0 %}
+                                <div class="mt-2">
+                                    <span class="small text-muted">Stock Code ({{ template_info.stock_count }}):</span>
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        {% for code in template_info.stock_codes %}
+                                        <span class="badge bg-secondary">{{ code }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning mb-4">
+                        <i class="fas fa-info-circle me-1"></i>
+                        {% if lang == 'ENG' %}
+                        No Word file has been uploaded yet.
+                        {% else %}
+                        아직 업로드된 워드 파일이 없습니다.
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <form id="exportLabelUploadForm">
+                        <div class="mb-3">
+                            <label for="wordFileInput" class="form-label">
+                                {% if lang == 'ENG' %}Select Word file{% else %}워드 파일 선택{% endif %}
+                            </label>
+                            <input type="file"
+                                   class="form-control"
+                                   id="wordFileInput"
+                                   accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                   required>
+                            <div class="form-text">
+                                {% if lang == 'ENG' %}
+                                Supported formats: .docx, .doc (max 50MB). Each upload is saved to history.
+                                {% else %}
+                                지원 형식: .docx, .doc (최대 50MB). 업로드 시 이력에 자동 저장됩니다.
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-primary" id="uploadBtn">
+                                <i class="fas fa-upload me-1"></i>
+                                {% if lang == 'ENG' %}Upload{% else %}업로드{% endif %}
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="downloadBtn" {% if not template_info %}disabled{% endif %}>
+                                <i class="fas fa-download me-1"></i>
+                                {% if lang == 'ENG' %}Download current file{% else %}현재 파일 다운로드{% endif %}
+                            </button>
+                            <button type="button" class="btn btn-success" id="generateLabelBtn" {% if not template_info %}disabled{% endif %}>
+                                <i class="fas fa-file-export me-1"></i>
+                                {% if lang == 'ENG' %}Generate label download{% else %}라벨 생성 다운로드{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="export-label-history-panel">
+                <div class="export-label-history-panel__header">
+                    <h5>
+                        {% if lang == 'ENG' %}Upload History{% else %}업로드 이력{% endif %}
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-outline-light" id="refreshHistoryBtn">
+                        {% if lang == 'ENG' %}Refresh{% else %}새로고침{% endif %}
+                    </button>
+                </div>
+                <div class="export-label-history-search py-3 px-3 px-md-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                        <div>
+                            <div class="search-panel-title">
+                                <i class="fas fa-barcode me-1"></i>
+                                {% if lang == 'ENG' %}Find by Stock Code{% else %}Stock Code 찾기{% endif %}
+                            </div>
+                        </div>
+                        <div class="history-search-status" id="historySearchSummary">
+                            <span class="status-pill">
+                                <i class="fas fa-list-ul"></i>
+                                <span id="historySearchSummaryText">{% if lang == 'ENG' %}Loading...{% else %}불러오는 중...{% endif %}</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 align-items-start">
+                        <div class="col-12 col-xl-7">
+                            <div class="position-relative">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 text-muted">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text"
+                                           class="form-control form-control-lg-search border-start-0 border-end-0"
+                                           id="historyStockCodeSearch"
+                                           placeholder=""
+                                           autocomplete="off"
+                                           spellcheck="false">
+                                    <button type="button" class="btn btn-outline-secondary" id="clearHistorySearchBtn" title="{% if lang == 'ENG' %}Clear{% else %}초기화{% endif %}">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-search-submit" id="submitHistorySearchBtn">
+                                        {% if lang == 'ENG' %}Search{% else %}검색{% endif %}
+                                    </button>
+                                </div>
+                                <div class="history-autocomplete" id="historyAutocomplete"></div>
+                            </div>
+                            <div class="history-active-filter mt-2" id="historyActiveFilter">
+                                <span class="small text-muted">{% if lang == 'ENG' %}Filter{% else %}검색 중{% endif %}</span>
+                                <span class="filter-chip">
+                                    <i class="fas fa-filter"></i>
+                                    <span id="historyActiveFilterText"></span>
+                                    <button type="button" id="historyActiveFilterClear" aria-label="Clear filter">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-12 col-xl-5">
+                            <div class="history-quick-codes" id="historyQuickCodes">
+                                <span class="quick-label">{% if lang == 'ENG' %}Quick pick{% else %}빠른 선택{% endif %}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="export-label-history-panel__body">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle history-table" id="historyTable">
+                            <thead>
+                                <tr>
+                                    <th>{% if lang == 'ENG' %}Uploaded{% else %}업로드일{% endif %}</th>
+                                    <th>{% if lang == 'ENG' %}File{% else %}파일명{% endif %}</th>
+                                    <th>Stock Code</th>
+                                    <th>{% if lang == 'ENG' %}Size{% else %}크기{% endif %}</th>
+                                    <th>{% if lang == 'ENG' %}Status{% else %}상태{% endif %}</th>
+                                    <th class="text-end">{% if lang == 'ENG' %}Actions{% else %}작업{% endif %}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                {% if upload_history %}
+                                    {% for item in upload_history %}
+                                    <tr data-upload-id="{{ item.id }}"
+                                        data-original-filename="{{ item.original_filename|e }}"
+                                        data-stock-codes="{{ item.stock_codes|tojson|e }}">
+                                        <td class="small text-nowrap">{{ item.uploaded_at }}</td>
+                                        <td>
+                                            <div class="fw-medium">{{ item.original_filename }}</div>
+                                            {% if item.uploaded_by %}
+                                            <div class="small text-muted">{{ item.uploaded_by }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.stock_codes and item.stock_codes|length > 0 %}
+                                            <div class="d-flex flex-wrap gap-1" style="max-width: 320px;">
+                                                {% for code in item.stock_codes[:6] %}
+                                                <span class="badge bg-secondary stock-code-badge" role="button">{{ code }}</span>
+                                                {% endfor %}
+                                                {% if item.stock_codes|length > 6 %}
+                                                <span class="badge bg-light text-dark">+{{ item.stock_codes|length - 6 }}</span>
+                                                {% endif %}
+                                            </div>
+                                            {% else %}
+                                            <span class="text-muted small">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="small text-nowrap">{{ item.size_kb }} KB</td>
+                                        <td>
+                                            {% if item.is_active %}
+                                            <span class="badge bg-success">{% if lang == 'ENG' %}Active{% else %}사용중{% endif %}</span>
+                                            {% else %}
+                                            <span class="badge bg-light text-dark">{% if lang == 'ENG' %}History{% else %}이력{% endif %}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end text-nowrap">
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-outline-secondary btn-history-download" title="{% if lang == 'ENG' %}Download{% else %}다운로드{% endif %}">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-success btn-history-generate" title="{% if lang == 'ENG' %}Generate labels{% else %}라벨 생성{% endif %}">
+                                                    <i class="fas fa-file-export"></i>
+                                                </button>
+                                                {% if not item.is_active %}
+                                                <button type="button" class="btn btn-outline-primary btn-history-activate" title="{% if lang == 'ENG' %}Use as current{% else %}현재 파일로 사용{% endif %}">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger btn-history-delete" title="{% if lang == 'ENG' %}Delete{% else %}삭제{% endif %}">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr id="historyEmptyRow">
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            {% if lang == 'ENG' %}No upload history yet.{% else %}업로드 이력이 없습니다.{% endif %}
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const lang = '{{ lang|default("KOR") }}';
+    const uploadUrls = ['/api/export_label/word', '/export_label'];
+    const downloadUrls = ['/api/export_label/word', '/export_label?download=1'];
+    const generateUrls = ['/api/export_label/generate', '/export_label?generate=1'];
+    const registeredFilename = {{ template_info.filename|tojson if template_info else 'null' }};
+    let historyItems = {{ upload_history|default([])|tojson }};
+    let historySearchQuery = '';
+
+    function showAlert(message, type) {
+        const el = document.getElementById('alertMessage');
+        if (!el) return;
+        el.textContent = message;
+        el.className = 'alert alert-' + type;
+        el.classList.remove('d-none');
+        window.setTimeout(function () { el.classList.add('d-none'); }, 6000);
+    }
+
+    function parseJsonResponse(r, fallbackMsg) {
+        return r.json().catch(function () {
+            var msg = fallbackMsg + ' (HTTP ' + r.status + ')';
+            if (r.status === 404) {
+                msg = lang === 'ENG'
+                    ? 'Upload API not found. Please restart the server.'
+                    : '업로드 API를 찾을 수 없습니다. 서버를 재시작해 주세요.';
+            }
+            throw new Error(msg);
+        });
+    }
+
+    function postUpload(formData, urlIndex) {
+        const uploadUrl = uploadUrls[urlIndex];
+        if (!uploadUrl) {
+            return Promise.reject(new Error(lang === 'ENG' ? 'Upload failed.' : '업로드에 실패했습니다.'));
+        }
+        return fetch(uploadUrl, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        }).then(function (r) {
+            if (r.status === 405 && urlIndex + 1 < uploadUrls.length) {
+                return postUpload(formData, urlIndex + 1);
+            }
+            return parseJsonResponse(
+                r,
+                lang === 'ENG' ? 'Upload failed' : '업로드에 실패했습니다'
+            );
+        });
+    }
+
+    function fetchDownload(url, fallbackIndex) {
+        if (!url) {
+            url = downloadUrls[fallbackIndex || 0];
+        }
+        if (!url) {
+            return Promise.reject(new Error(lang === 'ENG' ? 'No file to download.' : '다운로드할 파일이 없습니다.'));
+        }
+        return fetch(url, { credentials: 'same-origin' }).then(function (r) {
+            if (r.status === 405 && fallbackIndex !== undefined && fallbackIndex + 1 < downloadUrls.length) {
+                return fetchDownload(downloadUrls[fallbackIndex + 1]);
+            }
+            if (!r.ok) {
+                return parseJsonResponse(r, lang === 'ENG' ? 'Download failed' : '다운로드에 실패했습니다')
+                    .then(function (d) { throw new Error(d.error || 'Download failed'); });
+            }
+            return r.blob();
+        });
+    }
+
+    function fetchGeneratedLabel(url, fallbackIndex) {
+        if (!url) {
+            url = generateUrls[fallbackIndex || 0];
+        }
+        if (!url) {
+            return Promise.reject(new Error(lang === 'ENG' ? 'Generate failed.' : '라벨 생성에 실패했습니다.'));
+        }
+        return fetch(url, { credentials: 'same-origin' }).then(function (r) {
+            if (r.status === 404 && fallbackIndex !== undefined && fallbackIndex + 1 < generateUrls.length) {
+                return fetchGeneratedLabel(generateUrls[fallbackIndex + 1]);
+            }
+            var contentType = (r.headers.get('Content-Type') || '').toLowerCase();
+            if (!r.ok || contentType.indexOf('json') >= 0) {
+                return parseJsonResponse(r, lang === 'ENG' ? 'Generate failed' : '라벨 생성에 실패했습니다')
+                    .then(function (d) { throw new Error(d.error || 'Generate failed'); });
+            }
+            return r.blob();
+        });
+    }
+
+    function triggerBlobDownload(blob, filename) {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+
+    function normalizeStockCode(value) {
+        return String(value || '').trim().toUpperCase().replace(/\|/g, 'I').replace(/[^A-Z0-9]/g, '');
+    }
+
+    function stockCodeMatchesQuery(code, query) {
+        var normalizedQuery = normalizeStockCode(query);
+        if (!normalizedQuery) return true;
+        var normalizedCode = normalizeStockCode(code);
+        return normalizedCode.indexOf(normalizedQuery) >= 0 || normalizedQuery.indexOf(normalizedCode) >= 0;
+    }
+
+    function filterHistoryItems(items, query) {
+        var q = (query || '').trim();
+        if (!q) return items.slice();
+        return items.filter(function (item) {
+            return (item.stock_codes || []).some(function (code) {
+                return stockCodeMatchesQuery(code, q);
+            });
+        });
+    }
+
+    function collectAllStockCodes(items) {
+        var seen = {};
+        var codes = [];
+        (items || []).forEach(function (item) {
+            (item.stock_codes || []).forEach(function (code) {
+                var key = normalizeStockCode(code);
+                if (!key || seen[key]) return;
+                seen[key] = true;
+                codes.push(code);
+            });
+        });
+        return codes.sort(function (a, b) {
+            return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+        });
+    }
+
+    function getAutocompleteSuggestions(query, limit) {
+        var q = (query || '').trim();
+        if (!q) return [];
+        var allCodes = collectAllStockCodes(historyItems);
+        var matches = allCodes.filter(function (code) {
+            return stockCodeMatchesQuery(code, q);
+        });
+        return matches.slice(0, limit || 8);
+    }
+
+    function renderQuickCodeChips(activeQuery) {
+        var container = document.getElementById('historyQuickCodes');
+        if (!container) return;
+        var codes = collectAllStockCodes(historyItems).slice(0, 12);
+        var label = lang === 'ENG' ? 'Quick pick' : '빠른 선택';
+        if (!codes.length) {
+            container.innerHTML = '<span class="quick-label">' + label + '</span>' +
+                '<span class="small text-muted">' + (lang === 'ENG' ? 'No Stock Codes yet.' : '등록된 Stock Code가 없습니다.') + '</span>';
+            return;
+        }
+        var html = '<span class="quick-label">' + label + '</span>';
+        codes.forEach(function (code) {
+            var active = activeQuery && stockCodeMatchesQuery(code, activeQuery) &&
+                normalizeStockCode(code) === normalizeStockCode(activeQuery);
+            html += '<button type="button" class="quick-code-chip' + (active ? ' is-active' : '') + '" data-code="' + escapeHtml(code) + '">' +
+                escapeHtml(code) + '</button>';
+        });
+        container.innerHTML = html;
+    }
+
+    function renderAutocomplete(query) {
+        var box = document.getElementById('historyAutocomplete');
+        if (!box) return;
+        var suggestions = getAutocompleteSuggestions(query, 8);
+        if (!query || !query.trim() || !suggestions.length) {
+            box.classList.remove('is-open');
+            box.innerHTML = '';
+            return;
+        }
+        box.innerHTML = suggestions.map(function (code, index) {
+            return '<button type="button" data-code="' + escapeHtml(code) + '" data-index="' + index + '">' +
+                '<span>' + escapeHtml(code) + '</span>' +
+                '<span class="autocomplete-meta">' + (lang === 'ENG' ? 'Select' : '선택') + '</span>' +
+                '</button>';
+        }).join('');
+        box.classList.add('is-open');
+    }
+
+    function updateActiveFilterChip(query) {
+        var wrap = document.getElementById('historyActiveFilter');
+        var text = document.getElementById('historyActiveFilterText');
+        if (!wrap || !text) return;
+        if (!query) {
+            wrap.classList.remove('is-visible');
+            text.textContent = '';
+            return;
+        }
+        text.textContent = query;
+        wrap.classList.add('is-visible');
+    }
+
+    function updateHistorySearchSummary(visibleCount, totalCount, query) {
+        var wrap = document.getElementById('historySearchSummary');
+        var textEl = document.getElementById('historySearchSummaryText');
+        if (!wrap || !textEl) return;
+
+        var pill = wrap.querySelector('.status-pill');
+        if (!pill) return;
+
+        pill.classList.remove('is-filtered', 'is-empty');
+        updateActiveFilterChip(query);
+        renderQuickCodeChips(query);
+
+        if (!query) {
+            textEl.textContent = lang === 'ENG'
+                ? ('Showing all ' + totalCount + ' upload(s)')
+                : ('전체 ' + totalCount + '건 표시');
+            return;
+        }
+        if (!visibleCount) {
+            pill.classList.add('is-empty');
+            textEl.textContent = lang === 'ENG'
+                ? ('No results for "' + query + '"')
+                : ('"' + query + '" 검색 결과 없음');
+            return;
+        }
+        pill.classList.add('is-filtered');
+        textEl.textContent = lang === 'ENG'
+            ? (visibleCount + ' of ' + totalCount + ' upload(s) matched')
+            : ('"' + query + '" 포함 ' + visibleCount + '건 / 전체 ' + totalCount + '건');
+    }
+
+    function renderStockCodes(codes, query) {
+        if (!codes || !codes.length) {
+            return '<span class="text-muted small">-</span>';
+        }
+
+        var sorted = codes.slice();
+        if (query) {
+            sorted.sort(function (a, b) {
+                var aMatch = stockCodeMatchesQuery(a, query) ? 0 : 1;
+                var bMatch = stockCodeMatchesQuery(b, query) ? 0 : 1;
+                if (aMatch !== bMatch) return aMatch - bMatch;
+                return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+            });
+        }
+
+        var displayLimit = query ? sorted.length : 8;
+        var html = '<div class="stock-code-list">';
+        sorted.slice(0, displayLimit).forEach(function (code) {
+            var matched = query && stockCodeMatchesQuery(code, query);
+            var dimmed = query && !matched;
+            var classes = 'badge stock-code-badge ' + (matched ? 'is-match' : 'bg-secondary');
+            if (dimmed) classes += ' is-dim';
+            html += '<span class="' + classes + '" role="button" title="' +
+                (lang === 'ENG' ? 'Search this code' : '이 코드로 검색') + '">' + escapeHtml(code) + '</span>';
+        });
+        if (!query && sorted.length > displayLimit) {
+            html += '<span class="badge stock-code-count-badge">+' + (sorted.length - displayLimit) + '</span>';
+        }
+        html += '</div>';
+        if (query) {
+            var matchCount = sorted.filter(function (code) { return stockCodeMatchesQuery(code, query); }).length;
+            if (matchCount > 0) {
+                html += '<div class="small text-muted mt-1">' +
+                    (lang === 'ENG' ? (matchCount + ' matched code(s)') : ('일치 ' + matchCount + '개')) +
+                    '</div>';
+            }
+        }
+        return html;
+    }
+
+    function renderHistoryRow(item, query) {
+        var isFiltered = !!query;
+        var statusBadge = item.is_active
+            ? '<span class="badge bg-success">' + (lang === 'ENG' ? 'Active' : '사용중') + '</span>'
+            : '<span class="badge bg-light text-dark">' + (lang === 'ENG' ? 'History' : '이력') + '</span>';
+
+        var actionButtons =
+            '<button type="button" class="btn btn-outline-secondary btn-history-download" title="' + (lang === 'ENG' ? 'Download' : '다운로드') + '"><i class="fas fa-download"></i></button>' +
+            '<button type="button" class="btn btn-outline-success btn-history-generate" title="' + (lang === 'ENG' ? 'Generate labels' : '라벨 생성') + '"><i class="fas fa-file-export"></i></button>';
+
+        if (!item.is_active) {
+            actionButtons +=
+                '<button type="button" class="btn btn-outline-primary btn-history-activate" title="' + (lang === 'ENG' ? 'Use as current' : '현재 파일로 사용') + '"><i class="fas fa-check"></i></button>' +
+                '<button type="button" class="btn btn-outline-danger btn-history-delete" title="' + (lang === 'ENG' ? 'Delete' : '삭제') + '"><i class="fas fa-trash"></i></button>';
+        }
+
+        return '<tr class="' + (isFiltered ? 'history-row-filtered' : '') + '" data-upload-id="' + escapeHtml(item.id) + '" data-original-filename="' + escapeHtml(item.original_filename || '') + '" data-stock-codes="' + escapeHtml(JSON.stringify(item.stock_codes || [])) + '">' +
+            '<td class="small text-nowrap">' + escapeHtml(item.uploaded_at) + '</td>' +
+            '<td><div class="fw-medium">' + escapeHtml(item.original_filename) + '</div>' +
+            (item.uploaded_by ? '<div class="small text-muted">' + escapeHtml(item.uploaded_by) + '</div>' : '') +
+            '</td>' +
+            '<td>' + renderStockCodes(item.stock_codes || [], query) + '</td>' +
+            '<td class="small text-nowrap">' + escapeHtml(item.size_kb) + ' KB</td>' +
+            '<td>' + statusBadge + '</td>' +
+            '<td class="text-end text-nowrap"><div class="btn-group btn-group-sm">' + actionButtons + '</div></td>' +
+            '</tr>';
+    }
+
+    function renderHistoryTable(items, query) {
+        var tbody = document.getElementById('historyTableBody');
+        if (!tbody) return;
+        var filtered = filterHistoryItems(items, query);
+        updateHistorySearchSummary(filtered.length, items.length, query);
+        renderAutocomplete(query);
+
+        if (!items.length) {
+            tbody.innerHTML = '<tr id="historyEmptyRow"><td colspan="6"><div class="history-no-result-box">' +
+                '<div><i class="fas fa-inbox d-block"></i></div>' +
+                (lang === 'ENG' ? 'No upload history yet.' : '업로드 이력이 없습니다.') +
+                '</div></td></tr>';
+            return;
+        }
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr id="historyNoMatchRow"><td colspan="6"><div class="history-no-result-box">' +
+                '<div><i class="fas fa-search d-block"></i></div>' +
+                '<div class="fw-medium mb-1">' + (lang === 'ENG' ? 'No matching uploads' : '검색 결과가 없습니다') + '</div>' +
+                '<div class="small">' + (lang === 'ENG'
+                    ? 'Try another Stock Code or clear the filter.'
+                    : '다른 Stock Code를 입력하거나 검색을 초기화해 주세요.') +
+                '</div></div></td></tr>';
+            return;
+        }
+        tbody.innerHTML = filtered.map(function (item) {
+            return renderHistoryRow(item, query);
+        }).join('');
+    }
+
+    function applyHistorySearch(query) {
+        historySearchQuery = (query || '').trim();
+        if (historySearchInput) {
+            historySearchInput.value = historySearchQuery;
+        }
+        renderHistoryTable(historyItems, historySearchQuery);
+    }
+
+    function clearHistorySearch() {
+        applyHistorySearch('');
+        var box = document.getElementById('historyAutocomplete');
+        if (box) {
+            box.classList.remove('is-open');
+            box.innerHTML = '';
+        }
+        if (historySearchInput) {
+            historySearchInput.focus();
+        }
+    }
+
+    function loadHistory(preserveSearch) {
+        var searchInput = document.getElementById('historyStockCodeSearch');
+        var query = preserveSearch && searchInput ? searchInput.value.trim() : '';
+        var url = '/api/export_label/history';
+        if (query) {
+            url += '?stock_code=' + encodeURIComponent(query);
+        }
+        return fetch(url, { credentials: 'same-origin' })
+            .then(function (r) { return parseJsonResponse(r, lang === 'ENG' ? 'Failed to load history' : '이력 조회 실패'); })
+            .then(function (data) {
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed');
+                }
+                historyItems = data.items || [];
+                applyHistorySearch(preserveSearch && searchInput ? searchInput.value : '');
+            });
+    }
+
+    function getUploadIdFromRow(btn) {
+        var row = btn.closest('tr[data-upload-id]');
+        return row ? row.getAttribute('data-upload-id') : '';
+    }
+
+    function getOriginalFilenameFromRow(btn) {
+        var row = btn.closest('tr[data-upload-id]');
+        return row ? (row.getAttribute('data-original-filename') || '').trim() : '';
+    }
+
+    document.getElementById('exportLabelUploadForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const fileInput = document.getElementById('wordFileInput');
+        if (!fileInput.files || !fileInput.files[0]) {
+            showAlert(lang === 'ENG' ? 'Please select a file.' : '파일을 선택해주세요.', 'warning');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        const btn = document.getElementById('uploadBtn');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>' +
+            (lang === 'ENG' ? 'Uploading...' : '업로드 중...');
+
+        postUpload(formData, 0)
+        .then(function (data) {
+            btn.disabled = false;
+            btn.innerHTML = original;
+            if (data.success) {
+                showAlert(data.message || (lang === 'ENG' ? 'Uploaded.' : '업로드되었습니다.'), 'success');
+                window.setTimeout(function () { window.location.reload(); }, 800);
+            } else {
+                showAlert(data.error || (lang === 'ENG' ? 'Upload failed.' : '업로드에 실패했습니다.'), 'danger');
+            }
+        })
+        .catch(function (err) {
+            btn.disabled = false;
+            btn.innerHTML = original;
+            showAlert(err.message || (lang === 'ENG' ? 'An error occurred during upload.' : '업로드 중 오류가 발생했습니다.'), 'danger');
+        });
+    });
+
+    document.getElementById('downloadBtn').addEventListener('click', function () {
+        const btn = this;
+        if (btn.disabled) return;
+        btn.disabled = true;
+        fetchDownload(null, 0)
+        .then(function (blob) {
+            triggerBlobDownload(blob, registeredFilename || 'export_label_template.docx');
+            showAlert(lang === 'ENG' ? 'Download started.' : '다운로드되었습니다.', 'success');
+        })
+        .catch(function (err) {
+            showAlert(err.message || (lang === 'ENG' ? 'No file to download.' : '다운로드할 파일이 없습니다.'), 'warning');
+        })
+        .finally(function () {
+            btn.disabled = false;
+        });
+    });
+
+    document.getElementById('generateLabelBtn').addEventListener('click', function () {
+        const btn = this;
+        if (btn.disabled) return;
+        btn.disabled = true;
+        const original = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>' +
+            (lang === 'ENG' ? 'Generating...' : '생성 중...');
+
+        fetchGeneratedLabel(null, 0)
+        .then(function (blob) {
+            triggerBlobDownload(blob, 'export_labels.docx');
+            showAlert(lang === 'ENG' ? 'Label file downloaded.' : '라벨 파일이 다운로드되었습니다.', 'success');
+        })
+        .catch(function (err) {
+            showAlert(err.message || (lang === 'ENG' ? 'Label generation failed.' : '라벨 생성에 실패했습니다.'), 'danger');
+        })
+        .finally(function () {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        });
+    });
+
+    document.getElementById('refreshHistoryBtn').addEventListener('click', function () {
+        const btn = this;
+        btn.disabled = true;
+        loadHistory(true)
+            .catch(function (err) {
+                showAlert(err.message, 'danger');
+            })
+            .finally(function () {
+                btn.disabled = false;
+            });
+    });
+
+    var historySearchInput = document.getElementById('historyStockCodeSearch');
+    var historySearchTimer = null;
+    if (historySearchInput) {
+        historySearchInput.addEventListener('input', function () {
+            window.clearTimeout(historySearchTimer);
+            historySearchTimer = window.setTimeout(function () {
+                applyHistorySearch(historySearchInput.value);
+            }, 180);
+        });
+        historySearchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                window.clearTimeout(historySearchTimer);
+                applyHistorySearch(historySearchInput.value);
+                var box = document.getElementById('historyAutocomplete');
+                if (box) box.classList.remove('is-open');
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                clearHistorySearch();
+            }
+        });
+        historySearchInput.addEventListener('focus', function () {
+            renderAutocomplete(historySearchInput.value);
+        });
+    }
+
+    document.getElementById('submitHistorySearchBtn').addEventListener('click', function () {
+        applyHistorySearch(historySearchInput ? historySearchInput.value : '');
+        var box = document.getElementById('historyAutocomplete');
+        if (box) box.classList.remove('is-open');
+    });
+
+    document.getElementById('clearHistorySearchBtn').addEventListener('click', clearHistorySearch);
+    document.getElementById('historyActiveFilterClear').addEventListener('click', clearHistorySearch);
+
+    document.getElementById('historyQuickCodes').addEventListener('click', function (e) {
+        var chip = e.target.closest('.quick-code-chip');
+        if (!chip) return;
+        var code = chip.getAttribute('data-code') || chip.textContent.trim();
+        applyHistorySearch(code);
+    });
+
+    document.getElementById('historyAutocomplete').addEventListener('click', function (e) {
+        var btn = e.target.closest('button[data-code]');
+        if (!btn) return;
+        applyHistorySearch(btn.getAttribute('data-code') || '');
+        this.classList.remove('is-open');
+    });
+
+    document.addEventListener('click', function (e) {
+        var box = document.getElementById('historyAutocomplete');
+        if (!box || !historySearchInput) return;
+        if (!box.contains(e.target) && e.target !== historySearchInput) {
+            box.classList.remove('is-open');
+        }
+    });
+
+    applyHistorySearch('');
+
+    document.getElementById('historyTableBody').addEventListener('click', function (e) {
+        var badge = e.target.closest('.stock-code-badge');
+        if (badge) {
+            var code = (badge.textContent || '').trim();
+            if (historySearchInput && code) {
+                historySearchInput.value = code;
+                applyHistorySearch(code);
+            }
+            return;
+        }
+
+        var target = e.target.closest('button');
+        if (!target) return;
+
+        var uploadId = getUploadIdFromRow(target);
+        if (!uploadId) return;
+
+        if (target.classList.contains('btn-history-download')) {
+            target.disabled = true;
+            fetchDownload('/api/export_label/history/' + encodeURIComponent(uploadId) + '/download')
+                .then(function (blob) {
+                    var downloadName = getOriginalFilenameFromRow(target) || ('export_label_' + uploadId.slice(0, 8) + '.docx');
+                    triggerBlobDownload(blob, downloadName);
+                    showAlert(lang === 'ENG' ? 'Download started.' : '다운로드되었습니다.', 'success');
+                })
+                .catch(function (err) {
+                    showAlert(err.message, 'danger');
+                })
+                .finally(function () { target.disabled = false; });
+            return;
+        }
+
+        if (target.classList.contains('btn-history-generate')) {
+            target.disabled = true;
+            var original = target.innerHTML;
+            target.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            fetchGeneratedLabel('/api/export_label/history/' + encodeURIComponent(uploadId) + '/generate')
+                .then(function (blob) {
+                    triggerBlobDownload(blob, 'export_labels_' + uploadId.slice(0, 8) + '.docx');
+                    showAlert(lang === 'ENG' ? 'Label file downloaded.' : '라벨 파일이 다운로드되었습니다.', 'success');
+                })
+                .catch(function (err) {
+                    showAlert(err.message, 'danger');
+                })
+                .finally(function () {
+                    target.disabled = false;
+                    target.innerHTML = original;
+                });
+            return;
+        }
+
+        if (target.classList.contains('btn-history-activate')) {
+            if (!window.confirm(lang === 'ENG'
+                ? 'Use this file as the current template?'
+                : '이 파일을 현재 템플릿으로 사용하시겠습니까?')) {
+                return;
+            }
+            target.disabled = true;
+            fetch('/api/export_label/history/' + encodeURIComponent(uploadId) + '/activate', {
+                method: 'POST',
+                credentials: 'same-origin'
+            })
+                .then(function (r) { return parseJsonResponse(r, lang === 'ENG' ? 'Activate failed' : '활성화 실패'); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.error || 'Failed');
+                    showAlert(data.message || (lang === 'ENG' ? 'Activated.' : '현재 파일로 설정되었습니다.'), 'success');
+                    window.setTimeout(function () { window.location.reload(); }, 700);
+                })
+                .catch(function (err) {
+                    showAlert(err.message, 'danger');
+                    target.disabled = false;
+                });
+            return;
+        }
+
+        if (target.classList.contains('btn-history-delete')) {
+            if (!window.confirm(lang === 'ENG'
+                ? 'Delete this upload from history?'
+                : '이 업로드 이력을 삭제하시겠습니까?')) {
+                return;
+            }
+            target.disabled = true;
+            fetch('/api/export_label/history/' + encodeURIComponent(uploadId), {
+                method: 'DELETE',
+                credentials: 'same-origin'
+            })
+                .then(function (r) { return parseJsonResponse(r, lang === 'ENG' ? 'Delete failed' : '삭제 실패'); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.error || 'Failed');
+                    showAlert(data.message || (lang === 'ENG' ? 'Deleted.' : '삭제되었습니다.'), 'success');
+                    historyItems = historyItems.filter(function (item) { return item.id !== uploadId; });
+                    applyHistorySearch(historySearchInput ? historySearchInput.value : '');
+                })
+                .catch(function (err) {
+                    showAlert(err.message, 'danger');
+                    target.disabled = false;
+                });
+        }
+    });
+})();
+</script>
+{% endblock %}

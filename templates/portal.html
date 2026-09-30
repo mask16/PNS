@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% set portal_landing = true %}
+
+{% block title %}{% if lang == 'ENG' %}Product Series - Welding Equipment Option System{% else %}제품 시리즈 - 웰딩 장비 옵션 시스템{% endif %}{% endblock %}
+
+{% block content %}
+<style>
+main.portal-main,
+main.portal-main.container-fluid {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+}
+
+.series-portal {
+    min-height: 100vh;
+    padding: 5.25rem 1.5rem 2.5rem;
+    background: linear-gradient(180deg, #f7f7f8 0%, #f0f0f2 50%, #ebebed 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.series-portal-inner {
+    width: 100%;
+    max-width: 1080px;
+}
+
+.series-portal-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.series-portal-eyebrow {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #800020;
+    margin-bottom: 0.75rem;
+}
+
+.series-portal-header h1 {
+    font-size: clamp(1.75rem, 4vw, 2.35rem);
+    font-weight: 700;
+    margin-bottom: 0.55rem;
+    letter-spacing: -0.02em;
+    color: #1a1a1a;
+}
+
+.series-portal-header p {
+    font-size: 1.02rem;
+    color: #555555;
+    margin: 0;
+}
+
+.series-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.series-card {
+    position: relative;
+    min-height: 200px;
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.5rem 1.6rem;
+    text-decoration: none;
+    background: #ffffff;
+    border: 1px solid #dddddd;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.series-card-body,
+.series-card-foot {
+    position: relative;
+    z-index: 1;
+}
+
+.series-card.active {
+    cursor: pointer;
+    border-color: #800020;
+    border-width: 2px;
+    padding: calc(1.5rem - 1px) calc(1.6rem - 1px);
+}
+
+.series-card.active:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(128, 0, 32, 0.15);
+    border-color: #800020;
+    text-decoration: none;
+}
+
+.series-card.coming-soon {
+    cursor: default;
+    background: #fafafa;
+    border-style: dashed;
+    border-color: #cccccc;
+    box-shadow: none;
+}
+
+.series-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    margin-bottom: 1rem;
+}
+
+.series-card.active .series-card-icon {
+    background: #fff0f3;
+    color: #800020;
+}
+
+.series-card.coming-soon .series-card-icon {
+    background: #eeeeee;
+    color: #888888;
+}
+
+.series-card-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    margin-bottom: 0.55rem;
+}
+
+.series-card.active .series-card-label {
+    background: #800020;
+    color: #ffffff;
+}
+
+.series-card.coming-soon .series-card-label {
+    background: #e8e8e8;
+    color: #666666;
+}
+
+.series-card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.45rem;
+    line-height: 1.2;
+    color: #1a1a1a;
+}
+
+.series-card.coming-soon .series-card-title {
+    color: #444444;
+}
+
+.series-card-desc {
+    font-size: 0.9rem;
+    margin: 0;
+    line-height: 1.55;
+    color: #555555;
+}
+
+.series-card.coming-soon .series-card-desc {
+    color: #777777;
+}
+
+.series-card-foot {
+    margin-top: 1.15rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid #eeeeee;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.series-card-cta {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #800020;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.series-card.active:hover .series-card-cta i {
+    transform: translateX(4px);
+}
+
+.series-card-cta i {
+    transition: transform 0.2s ease;
+}
+
+.series-card.super-series {
+    min-height: 220px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 245, 247, 0.95) 100%),
+        url('https://images.unsplash.com/photo-1621905251918-48416bd8575a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') center/cover no-repeat;
+}
+
+.series-card.super-series .series-card-title,
+.series-card.super-series .series-card-desc {
+    text-shadow: none;
+}
+
+.series-portal-footer {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.78rem;
+    color: #999999;
+    letter-spacing: 0.02em;
+}
+
+@media (max-width: 768px) {
+    .series-portal {
+        padding: 4.75rem 1rem 2rem;
+        justify-content: flex-start;
+    }
+
+    .series-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .series-card {
+        min-height: 168px;
+    }
+
+    .series-card.super-series {
+        min-height: 190px;
+    }
+}
+</style>
+
+<div class="series-portal">
+    <div class="series-portal-inner">
+        <div class="series-portal-header">
+            <span class="series-portal-eyebrow">HYUNDAI POWER &amp; SYSTEM</span>
+            {% if lang == 'ENG' %}
+            <h1>Select Product Series</h1>
+            <p>Choose a product line to access the welding equipment option system.</p>
+            {% else %}
+            <h1>제품 시리즈 선택</h1>
+            <p>이용할 제품 라인을 선택해 주세요.</p>
+            {% endif %}
+        </div>
+
+        <div class="series-grid">
+            <a href="{{ url_for('super_series', lang=lang) if lang == 'ENG' else url_for('super_series') }}"
+               class="series-card super-series active">
+                <div class="series-card-body">
+                    <div class="series-card-icon"><i class="fas fa-bolt"></i></div>
+                    <span class="series-card-label">
+                        <i class="fas fa-circle" style="font-size:0.45rem;"></i>
+                        {% if lang == 'ENG' %}Available{% else %}이용 가능{% endif %}
+                    </span>
+                    <h2 class="series-card-title">SUPER SERIES</h2>
+                    <p class="series-card-desc">
+                        {% if lang == 'ENG' %}
+                        Option selection, code lookup, set price &amp; export quotation
+                        {% else %}
+                        옵션 선택, 코드 조회, 세트가격·수출견적서
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="series-card-foot">
+                    <span class="series-card-cta">
+                        {% if lang == 'ENG' %}Enter{% else %}시작하기{% endif %}
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+
+            <div class="series-card coming-soon" aria-disabled="true">
+                <div class="series-card-body">
+                    <div class="series-card-icon"><i class="fas fa-microchip"></i></div>
+                    <span class="series-card-label">
+                        <i class="fas fa-lock" style="font-size:0.65rem;"></i>
+                        {% if lang == 'ENG' %}Coming Soon{% else %}추후 구성 예정{% endif %}
+                    </span>
+                    <h2 class="series-card-title">Hi400i</h2>
+                    <p class="series-card-desc">
+                        {% if lang == 'ENG' %}This product line will be available soon.{% else %}해당 제품 라인은 추후 구성될 예정입니다.{% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="series-card coming-soon" aria-disabled="true">
+                <div class="series-card-body">
+                    <div class="series-card-icon"><i class="fas fa-robot"></i></div>
+                    <span class="series-card-label">
+                        <i class="fas fa-lock" style="font-size:0.65rem;"></i>
+                        {% if lang == 'ENG' %}Coming Soon{% else %}추후 구성 예정{% endif %}
+                    </span>
+                    <h2 class="series-card-title">COBOT</h2>
+                    <p class="series-card-desc">
+                        {% if lang == 'ENG' %}This product line will be available soon.{% else %}해당 제품 라인은 추후 구성될 예정입니다.{% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="series-card coming-soon" aria-disabled="true">
+                <div class="series-card-body">
+                    <div class="series-card-icon"><i class="fas fa-industry"></i></div>
+                    <span class="series-card-label">
+                        <i class="fas fa-lock" style="font-size:0.65rem;"></i>
+                        {% if lang == 'ENG' %}Coming Soon{% else %}추후 구성 예정{% endif %}
+                    </span>
+                    <h2 class="series-card-title">Hi1500</h2>
+                    <p class="series-card-desc">
+                        {% if lang == 'ENG' %}This product line will be available soon.{% else %}해당 제품 라인은 추후 구성될 예정입니다.{% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <p class="series-portal-footer">© HYUNDAI POWER &amp; SYSTEM</p>
+    </div>
+</div>
+{% endblock %}

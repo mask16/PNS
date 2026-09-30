@@ -1,0 +1,1378 @@
+{% extends "base.html" %}
+
+{% block title %}수출견적서(스태프) 대시보드 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 style="color: #000000 !important;">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    수출견적서(스태프) 대시보드
+                </h2>
+                <a href="/export_quotation" class="btn btn-primary">
+                    <i class="fas fa-file-export me-2"></i>
+                    수출견적서로 이동
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 통계 카드 섹션 -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-box fa-2x text-primary mb-2"></i>
+                    <h5 class="card-title">총 제품 수</h5>
+                    <h2 class="text-primary" id="totalProductsCount">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-euro-sign fa-2x text-success mb-2"></i>
+                    <h5 class="card-title">총 프라이스북 단가</h5>
+                    <h2 class="text-success" id="totalPriceBook">€ 0.00</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-coins fa-2x text-warning mb-2"></i>
+                    <h5 class="card-title">총 구매가 원가</h5>
+                    <h2 class="text-warning" id="totalPurchase">€ 0.00</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-percentage fa-2x text-info mb-2"></i>
+                    <h5 class="card-title">평균 마진율</h5>
+                    <h2 class="text-info" id="averageMarginRate">0%</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 환율 선택 (하나은행) -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div id="dashboardFxRateTable"></div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <strong><i class="fas fa-info-circle me-2"></i>환율 적용 안내</strong>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2 small text-muted">하나은행 고시환율을 매일 자동 동기화합니다.</p>
+                    <ul class="mb-2 small">
+                        <li>USD / KRW, EUR / KRW, EUR / USD 선택 가능</li>
+                        <li>선택 후 <strong>적용</strong> 버튼을 누르면 현재 환율이 반영됩니다</li>
+                    </ul>
+                    <div class="small">
+                        <div>선택 통화: <strong id="dashboardSelectedFx">EUR</strong></div>
+                        <div>적용 환율: <strong id="dashboardAppliedRate">-</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 필터 및 검색 섹션 -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">제품코드 또는 제품명 검색</label>
+                            <input type="text" class="form-control" id="searchInput" placeholder="검색어를 입력하세요..." onkeyup="handleSearch()">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">정렬 기준</label>
+                            <select class="form-select" id="sortBy" onchange="loadProducts()">
+                                <option value="code">제품코드</option>
+                                <option value="name">제품명</option>
+                                <option value="category">분류</option>
+                                <option value="priceBook">프라이스북 단가</option>
+                                <option value="purchase">구매가 원가</option>
+                                <option value="margin">마진액</option>
+                                <option value="marginRate">마진율</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">정렬 방향</label>
+                            <select class="form-select" id="sortOrder" onchange="loadProducts()">
+                                <option value="asc">오름차순</option>
+                                <option value="desc">내림차순</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button class="btn btn-success me-2" onclick="openAddProductModal()">
+                                <i class="fas fa-plus me-2"></i>제품코드 추가
+                            </button>
+                            <button class="btn btn-primary me-2" onclick="loadProducts()">
+                                <i class="fas fa-sync-alt me-2"></i>새로고침
+                            </button>
+                            <button class="btn btn-secondary me-2" id="exportExcelBtn" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel me-2"></i>엑셀 다운로드
+                            </button>
+                            <button class="btn btn-danger" id="bulkDeleteBtn" onclick="bulkDeleteProducts()" disabled>
+                                <i class="fas fa-trash me-2"></i>선택 삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 제품 목록 테이블 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card" style="width: 105%; margin-left: -2.5%;">
+                <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                    <h5 class="mb-0" style="color: #000000 !important;">
+                        <i class="fas fa-list me-2"></i>
+                        제품 목록
+                    </h5>
+                </div>
+                <div class="card-body" style="overflow-x: visible !important; width: 100%;">
+                    <div id="loadingMessage" class="text-center py-4" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">로딩 중...</span>
+                        </div>
+                        <p class="mt-2">데이터를 불러오는 중...</p>
+                    </div>
+                    <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+                    <div style="overflow-x: visible !important; width: 100%;">
+                        <table class="table table-striped table-hover" id="productsTable" style="width: 100%; table-layout: auto;">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width: 50px;">
+                                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
+                                    </th>
+                                    <th style="white-space: nowrap; width: 130px;">번호</th>
+                                    <th style="white-space: nowrap; width: 270px;">제품코드</th>
+                                    <th style="white-space: nowrap; width: 430px;">제품명</th>
+                                    <th style="white-space: nowrap; width: 300px;">분류</th>
+                                    <th class="text-end" style="white-space: nowrap; width: 270px;">프라이스북단가(EUR)</th>
+                                    <th class="text-end" style="white-space: nowrap; width: 270px;">구매가원가(EUR)</th>
+                                    <th class="text-end" style="white-space: nowrap; width: 242px;">마진액(EUR)</th>
+                                    <th class="text-end" style="white-space: nowrap; width: 220px;">마진율(%)</th>
+                                    <th style="white-space: nowrap; width: 240px;">등록일</th>
+                                    <th class="text-center" style="width: 150px;">편집</th>
+                                    <th class="text-center" style="width: 150px;">삭제</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsTableBody">
+                                <tr>
+                                    <td colspan="12" class="text-center">데이터를 불러오는 중...</td>
+                                </tr>
+                            </tbody>
+                            <tfoot id="productsTableFooter" style="display: none;">
+                                <tr class="table-info fw-bold">
+                                    <td></td>
+                                    <td colspan="2" class="text-end"><strong>합계:</strong></td>
+                                    <td><strong>수량: <span id="totalProductCount">0</span>개</strong></td>
+                                    <td></td>
+                                    <td class="text-end" id="totalPriceBookSum">€ 0.00</td>
+                                    <td class="text-end" id="totalPurchaseSum">€ 0.00</td>
+                                    <td class="text-end" id="totalMarginSum">€ 0.00</td>
+                                    <td class="text-end" id="totalMarginRateSum">-</td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="mt-3">
+                        <nav>
+                            <ul class="pagination justify-content-center" id="pagination">
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 제품 추가 모달 -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success" style="background-color: #28a745 !important;">
+                <h5 class="modal-title" id="addProductModalLabel" style="color: #ffffff !important;">
+                    <i class="fas fa-plus me-2"></i>제품코드 추가
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addProductForm">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>제품코드 <span class="text-danger">*</span></strong></label>
+                        <input type="text" class="form-control" id="addProductCode" required>
+                        <small class="form-text text-muted">제품코드를 입력하세요.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>제품명</strong></label>
+                        <input type="text" class="form-control" id="addProductName" placeholder="선택사항">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>분류</strong></label>
+                        <select class="form-select" id="addCategory">
+                            <option value="">선택안함</option>
+                            <option value="1">[1] 파워소스</option>
+                            <option value="2">[2] 타입</option>
+                            <option value="3">[3] 와이어피더</option>
+                            <option value="4">[4] 토치</option>
+                            <option value="5">[5] 호스패키지</option>
+                            <option value="6">[6] 어스</option>
+                            <option value="7">[7] 트롤리</option>
+                            <option value="8">[8] 쿨러</option>
+                            <option value="9">[9] 쿨란트</option>
+                            <option value="10">[10] 가스호스</option>
+                            <option value="11">[11] 용접봉 홀더</option>
+                            <option value="12">[12] 기타</option>
+                            <option value="13">[13] 세트코드</option>
+                            <option value="14">[14] 스페어부품</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>프라이스북 단가 (EUR) <span class="text-danger">*</span></strong></label>
+                        <input type="number" class="form-control" id="addPriceBookPrice" step="0.01" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>구매가 원가 (EUR) <span class="text-danger">*</span></strong></label>
+                        <input type="number" class="form-control" id="addPurchasePrice" step="0.01" min="0" required>
+                    </div>
+                    <div id="addProductError" class="alert alert-danger" style="display: none;"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-success" id="saveAddProductBtn" onclick="saveAddProduct()">
+                    <i class="fas fa-save me-2"></i>추가
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 편집 모달 -->
+<div class="modal fade" id="editPriceModal" tabindex="-1" aria-labelledby="editPriceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-burgundy" style="background-color: #800020 !important;">
+                <h5 class="modal-title" id="editPriceModalLabel" style="color: #ffffff !important;">
+                    <i class="fas fa-edit me-2"></i>가격 편집
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editPriceForm">
+                    <input type="hidden" id="editProductId">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>제품코드</strong></label>
+                        <input type="text" class="form-control" id="editProductCode" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>제품명</strong></label>
+                        <input type="text" class="form-control" id="editProductName">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>분류</strong></label>
+                        <select class="form-select" id="editCategory">
+                            <option value="">선택안함</option>
+                            <option value="1">[1] 파워소스</option>
+                            <option value="2">[2] 타입</option>
+                            <option value="3">[3] 와이어피더</option>
+                            <option value="4">[4] 토치</option>
+                            <option value="5">[5] 호스패키지</option>
+                            <option value="6">[6] 어스</option>
+                            <option value="7">[7] 트롤리</option>
+                            <option value="8">[8] 쿨러</option>
+                            <option value="9">[9] 쿨란트</option>
+                            <option value="10">[10] 가스호스</option>
+                            <option value="11">[11] 용접봉 홀더</option>
+                            <option value="12">[12] 기타</option>
+                            <option value="13">[13] 세트코드</option>
+                            <option value="14">[14] 스페어부품</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>프라이스북 단가 (EUR)</strong></label>
+                        <input type="number" class="form-control" id="editPriceBookPrice" step="0.01" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>구매가 원가 (EUR)</strong></label>
+                        <input type="number" class="form-control" id="editPurchasePrice" step="0.01" min="0" required>
+                    </div>
+                    <div id="editPriceError" class="alert alert-danger" style="display: none;"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="savePriceEditBtn" onclick="savePriceEdit()">
+                    <i class="fas fa-save me-2"></i>저장
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPage = 1;
+const itemsPerPage = 20;
+let allProducts = [];
+let filteredProducts = [];
+let dashboardFx = { currency: 'EUR', eur_krw: null, eur_usd: null, usd_krw: null };
+
+function initDashboardFxTable() {
+    if (!window.PnsExchangeRates) return;
+    window.PnsExchangeRates.buildSelectableTable('dashboardFxRateTable', {
+        selectedCurrency: 'EUR',
+        lang: 'kor',
+        onApply: function (payload) {
+            dashboardFx = {
+                currency: payload.currency,
+                eur_krw: payload.eur_krw,
+                eur_usd: payload.eur_usd,
+                usd_krw: payload.usd_krw
+            };
+            const curEl = document.getElementById('dashboardSelectedFx');
+            const rateEl = document.getElementById('dashboardAppliedRate');
+            if (curEl) curEl.textContent = payload.currency;
+            if (rateEl) {
+                if (payload.currency === 'USD') {
+                    rateEl.textContent = '1 EUR = ' + Number(payload.eur_usd).toFixed(4) + ' USD';
+                } else if (payload.currency === 'KRW') {
+                    rateEl.textContent = '1 EUR = ' + Number(payload.eur_krw).toFixed(2) + ' KRW';
+                } else {
+                    rateEl.textContent = '1 EUR = 1 EUR (USD ' + Number(payload.usd_krw).toFixed(2) + ' / EUR ' + Number(payload.eur_krw).toFixed(2) + ')';
+                }
+            }
+            // 통계 카드에 환산 표시 (참고용)
+            applyDashboardFxToStats();
+        }
+    });
+}
+
+function applyDashboardFxToStats() {
+    const priceBookEl = document.getElementById('totalPriceBook');
+    const purchaseEl = document.getElementById('totalPurchase');
+    if (!priceBookEl || !purchaseEl || !dashboardFx) return;
+    const eurPrice = parseFloat(String(priceBookEl.dataset.eurValue || '').replace(/[^\d.-]/g, ''));
+    const eurPurchase = parseFloat(String(purchaseEl.dataset.eurValue || '').replace(/[^\d.-]/g, ''));
+    if (!Number.isFinite(eurPrice) || !Number.isFinite(eurPurchase)) return;
+
+    if (dashboardFx.currency === 'USD' && dashboardFx.eur_usd) {
+        priceBookEl.textContent = '$ ' + (eurPrice * dashboardFx.eur_usd).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        purchaseEl.textContent = '$ ' + (eurPurchase * dashboardFx.eur_usd).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    } else if (dashboardFx.currency === 'KRW' && dashboardFx.eur_krw) {
+        priceBookEl.textContent = '₩ ' + Math.round(eurPrice * dashboardFx.eur_krw).toLocaleString('en-US');
+        purchaseEl.textContent = '₩ ' + Math.round(eurPurchase * dashboardFx.eur_krw).toLocaleString('en-US');
+    } else {
+        priceBookEl.textContent = '€ ' + eurPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        purchaseEl.textContent = '€ ' + eurPurchase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+}
+
+// 페이지 로드 시 데이터 불러오기
+document.addEventListener('DOMContentLoaded', function() {
+    loadProducts();
+    initDashboardFxTable();
+    
+    // 이벤트 위임을 사용한 삭제 버튼 클릭 처리
+    const tableBody = document.getElementById('productsTableBody');
+    if (tableBody) {
+        tableBody.addEventListener('click', function(e) {
+            const deleteBtn = e.target.closest('.delete-btn');
+            if (deleteBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const productId = deleteBtn.getAttribute('data-product-id');
+                const productCode = deleteBtn.getAttribute('data-product-code');
+                const productName = deleteBtn.getAttribute('data-product-name');
+                if (productId) {
+                    if (typeof deleteProduct === 'function') {
+                        deleteProduct(productId, productCode, productName);
+                    } else {
+                        alert('삭제 기능을 사용할 수 없습니다. 페이지를 새로고침해주세요.');
+                    }
+                }
+            }
+        });
+    }
+    
+    // 편집 모달 이벤트
+    const editPriceModal = document.getElementById('editPriceModal');
+    if (editPriceModal) {
+        editPriceModal.addEventListener('show.bs.modal', function() {
+            const saveButton = document.getElementById('savePriceEditBtn');
+            if (saveButton) {
+                saveButton.disabled = false;
+                saveButton.innerHTML = '<i class="fas fa-save me-2"></i>저장';
+            }
+        });
+    }
+});
+
+// 제품 목록 불러오기
+function loadProducts() {
+    const loadingMessage = document.getElementById('loadingMessage');
+    const errorMessage = document.getElementById('errorMessage');
+    const tableBody = document.getElementById('productsTableBody');
+    
+    loadingMessage.style.display = 'block';
+    errorMessage.style.display = 'none';
+    tableBody.innerHTML = '<tr><td colspan="11" class="text-center">데이터를 불러오는 중...</td></tr>';
+    
+    fetch('/api/export_price/dashboard_new')
+        .then(response => response.json())
+        .then(data => {
+            loadingMessage.style.display = 'none';
+            
+            console.log('API 응답 데이터:', data);
+            console.log('제품 수:', data.products ? data.products.length : 0);
+            if (data.products && data.products.length > 0) {
+                console.log('첫 번째 제품 데이터:', data.products[0]);
+            }
+            
+            if (data.success) {
+                allProducts = data.products || [];
+                console.log('allProducts 설정 완료, 개수:', allProducts.length);
+                applyFilters();
+                updateStatistics(data.statistics || {});
+                updateBulkDeleteButton();
+            } else {
+                errorMessage.textContent = data.error || '데이터를 불러오는 중 오류가 발생했습니다.';
+                errorMessage.style.display = 'block';
+                tableBody.innerHTML = '<tr><td colspan="11" class="text-center text-danger">데이터를 불러올 수 없습니다.</td></tr>';
+                updateBulkDeleteButton();
+            }
+        })
+        .catch(error => {
+            loadingMessage.style.display = 'none';
+            errorMessage.textContent = '데이터를 불러오는 중 오류가 발생했습니다: ' + error.message;
+            errorMessage.style.display = 'block';
+            tableBody.innerHTML = '<tr><td colspan="11" class="text-center text-danger">데이터를 불러올 수 없습니다.</td></tr>';
+            updateBulkDeleteButton();
+        });
+}
+
+// 필터 적용
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+    const sortBy = document.getElementById('sortBy').value;
+    const sortOrder = document.getElementById('sortOrder').value;
+    
+    // 검색 필터
+    filteredProducts = allProducts.filter(product => {
+        if (!searchTerm) return true;
+        const code = (product.code || '').toLowerCase();
+        const name = (product.name || '').toLowerCase();
+        return code.includes(searchTerm) || name.includes(searchTerm);
+    });
+    
+    // 정렬
+    filteredProducts.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch(sortBy) {
+            case 'code':
+                aVal = (a.code || '').toLowerCase();
+                bVal = (b.code || '').toLowerCase();
+                break;
+            case 'name':
+                aVal = (a.name || '').toLowerCase();
+                bVal = (b.name || '').toLowerCase();
+                break;
+            case 'category':
+                // 분류 기준 정렬: 카테고리 번호 우선, 같으면 카테고리명
+                const categoryNames = {
+                    1: "파워소스",
+                    2: "타입",
+                    3: "와이어피더",
+                    4: "토치",
+                    5: "호스패키지",
+                    6: "어스",
+                    7: "트롤리",
+                    8: "쿨러",
+                    9: "쿨란트",
+                    10: "가스호스",
+                    11: "용접봉 홀더",
+                    12: "기타",
+                    13: "세트코드",
+                    14: "스페어부품"
+                };
+                const aCategoryNum = a.categoryNumber || 999; // 분류가 없으면 뒤로
+                const bCategoryNum = b.categoryNumber || 999;
+                const aCategoryName = (a.categoryName || categoryNames[aCategoryNum] || '').toLowerCase();
+                const bCategoryName = (b.categoryName || categoryNames[bCategoryNum] || '').toLowerCase();
+                
+                // 먼저 카테고리 번호로 비교
+                if (aCategoryNum !== bCategoryNum) {
+                    aVal = aCategoryNum;
+                    bVal = bCategoryNum;
+                } else {
+                    // 카테고리 번호가 같으면 카테고리명으로 비교
+                    aVal = aCategoryName;
+                    bVal = bCategoryName;
+                }
+                break;
+            case 'priceBook':
+                aVal = a.priceBookPrice || 0;
+                bVal = b.priceBookPrice || 0;
+                break;
+            case 'purchase':
+                aVal = a.purchasePrice || 0;
+                bVal = b.purchasePrice || 0;
+                break;
+            case 'margin':
+                aVal = (a.priceBookPrice || 0) - (a.purchasePrice || 0);
+                bVal = (b.priceBookPrice || 0) - (b.purchasePrice || 0);
+                break;
+            case 'marginRate':
+                const marginA = (a.priceBookPrice || 0) - (a.purchasePrice || 0);
+                const marginB = (b.priceBookPrice || 0) - (b.purchasePrice || 0);
+                aVal = (a.priceBookPrice || 0) > 0 ? (marginA / a.priceBookPrice) * 100 : 0;
+                bVal = (b.priceBookPrice || 0) > 0 ? (marginB / b.priceBookPrice) * 100 : 0;
+                break;
+            default:
+                aVal = (a.code || '').toLowerCase();
+                bVal = (b.code || '').toLowerCase();
+        }
+        
+        if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    currentPage = 1;
+    renderTable();
+}
+
+// 검색 처리
+function handleSearch() {
+    applyFilters();
+}
+
+// 테이블 렌더링
+function renderTable() {
+    const tableBody = document.getElementById('productsTableBody');
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageProducts = filteredProducts.slice(startIndex, endIndex);
+    
+    if (pageProducts.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="12" class="text-center">제품이 없습니다.</td></tr>';
+        document.getElementById('pagination').innerHTML = '';
+        const footer = document.getElementById('productsTableFooter');
+        if (footer) {
+            footer.style.display = 'none';
+        }
+        updateBulkDeleteButton();
+        return;
+    }
+    
+    tableBody.innerHTML = pageProducts.map((product, index) => {
+        const priceBookPrice = product.priceBookPrice || 0;
+        const purchasePrice = product.purchasePrice || 0;
+        const margin = priceBookPrice - purchasePrice;
+        const marginRate = priceBookPrice > 0 
+            ? ((margin / priceBookPrice) * 100).toFixed(2) 
+            : '0.00';
+        
+        // 카테고리 정보 표시
+        const categoryNames = {
+            1: "파워소스",
+            2: "타입",
+            3: "와이어피더",
+            4: "토치",
+            5: "호스패키지",
+            6: "어스",
+            7: "트롤리",
+            8: "쿨러",
+            9: "쿨란트",
+            10: "가스호스",
+            11: "용접봉 홀더",
+            12: "기타",
+            13: "세트코드",
+            14: "스페어부품"
+        };
+        
+        let categoryDisplay = '-';
+        if (product.categoryNumber) {
+            // categoryNames에 정의된 이름을 우선 사용
+            const categoryName = categoryNames[product.categoryNumber] || product.categoryName || `카테고리 ${product.categoryNumber}`;
+            categoryDisplay = `[${product.categoryNumber}] ${categoryName}`;
+        }
+        
+        console.log(`제품 ${index + 1}: code=${product.code}, priceBookPrice=${priceBookPrice}, purchasePrice=${purchasePrice}, category=${categoryDisplay}`);
+        
+        return `
+            <tr>
+                <td class="text-center" style="width: 50px;">
+                    <input type="checkbox" class="product-checkbox" 
+                           data-product-id="${product.id}"
+                           data-product-code="${(product.code || '').replace(/"/g, '&quot;')}"
+                           data-product-name="${(product.name || '').replace(/"/g, '&quot;')}"
+                           onchange="updateBulkDeleteButton()">
+                </td>
+                <td style="white-space: nowrap; width: 130px;">${startIndex + index + 1}</td>
+                <td style="white-space: nowrap; width: 270px;"><strong>${product.code || '-'}</strong></td>
+                <td style="white-space: nowrap; width: 430px;">${product.name || '-'}</td>
+                <td style="white-space: nowrap; width: 300px;">${categoryDisplay}</td>
+                <td class="text-end" style="white-space: nowrap; width: 270px;">€ ${priceBookPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end" style="white-space: nowrap; width: 270px;">€ ${purchasePrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end ${margin >= 0 ? 'text-success' : 'text-danger'}" style="white-space: nowrap; width: 242px;">€ ${margin.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end ${parseFloat(marginRate) >= 0 ? 'text-success' : 'text-danger'}" style="white-space: nowrap; width: 220px;">${marginRate}%</td>
+                <td style="white-space: nowrap; width: 240px;">${product.createdAt ? new Date(product.createdAt).toLocaleDateString('ko-KR') : '-'}</td>
+                <td class="text-center" style="width: 150px;">
+                    <button class="btn btn-sm btn-primary edit-btn" 
+                            data-product-id="${product.id}"
+                            data-product-code="${(product.code || '').replace(/"/g, '&quot;')}"
+                            data-product-name="${(product.name || '').replace(/"/g, '&quot;')}"
+                            data-price-book="${product.priceBookPrice || 0}"
+                            data-purchase-price="${product.purchasePrice || 0}"
+                            data-category-number="${product.categoryNumber || ''}"
+                            title="편집">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </td>
+                <td class="text-center" style="width: 150px;">
+                    <button class="btn btn-sm btn-danger delete-btn" 
+                            data-product-id="${product.id}"
+                            data-product-code="${(product.code || '').replace(/"/g, '&quot;')}"
+                            data-product-name="${(product.name || '').replace(/"/g, '&quot;')}"
+                            title="삭제">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // 합계 계산 및 표시
+    updateTableSummary();
+    updateBulkDeleteButton();
+    renderPagination();
+    
+    // 편집 버튼 이벤트 리스너 추가
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = this.getAttribute('data-product-id');
+            const productCode = this.getAttribute('data-product-code');
+            const productName = this.getAttribute('data-product-name');
+            const priceBookPrice = parseFloat(this.getAttribute('data-price-book')) || 0;
+            const purchasePrice = parseFloat(this.getAttribute('data-purchase-price')) || 0;
+            const categoryNumber = this.getAttribute('data-category-number') || '';
+            openEditModal(productId, productCode, productName, priceBookPrice, purchasePrice, categoryNumber);
+        });
+    });
+}
+
+// 테이블 합계 업데이트
+function updateTableSummary() {
+    const footer = document.getElementById('productsTableFooter');
+    const productCountElement = document.getElementById('totalProductCount');
+    
+    if (!footer) return;
+    
+    if (filteredProducts.length === 0) {
+        footer.style.display = 'none';
+        if (productCountElement) {
+            productCountElement.textContent = '0';
+        }
+        return;
+    }
+    
+    let totalPriceBook = 0;
+    let totalPurchase = 0;
+    let totalMargin = 0;
+    const productCount = filteredProducts.length;
+    
+    filteredProducts.forEach(product => {
+        const priceBookPrice = product.priceBookPrice || 0;
+        const purchasePrice = product.purchasePrice || 0;
+        const margin = priceBookPrice - purchasePrice;
+        totalPriceBook += priceBookPrice;
+        totalPurchase += purchasePrice;
+        totalMargin += margin;
+    });
+    
+    if (productCountElement) {
+        productCountElement.textContent = productCount;
+    }
+    
+    const priceBookSumElement = document.getElementById('totalPriceBookSum');
+    const purchaseSumElement = document.getElementById('totalPurchaseSum');
+    const marginSumElement = document.getElementById('totalMarginSum');
+    const marginRateSumElement = document.getElementById('totalMarginRateSum');
+    
+    if (priceBookSumElement) {
+        priceBookSumElement.textContent = 
+            '€ ' + totalPriceBook.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    
+    if (purchaseSumElement) {
+        purchaseSumElement.textContent = 
+            '€ ' + totalPurchase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    
+    if (marginSumElement) {
+        const marginClass = totalMargin >= 0 ? 'text-success' : 'text-danger';
+        marginSumElement.textContent = 
+            '€ ' + totalMargin.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        marginSumElement.className = 'text-end ' + marginClass;
+    }
+    
+    if (marginRateSumElement) {
+        const totalMarginRate = totalPriceBook > 0 ? (totalMargin / totalPriceBook * 100).toFixed(2) : '0.00';
+        const marginRateClass = parseFloat(totalMarginRate) >= 0 ? 'text-success' : 'text-danger';
+        marginRateSumElement.textContent = totalMarginRate + '%';
+        marginRateSumElement.className = 'text-end ' + marginRateClass;
+    }
+    
+    footer.style.display = '';
+}
+
+// 전체 선택/해제
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.product-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    updateBulkDeleteButton();
+}
+
+// 일괄 삭제 버튼 상태 업데이트
+function updateBulkDeleteButton() {
+    const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.disabled = checkedBoxes.length === 0;
+    }
+}
+
+// 일괄 삭제
+function bulkDeleteProducts() {
+    const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        alert('삭제할 제품을 선택해주세요.');
+        return;
+    }
+    
+    const selectedProducts = Array.from(checkedBoxes).map(cb => ({
+        id: parseInt(cb.getAttribute('data-product-id')),
+        code: cb.getAttribute('data-product-code'),
+        name: cb.getAttribute('data-product-name')
+    }));
+    
+    const productList = selectedProducts.map(p => `- ${p.code}: ${p.name}`).join('\n');
+    
+    if (!confirm(`선택한 ${selectedProducts.length}개의 제품을 삭제하시겠습니까?\n\n${productList}`)) {
+        return;
+    }
+    
+    const productIds = selectedProducts.map(p => p.id);
+    
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const originalText = bulkDeleteBtn.innerHTML;
+    bulkDeleteBtn.disabled = true;
+    bulkDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>삭제 중...';
+    
+    fetch('/api/export_price/bulk_delete_new', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ids: productIds
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                if (text.trim().startsWith('<!')) {
+                    throw new Error(`서버 오류 (${response.status}): HTML 오류 페이지가 반환되었습니다.`);
+                }
+                try {
+                    const errorData = JSON.parse(text);
+                    throw new Error(errorData.error || `서버 오류 (${response.status})`);
+                } catch (e) {
+                    throw new Error(`서버 오류 (${response.status}): ${text.substring(0, 100)}`);
+                }
+            });
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                throw new Error('서버에서 JSON이 아닌 응답을 받았습니다.');
+            });
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            const checkboxes = document.querySelectorAll('.product-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+            }
+            
+            bulkDeleteBtn.disabled = true;
+            bulkDeleteBtn.innerHTML = originalText;
+            
+            alert(`${data.deletedCount || selectedProducts.length}개의 제품이 성공적으로 삭제되었습니다.`);
+            loadProducts();
+        } else {
+            alert('제품 삭제 중 오류가 발생했습니다: ' + (data.error || '알 수 없는 오류'));
+            bulkDeleteBtn.disabled = false;
+            bulkDeleteBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        alert('제품 삭제 중 오류가 발생했습니다: ' + error.message);
+        bulkDeleteBtn.disabled = false;
+        bulkDeleteBtn.innerHTML = originalText;
+    });
+}
+
+// 페이지네이션 렌더링
+function renderPagination() {
+    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+    const pagination = document.getElementById('pagination');
+    
+    if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+    
+    let paginationHTML = '';
+    
+    paginationHTML += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">이전</a>
+        </li>
+    `;
+    
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+            paginationHTML += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+                </li>
+            `;
+        } else if (i === currentPage - 3 || i === currentPage + 3) {
+            paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+    
+    paginationHTML += `
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">다음</a>
+        </li>
+    `;
+    
+    pagination.innerHTML = paginationHTML;
+}
+
+// 페이지 변경
+function changePage(page) {
+    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    renderTable();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// 통계 업데이트
+function updateStatistics(stats) {
+    document.getElementById('totalProductsCount').textContent = stats.totalProducts || 0;
+    const priceBookEl = document.getElementById('totalPriceBook');
+    const purchaseEl = document.getElementById('totalPurchase');
+    const priceBook = stats.totalPriceBook || 0;
+    const purchase = stats.totalPurchase || 0;
+    if (priceBookEl) {
+        priceBookEl.dataset.eurValue = String(priceBook);
+        priceBookEl.textContent = '€ ' + priceBook.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    if (purchaseEl) {
+        purchaseEl.dataset.eurValue = String(purchase);
+        purchaseEl.textContent = '€ ' + purchase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    
+    const avgMarginRate = stats.averageMarginRate || 0;
+    document.getElementById('averageMarginRate').textContent = avgMarginRate.toFixed(2) + '%';
+    document.getElementById('averageMarginRate').className = avgMarginRate >= 0 ? 'text-info' : 'text-danger';
+    if (typeof applyDashboardFxToStats === 'function') {
+        applyDashboardFxToStats();
+    }
+}
+
+// 엑셀 다운로드
+function exportToExcel() {
+    if (!filteredProducts || filteredProducts.length === 0) {
+        alert('다운로드할 데이터가 없습니다.');
+        return;
+    }
+    
+    let exportBtn = document.getElementById('exportExcelBtn');
+    if (!exportBtn) {
+        exportBtn = document.querySelector('button[onclick="exportToExcel()"]');
+    }
+    
+    if (!exportBtn) {
+        alert('엑셀 다운로드 버튼을 찾을 수 없습니다.');
+        return;
+    }
+    
+    const originalText = exportBtn.innerHTML;
+    exportBtn.disabled = true;
+    exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>다운로드 중...';
+    
+    // 카테고리 이름 매핑
+    const categoryNames = {
+        1: "파워소스",
+        2: "타입",
+        3: "와이어피더",
+        4: "토치",
+        5: "호스패키지",
+        6: "어스",
+        7: "트롤리",
+        8: "쿨러",
+        9: "쿨란트",
+        10: "가스호스",
+        11: "용접봉 홀더",
+        12: "기타",
+        13: "세트코드",
+        14: "스페어부품"
+    };
+    
+    const exportData = filteredProducts.map((product, index) => {
+        const categoryNumber = product.categoryNumber || null;
+        const categoryDisplay = categoryNumber 
+            ? `[${categoryNumber}] ${categoryNames[categoryNumber] || ''}` 
+            : '';
+        
+        return {
+            번호: index + 1,
+            제품코드: product.code || '',
+            제품명: product.name || '',
+            분류: categoryDisplay,
+            프라이스북단가: product.priceBookPrice || 0,
+            구매가원가: product.purchasePrice || 0
+        };
+    });
+    
+    fetch('/api/export_price/excel_new', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            products: exportData
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                let errorMsg = `서버 오류 (${response.status})`;
+                try {
+                    const errorData = JSON.parse(text);
+                    if (errorData.error) {
+                        errorMsg += ': ' + errorData.error;
+                    }
+                } catch (e) {
+                    errorMsg += ': ' + text.substring(0, 200);
+                }
+                throw new Error(errorMsg);
+            });
+        }
+        
+        return response.blob();
+    })
+    .then(blob => {
+        if (!blob || blob.size === 0) {
+            throw new Error('다운로드할 파일이 비어있습니다.');
+        }
+        
+        if (blob.size < 100) {
+            return blob.text().then(text => {
+                throw new Error('서버 오류: ' + text.substring(0, 200));
+            });
+        }
+        
+        const url = window.URL.createObjectURL(blob);
+        const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+        const filename = `export_price_new_${dateStr}.xlsx`;
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        a.setAttribute('download', filename);
+        
+        document.body.appendChild(a);
+        
+        setTimeout(() => {
+            a.focus();
+            a.click();
+            
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+                if (document.body.contains(a)) {
+                    document.body.removeChild(a);
+                }
+                
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = originalText;
+            }, 2000);
+        }, 100);
+    })
+    .catch(error => {
+        alert('엑셀 다운로드 중 오류가 발생했습니다.\n\n오류 내용: ' + error.message);
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = originalText;
+        }
+    });
+}
+
+// 편집 모달 열기
+function openEditModal(productId, productCode, productName, priceBookPrice, purchasePrice, categoryNumber) {
+    const saveButton = document.getElementById('savePriceEditBtn');
+    if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.innerHTML = '<i class="fas fa-save me-2"></i>저장';
+    }
+    
+    document.getElementById('editProductId').value = productId;
+    document.getElementById('editProductCode').value = productCode || '';
+    document.getElementById('editProductName').value = productName || '';
+    document.getElementById('editPriceBookPrice').value = priceBookPrice || 0;
+    document.getElementById('editPurchasePrice').value = purchasePrice || 0;
+    document.getElementById('editCategory').value = categoryNumber || '';
+    document.getElementById('editPriceError').style.display = 'none';
+    document.getElementById('editPriceError').textContent = '';
+    
+    const modalElement = document.getElementById('editPriceModal');
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
+    modal.show();
+}
+
+// 가격 편집 저장
+function savePriceEdit() {
+    const productId = document.getElementById('editProductId').value;
+    const productCode = document.getElementById('editProductCode').value;
+    const productName = document.getElementById('editProductName').value.trim();
+    const priceBookPrice = parseFloat(document.getElementById('editPriceBookPrice').value);
+    const purchasePrice = parseFloat(document.getElementById('editPurchasePrice').value);
+    const categoryNumber = document.getElementById('editCategory').value;
+    const errorDiv = document.getElementById('editPriceError');
+    
+    // 제품명 검증
+    if (!productName) {
+        errorDiv.textContent = '제품명을 입력해주세요.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    if (isNaN(priceBookPrice) || priceBookPrice < 0) {
+        errorDiv.textContent = '프라이스북 단가를 올바르게 입력해주세요.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    if (isNaN(purchasePrice) || purchasePrice < 0) {
+        errorDiv.textContent = '구매가 원가를 올바르게 입력해주세요.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    errorDiv.style.display = 'none';
+    
+    const saveButton = document.getElementById('savePriceEditBtn');
+    if (!saveButton) {
+        errorDiv.textContent = '저장 버튼을 찾을 수 없습니다.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    const originalText = saveButton.innerHTML;
+    saveButton.disabled = true;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>저장 중...';
+    
+    const requestData = {
+        id: parseInt(productId),
+        productCode: productCode,
+        productName: productName,
+        priceBookPrice: priceBookPrice,
+        purchasePrice: purchasePrice,
+        categoryNumber: categoryNumber && categoryNumber !== '' ? parseInt(categoryNumber) : null
+    };
+    
+    fetch('/api/export_price/update_new', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                if (text.trim().startsWith('<!')) {
+                    throw new Error(`서버 오류 (${response.status}): HTML 오류 페이지가 반환되었습니다.`);
+                }
+                try {
+                    const errorData = JSON.parse(text);
+                    throw new Error(errorData.error || `서버 오류 (${response.status})`);
+                } catch (e) {
+                    throw new Error(`서버 오류 (${response.status}): ${text.substring(0, 100)}`);
+                }
+            });
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                throw new Error('서버에서 JSON이 아닌 응답을 받았습니다.');
+            });
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            saveButton.disabled = false;
+            saveButton.innerHTML = originalText;
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editPriceModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            alert('가격이 성공적으로 업데이트되었습니다.');
+            loadProducts();
+        } else {
+            errorDiv.textContent = data.error || '가격 업데이트 중 오류가 발생했습니다.';
+            errorDiv.style.display = 'block';
+            saveButton.disabled = false;
+            saveButton.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        errorDiv.textContent = '가격 업데이트 중 오류가 발생했습니다: ' + error.message;
+        errorDiv.style.display = 'block';
+        saveButton.disabled = false;
+        saveButton.innerHTML = originalText;
+    });
+}
+
+// 제품 추가 모달 열기
+function openAddProductModal() {
+    const saveButton = document.getElementById('saveAddProductBtn');
+    if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.innerHTML = '<i class="fas fa-save me-2"></i>추가';
+    }
+    
+    document.getElementById('addProductCode').value = '';
+    document.getElementById('addProductName').value = '';
+    document.getElementById('addPriceBookPrice').value = '';
+    document.getElementById('addPurchasePrice').value = '';
+    document.getElementById('addCategory').value = '';
+    document.getElementById('addProductError').style.display = 'none';
+    document.getElementById('addProductError').textContent = '';
+    
+    const modalElement = document.getElementById('addProductModal');
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
+    modal.show();
+}
+
+// 제품 추가 저장
+function saveAddProduct() {
+    const productCode = document.getElementById('addProductCode').value.trim();
+    const productName = document.getElementById('addProductName').value.trim();
+    const priceBookPrice = parseFloat(document.getElementById('addPriceBookPrice').value);
+    const purchasePrice = parseFloat(document.getElementById('addPurchasePrice').value);
+    const categoryNumber = document.getElementById('addCategory').value;
+    const errorDiv = document.getElementById('addProductError');
+    
+    if (!productCode) {
+        errorDiv.textContent = '제품코드를 입력해주세요.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    if (isNaN(priceBookPrice) || priceBookPrice < 0) {
+        errorDiv.textContent = '프라이스북 단가를 올바르게 입력해주세요.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    if (isNaN(purchasePrice) || purchasePrice < 0) {
+        errorDiv.textContent = '구매가 원가를 올바르게 입력해주세요.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    errorDiv.style.display = 'none';
+    
+    const saveButton = document.getElementById('saveAddProductBtn');
+    if (!saveButton) {
+        errorDiv.textContent = '저장 버튼을 찾을 수 없습니다.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    const originalText = saveButton.innerHTML;
+    saveButton.disabled = true;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>추가 중...';
+    
+    fetch('/api/export_price/add_new', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            productCode: productCode,
+            productName: productName,
+            priceBookPrice: priceBookPrice,
+            purchasePrice: purchasePrice,
+            categoryNumber: categoryNumber && categoryNumber.trim() !== '' ? parseInt(categoryNumber) : null
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                if (text.trim().startsWith('<!')) {
+                    throw new Error(`서버 오류 (${response.status}): HTML 오류 페이지가 반환되었습니다.`);
+                }
+                try {
+                    const errorData = JSON.parse(text);
+                    throw new Error(errorData.error || `서버 오류 (${response.status})`);
+                } catch (e) {
+                    throw new Error(`서버 오류 (${response.status}): ${text.substring(0, 100)}`);
+                }
+            });
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                throw new Error('서버에서 JSON이 아닌 응답을 받았습니다.');
+            });
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            saveButton.disabled = false;
+            saveButton.innerHTML = originalText;
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addProductModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            alert('제품이 성공적으로 추가되었습니다.');
+            loadProducts();
+        } else {
+            errorDiv.textContent = data.error || '제품 추가 중 오류가 발생했습니다.';
+            errorDiv.style.display = 'block';
+            saveButton.disabled = false;
+            saveButton.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        errorDiv.textContent = '제품 추가 중 오류가 발생했습니다: ' + error.message;
+        errorDiv.style.display = 'block';
+        saveButton.disabled = false;
+        saveButton.innerHTML = originalText;
+    });
+}
+
+// 제품 삭제
+function deleteProduct(productId, productCode, productName) {
+    if (!productId) {
+        alert('제품 ID가 없습니다.');
+        return;
+    }
+    
+    if (!confirm(`제품을 삭제하시겠습니까?\n\n제품코드: ${productCode}\n제품명: ${productName}`)) {
+        return;
+    }
+    
+    fetch('/api/export_price/delete_new', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            id: parseInt(productId)
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                if (text.trim().startsWith('<!')) {
+                    throw new Error(`서버 오류 (${response.status}): HTML 오류 페이지가 반환되었습니다.`);
+                }
+                try {
+                    const errorData = JSON.parse(text);
+                    throw new Error(errorData.error || `서버 오류 (${response.status})`);
+                } catch (e) {
+                    throw new Error(`서버 오류 (${response.status}): ${text.substring(0, 100)}`);
+                }
+            });
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                throw new Error('서버에서 JSON이 아닌 응답을 받았습니다.');
+            });
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            alert('제품이 성공적으로 삭제되었습니다.');
+            loadProducts();
+        } else {
+            alert('제품 삭제 중 오류가 발생했습니다: ' + (data.error || '알 수 없는 오류'));
+        }
+    })
+    .catch(error => {
+        alert('제품 삭제 중 오류가 발생했습니다: ' + error.message);
+    });
+}
+</script>
+{% endblock %}
+
+

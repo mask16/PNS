@@ -1,0 +1,2206 @@
+{% extends "base.html" %}
+
+{% block title %}{% if lang == 'ENG' %}Export Quotation (Customer){% else %}수출견적서(고객){% endif %} - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/product_name_glossary.css') }}">
+<script src="{{ url_for('static', filename='js/product_name_glossary.js') }}"></script>
+<script>
+// 언어 확인 (URL 파라미터 우선, 그 다음 sessionStorage, 기본값 KOR)
+const urlParams = new URLSearchParams(window.location.search);
+const urlLang = urlParams.get('lang');
+const LANGUAGE_STORAGE_KEY = 'pnsLanguage';
+let currentLang = urlLang ? urlLang.toUpperCase() : (sessionStorage.getItem(LANGUAGE_STORAGE_KEY) || 'KOR');
+// 서버에서 전달된 lang이 있으면 우선 사용
+const serverLang = '{{ lang|default("") }}';
+if (serverLang) {
+    currentLang = serverLang.toUpperCase();
+}
+
+window.PNS_CAN_VIEW_EXPORT_COST = false;
+
+function canViewExportCostNow() {
+    return false;
+}
+
+function applyExportCostVisibility() {
+    document.body.classList.remove('show-export-cost');
+    window.PNS_CAN_VIEW_EXPORT_COST = false;
+}
+
+const translations = {
+    KOR: {
+        pageTitle: '수출견적서(고객)',
+        additionalCosts: '추가비용',
+        sales: '판매',
+        purchase: '구매',
+        shipping: '운임',
+        discountRate: '할인율',
+        productInfo: '제품 정보',
+        search: '조회',
+        excelDownload: '엑셀 다운로드',
+        productCode: '제품코드',
+        productName: '제품명',
+        quantity: '수량',
+        priceBook: '프라이스북',
+        discounted: '할인가',
+        shippingSales: '운임(판매)',
+        finalSales: '최종 판매가',
+        unitPrice: '단가',
+        total: '합계',
+        totalSum: '총 합계',
+        searchProducts: '제품 조회',
+        productSearch: '제품 검색',
+        productSearchPlaceholder: '제품코드 또는 제품명으로 검색',
+        selectAll: '전체 선택',
+        addSelected: '선택한 제품 추가',
+        cancel: '취소',
+        noProducts: '제품이 없습니다.',
+        noSearchResults: '검색 결과가 없습니다.',
+        excelDownloadError: '엑셀 다운로드 중 오류가 발생했습니다.',
+        noProductsToDownload: '다운로드할 제품이 없습니다.',
+        enterIdPw: 'ID와 비밀번호를 모두 입력해주세요.',
+        authFailed: '인증에 실패했습니다. ID와 비밀번호를 확인해주세요.',
+        selectProductsToAdd: '추가할 제품을 선택해주세요.',
+        excelDownloadFunctionNotFound: '엑셀 다운로드 함수를 찾을 수 없습니다. 페이지를 새로고침해주세요.',
+        excelDownloadError: '엑셀 다운로드 중 오류가 발생했습니다: ',
+        collapse: '접기',
+        expand: '펼치기',
+        bulkDelete: '일괄삭제',
+        confirmDeleteAll: '모든 제품을 삭제하시겠습니까?',
+        allProductsDeleted: '모든 제품이 삭제되었습니다.'
+    },
+    ENG: {
+        pageTitle: 'Export Quotation (Customer)',
+        additionalCosts: 'Additional Costs',
+        sales: 'Sales',
+        purchase: 'Purchase',
+        shipping: 'Shipping',
+        discountRate: 'Discount Rate',
+        productInfo: 'Product Information',
+        search: 'Search',
+        excelDownload: 'Excel Download',
+        productCode: 'Product Code',
+        productName: 'Product Name',
+        quantity: 'Quantity',
+        priceBook: 'Price Book',
+        discounted: 'Discounted',
+        shippingSales: 'Shipping (Sales)',
+        finalSales: 'Final Sales Price',
+        unitPrice: 'Unit Price',
+        total: 'Total',
+        totalSum: 'Total Sum',
+        searchProducts: 'Search Products',
+        productSearch: 'Product Search',
+        productSearchPlaceholder: 'Search by product code or name',
+        selectAll: 'Select All',
+        addSelected: 'Add Selected Products',
+        cancel: 'Cancel',
+        noProducts: 'No products',
+        noSearchResults: 'No search results',
+        excelDownloadError: 'An error occurred while downloading Excel.',
+        noProductsToDownload: 'No products to download.',
+        enterIdPw: 'Please enter both ID and password.',
+        authFailed: 'Authentication failed. Please check your ID and password.',
+        selectProductsToAdd: 'Please select products to add.',
+        excelDownloadFunctionNotFound: 'Excel download function not found. Please refresh the page.',
+        excelDownloadError: 'An error occurred while downloading Excel: ',
+        collapse: 'Collapse',
+        expand: 'Expand',
+        bulkDelete: 'Delete All',
+        confirmDeleteAll: 'Are you sure you want to delete all products?',
+        allProductsDeleted: 'All products have been deleted.'
+    }
+};
+
+function t(key) {
+    return translations[currentLang]?.[key] || translations.KOR[key] || key;
+}
+
+function updatePageLanguage() {
+    const lang = currentLang === 'ENG' ? 'eng' : 'kor';
+    const langAttr = `data-lang-${lang}`;
+    
+    // 모든 data-lang 속성이 있는 요소 업데이트
+    document.querySelectorAll('[data-lang-kor], [data-lang-eng]').forEach(element => {
+        const langText = element.getAttribute(langAttr);
+        if (langText) {
+            const textSpan = element.querySelector('.lang-text');
+            if (textSpan) {
+                textSpan.textContent = langText;
+            } else if (element.tagName === 'TH' || element.tagName === 'TD' || element.tagName === 'STRONG' || element.tagName === 'LABEL') {
+                element.textContent = langText;
+            } else {
+                const existingText = element.textContent.trim();
+                if (existingText) {
+                    element.textContent = langText;
+                }
+            }
+        }
+    });
+    
+    // placeholder 업데이트
+    document.querySelectorAll('[data-lang-kor-placeholder], [data-lang-eng-placeholder]').forEach(input => {
+        const placeholderAttr = `data-lang-${lang}-placeholder`;
+        const placeholder = input.getAttribute(placeholderAttr);
+        if (placeholder) {
+            input.placeholder = placeholder;
+        }
+    });
+    
+    // 접기/펼치기 버튼 텍스트 업데이트
+    const toggleText = document.getElementById('toggleProductInfoText');
+    const toggleIcon = document.getElementById('toggleProductInfoIcon');
+    if (toggleText && toggleIcon) {
+        const isCollapsed = document.getElementById('productInfoCardBody')?.style.display === 'none';
+        if (isCollapsed) {
+            toggleText.textContent = currentLang === 'ENG' ? 'Expand' : '펼치기';
+        } else {
+            toggleText.textContent = currentLang === 'ENG' ? 'Collapse' : '접기';
+        }
+    }
+}
+</script>
+<style>
+    .code-name-tooltip {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+    }
+    .code-name-tooltip:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        left: 0;
+        top: 100%;
+        background-color: #333;
+        color: #fff;
+        padding: 5px 10px;
+        border-radius: 4px;
+        white-space: normal;
+        word-wrap: break-word;
+        max-width: 400px;
+        z-index: 10000;
+        font-size: 0.8rem;
+        margin-top: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    /* 고객: 원가/마진 항상 숨김 */
+    #productTable .cost-column-header,
+    #productTable .cost-column {
+        display: none !important;
+    }
+    #productTable .margin-column-header,
+    #productTable .margin-column {
+        display: none !important;
+    }
+    #searchProductsModal .hide-purchase-cost {
+        display: none !important;
+    }
+    .customer-hide-cost {
+        display: none !important;
+    }
+    /* P51-P54 추가 시 판매가 부분 숨김 처리 */
+    #productTable.hide-sales-price .sales-price-header,
+    #productTable.hide-sales-price .sales-price-column {
+        display: none !important;
+    }
+    /* 제품정보 테이블이 항상 전체 너비를 차지하도록 설정 */
+    #productTable {
+        min-width: 100% !important;
+        width: 100% !important;
+    }
+    #productTable tbody tr td[colspan] {
+        width: 100% !important;
+    }
+    .table-responsive {
+        min-width: 100% !important;
+        width: 100% !important;
+    }
+    /* SAP 코드 칸 너비 고정 - 모든 행에 적용 */
+    #productTable thead th:nth-child(1),
+    #productTable tbody td:nth-child(1),
+    #productTable tfoot th:nth-child(1),
+    #productTable tfoot td:nth-child(1) {
+        width: 120px !important;
+        min-width: 120px !important;
+        max-width: 120px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+    #productTable tbody td:nth-child(1) > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+    #productTable tbody td:nth-child(1) input {
+        max-width: calc(100% - 30px) !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        box-sizing: border-box !important;
+    }
+    /* 코드명 칸 너비 제한 - 모든 행에 적용 */
+    #productTable thead th:nth-child(2),
+    #productTable tbody td:nth-child(2),
+    #productTable tfoot th:nth-child(2),
+    #productTable tfoot td:nth-child(2) {
+        width: 300px !important;
+        max-width: 300px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+    /* 하위품목 코드명 칸 툴팁을 위한 예외 처리 */
+    #productTable tbody tr[style*="background-color: #e6f3ff"] td:nth-child(2) {
+        overflow: visible !important;
+    }
+    #productTable tbody td:nth-child(2) > div,
+    #productTable tbody td:nth-child(2) input {
+        max-width: 100% !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        box-sizing: border-box !important;
+    }
+    /* 코드명 툴팁 예외 처리 */
+    #productTable tbody td:nth-child(2) > div.code-name-tooltip {
+        overflow: visible !important;
+    }
+    /* 수량 칸 너비 고정 - 모든 행에 적용 */
+    #productTable thead th:nth-child(3),
+    #productTable tbody td:nth-child(3),
+    #productTable tfoot th:nth-child(3),
+    #productTable tfoot td:nth-child(3) {
+        width: 20px !important;
+        min-width: 20px !important;
+        max-width: 20px !important;
+        padding: 0.1rem !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+    #productTable td:nth-child(3) input {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        padding: 0.05rem 0.1rem !important;
+        font-size: 0.65rem !important;
+        text-align: center !important;
+    }
+    
+    /* 모바일/태블릿 반응형 스타일 */
+    @media (max-width: 991.98px) {
+        /* 제품 정보 테이블 카드 스타일 조정 */
+        #productTable {
+            font-size: 0.75rem !important;
+        }
+        
+        #productTable th,
+        #productTable td {
+            padding: 0.3rem 0.2rem !important;
+            font-size: 0.7rem !important;
+        }
+        
+        /* 세트코드 카드 모바일 대응 */
+        #setCodeCard .card {
+            width: 100% !important;
+            margin-left: 0% !important;
+        }
+        
+        #setCodeCard .card-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 0.5rem;
+        }
+        
+        #setCodeCard .d-flex.gap-4 {
+            flex-direction: column;
+            gap: 0.5rem !important;
+            width: 100%;
+        }
+        
+        /* 제품 정보 테이블 카드 모바일 대응 */
+        .row > .col-12 > .card {
+            width: 100% !important;
+            margin-left: 0% !important;
+        }
+        
+        /* 테이블 가로 스크롤 활성화 */
+        .table-responsive {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* 모바일에서 테이블 최소 너비 유지 */
+        #productTable {
+            min-width: 1000px !important;
+        }
+        
+        /* 버튼 크기 조정 */
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        
+        /* 입력 필드 크기 조정 */
+        .form-control-sm {
+            padding: 0.15rem 0.3rem;
+            font-size: 0.7rem;
+        }
+    }
+    
+    /* 태블릿 스타일 (768px ~ 991px) */
+    @media (min-width: 768px) and (max-width: 991.98px) {
+        #productTable {
+            font-size: 0.8rem !important;
+        }
+        
+        #productTable th,
+        #productTable td {
+            padding: 0.4rem 0.3rem !important;
+            font-size: 0.75rem !important;
+        }
+    }
+    
+    /* PC 스타일 유지 (992px 이상) */
+    @media (min-width: 992px) {
+        /* PC에서는 기존 스타일 그대로 유지 */
+        .row > .col-12 > .card {
+            width: 150% !important;
+            margin-left: -25% !important;
+        }
+        
+        #setCodeCard .card {
+            width: 150% !important;
+            margin-left: -25% !important;
+        }
+    }
+    /* 수량 입력 필드 테두리 완전 제거 및 가운데 정렬 */
+    input.quantity-input,
+    input.quantity-input:focus,
+    input.quantity-input:hover,
+    input.quantity-input:active,
+    input.quantity-input:focus-visible,
+    input.quantity-input:focus-within,
+    input[type="number"].quantity-input,
+    input[type="number"].quantity-input:focus,
+    input[type="number"].quantity-input:hover,
+    input[type="number"].quantity-input:active {
+        border: none !important;
+        border-width: 0 !important;
+        border-style: none !important;
+        border-color: transparent !important;
+        border-top: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        border-left: none !important;
+        outline: none !important;
+        outline-width: 0 !important;
+        outline-style: none !important;
+        outline-color: transparent !important;
+        outline-offset: 0 !important;
+        box-shadow: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        line-height: inherit !important;
+        display: inline-block !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: textfield !important;
+        font-size: 0.85rem !important;
+        font-family: inherit !important;
+        font-weight: inherit !important;
+        height: auto !important;
+    }
+    /* Bootstrap form-control 클래스 오버라이드 */
+    .form-control.quantity-input,
+    .form-control-sm.quantity-input,
+    input.form-control.quantity-input,
+    input.form-control-sm.quantity-input {
+        border: none !important;
+        border-width: 0 !important;
+        border-style: none !important;
+        border-color: transparent !important;
+        border-top: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        border-left: none !important;
+        outline: none !important;
+        outline-width: 0 !important;
+        box-shadow: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: textfield !important;
+    }
+    /* 수량 입력 필드가 있는 td 스타일 */
+    td input.quantity-input {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    /* 접기/펼치기 버튼: 파란 배경으로 가독성 확보 */
+    #toggleProductInfoBtn {
+        background-color: #0d6efd !important;
+        color: #ffffff !important;
+        border-color: #0d6efd !important;
+    }
+    #toggleProductInfoBtn:hover {
+        background-color: #0b5ed7 !important;
+        color: #ffffff !important;
+        border-color: #0a58ca !important;
+    }
+</style>
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12">
+            <h2 style="color: #000000 !important;" data-lang-kor="수출견적서(고객)" data-lang-eng="Export Quotation (Customer)">
+                <span class="lang-text">수출견적서(고객)</span>
+            </h2>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- 요약 섹션 -->
+        <div class="col-12 col-md-6 mb-3 mb-md-0 customer-hide-cost col-section">
+            <div class="card">
+                <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                    <h5 class="mb-0" style="color: #000000 !important;">
+                        <i class="fas fa-chart-line me-2"></i>
+                        요약
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th class="text-center currency-clickable" data-currency="EUR" style="cursor:pointer;" title="EUR 환율 적용">EURO</th>
+                                <th class="text-center currency-clickable" data-currency="USD" style="cursor:pointer;" title="USD 환율 적용">USD</th>
+                                <th class="text-center currency-clickable" data-currency="KRW" style="cursor:pointer;" title="KRW 환율 적용">KRW</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>총 판매 금액</strong></td>
+                                <td class="text-end" id="totalSalesEUR" style="background-color: #e0e0e0;">€ 0.00</td>
+                                <td class="text-end" id="totalSalesUSD" style="background-color: #e0e0e0;">$ 0.00</td>
+                                <td class="text-end" id="totalSalesKRW" style="background-color: #e0e0e0;">₩ 0</td>
+                            </tr>
+                            <tr>
+                                <td><strong>판매 이익금</strong></td>
+                                <td class="text-end" id="salesProfitEUR" style="background-color: #e0e0e0;">€ 0.00</td>
+                                <td class="text-end" id="salesProfitUSD" style="background-color: #e0e0e0;">$ 0.00</td>
+                                <td class="text-end" id="salesProfitKRW" style="background-color: #e0e0e0;">₩ 0</td>
+                            </tr>
+                            <tr>
+                                <td><strong>총 마진율</strong></td>
+                                <td colspan="3" class="text-center" style="background-color: #e0e0e0;">
+                                    <h4 class="text-primary mb-0" id="totalMarginRate">0%</h4>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>환율</strong></td>
+                                <td colspan="3">
+                                    <div class="input-group input-group-sm mb-2">
+                                        <span class="input-group-text" id="fxRatePrefix">1 EUR =</span>
+                                        <input type="number" class="form-control" id="krwExchangeRate" value="1700" step="0.01" min="0.0001" onchange="updateCalculations()" style="background-color: #ffcccc;">
+                                        <span class="input-group-text" id="fxRateSuffix">KRW</span>
+                                    </div>
+                                    <div id="exportFxRateTablePublic"></div>
+                                    <input type="hidden" id="selectedQuoteCurrency" value="KRW">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 추가비용 섹션 -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                    <h5 class="mb-0" style="color: #ffffff !important;" data-lang-kor="추가비용" data-lang-eng="Additional Costs">
+                        <span class="lang-text" style="color: #ffffff !important;">추가비용</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th class="text-center" data-lang-kor="판매" data-lang-eng="Sales">판매</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong data-lang-kor="운임" data-lang-eng="Shipping">운임</strong></td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm" id="shippingSales" value="1500" step="1" min="0" onchange="updateCalculations()" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, '');" style="background-color: #ffcccc;">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong data-lang-kor="할인율" data-lang-eng="Discount Rate">할인율</strong></td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" id="discountRateSales" value="10" step="1" min="0" max="80" onchange="updateCalculations()" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, ''); if(this.value > 80) this.value = 80;" style="background-color: #ffcccc;">
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="customer-hide-cost">
+                                        <td><strong>부대비용</strong></td>
+                                        <td>
+                                            <span class="form-control form-control-sm bg-light"></span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 세트코드 정보 카드 -->
+    <div class="row mb-3" id="setCodeCard" style="display: none;">
+        <div class="col-12" style="overflow: visible !important;">
+            <div class="card" style="overflow: visible !important; width: 150%; margin-left: -25%;">
+                <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0" style="color: #000000 !important;">
+                            <i class="fas fa-box me-2"></i>
+                            <span data-lang-kor="세트코드" data-lang-eng="Set Code">세트코드:</span>
+                            <strong id="setCodeDisplay" class="ms-2"></strong>
+                            <span id="setCodeNameDisplay" class="ms-2" style="font-weight: normal; color: #666;"></span>
+                        </h5>
+                        <div class="d-flex align-items-center gap-4">
+                            <div>
+                                <small class="text-muted" data-lang-kor="원판매가격" data-lang-eng="Original Price">원판매가격:</small>
+                                <strong id="originalPriceDisplay" class="ms-2"></strong>
+                            </div>
+                            <div>
+                                <small class="text-muted" data-lang-kor="할인 판매가격" data-lang-eng="Discounted Price">할인 판매가격:</small>
+                                <strong id="discountedPriceDisplay" class="ms-2"></strong>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-light" id="toggleProductInfoBtn" onclick="toggleProductInfo()" style="margin-left: 1rem; background-color: #0d6efd !important; color: #ffffff !important; border-color: #0d6efd;">
+                                <i class="fas fa-chevron-up" id="toggleProductInfoIcon"></i>
+                                <span data-lang-kor="접기" data-lang-eng="Collapse" id="toggleProductInfoText">접기</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 제품 정보 테이블 -->
+    <div class="row">
+        <div class="col-12" style="overflow: visible !important;">
+            <div class="card" id="productInfoCard" style="overflow: visible !important; width: 150%; margin-left: -25%;">
+                <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0" style="color: #000000 !important;" data-lang-kor="제품 정보" data-lang-eng="Product Information">
+                            <span class="lang-text">제품 정보</span>
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-danger btn-sm" id="bulkDeleteBtn" data-lang-kor="일괄삭제" data-lang-eng="Delete All" style="background-color: #dc3545 !important; color: #ffffff !important; border: 1px solid #dc3545 !important;">
+                                <i class="fas fa-trash-alt me-1"></i><span class="lang-text">일괄삭제</span>
+                            </button>
+                            <button type="button" class="btn btn-sm" id="searchProductsBtn" data-lang-kor="조회" data-lang-eng="Search" style="background-color: #0d6efd !important; color: #ffffff !important; border: 1px solid #0d6efd !important;">
+                                <i class="fas fa-search me-1" style="color: #ffffff !important;"></i><span class="lang-text" style="color: #ffffff !important;">조회</span>
+                            </button>
+                            <button type="button" class="btn btn-sm" id="priceBookPdfBtn" data-lang-kor="PRICE BOOK 다운" data-lang-eng="PRICE BOOK Download" style="background-color: #ffc107 !important; color: #212529 !important; border: 1px solid #ffc107 !important;">
+                                <span class="lang-text">PRICE BOOK 다운</span>
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm" id="exportExcelBtn" data-lang-kor="엑셀 다운로드" data-lang-eng="Excel Download" style="display: none !important;">
+                                <i class="fas fa-file-excel me-1"></i><span class="lang-text">엑셀 다운로드</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" id="productInfoCardBody" style="padding: 0.5rem !important; overflow: visible !important;">
+                    <div class="table-responsive" style="overflow-x: visible !important; overflow-y: visible !important; width: 100%;">
+                        <table class="table table-bordered table-hover" id="productTable" style="border-collapse: separate; border-spacing: 0; table-layout: fixed; width: 100%; margin: 0; font-size: 0.85rem;">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th colspan="3" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; max-width: 440px !important;" data-lang-kor="제품정보" data-lang-eng="Product Information">제품정보</th>
+                                    <th colspan="8" class="sales-price-header" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; width: 38%;" data-lang-kor="판매가" data-lang-eng="Sales Price">판매가</th>
+                                    <th colspan="8" class="cost-column-header" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; width: 38%;" data-lang-kor="원가" data-lang-eng="Cost">원가</th>
+                                    <th class="margin-column-header" style="background-color: #800020 !important; text-align: center; vertical-align: middle; border: 2px solid #ffffff !important; width: 4%;" data-lang-kor="마진" data-lang-eng="Margin">마진</th>
+                                </tr>
+                                <tr>
+                                    <th rowspan="2" style="background-color: #800020 !important; text-align: center; vertical-align: middle; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; width: 120px !important; min-width: 120px !important; max-width: 120px !important;" data-lang-kor="SAP 코드" data-lang-eng="SAP Code">SAP 코드</th>
+                                    <th rowspan="2" style="background-color: #800020 !important; text-align: center; vertical-align: middle; border: 2px solid #ffffff !important; width: 300px !important; max-width: 300px !important;" data-lang-kor="코드명" data-lang-eng="Product Name">코드명</th>
+                                    <th rowspan="2" style="background-color: #800020 !important; text-align: center; vertical-align: middle; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; width: 20px !important; min-width: 20px !important; max-width: 20px !important; padding: 0.1rem !important;" data-lang-kor="수량" data-lang-eng="Quantity">수량</th>
+                                    <th colspan="2" class="sales-price-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="프라이스북" data-lang-eng="Price Book">프라이스북</th>
+                                    <th colspan="2" class="sales-price-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="할인가" data-lang-eng="Discounted">할인가</th>
+                                    <th colspan="2" class="sales-price-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="운임(판매)" data-lang-eng="Shipping (Sales)">운임(판매)</th>
+                                    <th colspan="2" class="sales-price-header" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;" data-lang-kor="최종 판매가" data-lang-eng="Final Sales Price">최종 판매가</th>
+                                    <th colspan="2" class="cost-column-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="구매가" data-lang-eng="Purchase Price">구매가</th>
+                                    <th colspan="2" class="cost-column-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="운임(구매)" data-lang-eng="Shipping (Purchase)">운임(구매)</th>
+                                    <th colspan="2" class="cost-column-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="부대비용" data-lang-eng="Incidental Expense">부대비용</th>
+                                    <th colspan="2" class="cost-column-header" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;" data-lang-kor="최종 원가" data-lang-eng="Final Cost">최종 원가</th>
+                                    <th rowspan="2" class="margin-column-header" style="background-color: #800020 !important; text-align: center; vertical-align: middle; border: 2px solid #ffffff !important; width: 5%;" data-lang-kor="마진" data-lang-eng="Margin">마진</th>
+                                </tr>
+                                <tr>
+                                    <th class="sales-price-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="단가" data-lang-eng="Unit Price">단가</th>
+                                    <th class="sales-price-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="합계" data-lang-eng="Total">합계</th>
+                                    <th class="sales-price-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="단가" data-lang-eng="Unit Price">단가</th>
+                                    <th class="sales-price-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="합계" data-lang-eng="Total">합계</th>
+                                    <th class="sales-price-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="단가" data-lang-eng="Unit Price">단가</th>
+                                    <th class="sales-price-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="합계" data-lang-eng="Total">합계</th>
+                                    <th class="sales-price-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="단가" data-lang-eng="Unit Price">단가</th>
+                                    <th class="sales-price-header" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;" data-lang-kor="합계" data-lang-eng="Total">합계</th>
+                                    <th class="cost-column-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="구매가 원가" data-lang-eng="Purchase Price">구매가 원가</th>
+                                    <th class="cost-column-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="합계" data-lang-eng="Total">합계</th>
+                                    <th class="cost-column-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="단가" data-lang-eng="Unit Price">단가</th>
+                                    <th class="cost-column-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="합계" data-lang-eng="Total">합계</th>
+                                    <th class="cost-column-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="단가" data-lang-eng="Unit Price">단가</th>
+                                    <th class="cost-column-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="합계" data-lang-eng="Total">합계</th>
+                                    <th class="cost-column-header" style="background-color: #800020 !important; text-align: center; border: 2px solid #ffffff !important;" data-lang-kor="단가" data-lang-eng="Unit Price">단가</th>
+                                    <th class="cost-column-header" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;" data-lang-kor="합계" data-lang-eng="Total">합계</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productTableBody">
+                                <tr>
+                                    <td colspan="11" class="text-center" style="border: 2px solid #ffffff !important; width: 100%;">제품을 조회하여 추가해주세요.</td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="table-secondary">
+                                <tr style="font-weight: bold; background-color: #e0e0e0 !important;">
+                                    <th colspan="2" style="text-align: right; background-color: #e0e0e0 !important; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; width: auto !important; max-width: none !important;" data-lang-kor="총 합계" data-lang-eng="Total Sum">총 합계</th>
+                                    <th id="totalQuantity" style="text-align: center; background-color: #e0e0e0 !important; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; width: 20px !important; min-width: 20px !important; max-width: 20px !important; padding: 0.1rem !important;">0</th>
+                                    <th id="totalPriceBookUnit" class="sales-price-column" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important; font-weight: bold !important; color: #000000 !important;"></th>
+                                    <th id="totalPriceBook" class="sales-price-column" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important; font-weight: bold !important; color: #000000 !important;"></th>
+                                    <th class="sales-price-column" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th id="totalDiscounted" class="sales-price-column" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th class="sales-price-column" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th id="totalShippingSales" class="sales-price-column" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th class="sales-price-column" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th id="totalFinalSales" class="sales-price-column" style="text-align: right; background-color: #e0e0e0 !important; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;"></th>
+                                    <th class="cost-column" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th class="cost-column" id="totalPurchase" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th class="cost-column" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th class="cost-column" id="totalShippingPurchase" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th class="cost-column" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th class="cost-column" id="totalIncidental" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th class="cost-column" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;"></th>
+                                    <th class="cost-column" id="totalFinalCost" style="text-align: right; background-color: #e0e0e0 !important; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;"></th>
+                                    <th class="margin-column" id="totalTableMarginRate" style="text-align: right; background-color: #e0e0e0 !important; border: 2px solid #ffffff !important;">0%</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 제품 조회 모달 -->
+<div class="modal fade" id="searchProductsModal" tabindex="-1" aria-labelledby="searchProductsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-burgundy" style="background-color: #800020 !important;">
+                <h5 class="modal-title" id="searchProductsModalLabel" style="color: #ffffff !important;" data-lang-kor="제품 조회" data-lang-eng="Search Products">제품 조회</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="productSearchInput" class="form-label" data-lang-kor="제품 검색" data-lang-eng="Product Search">제품 검색</label>
+                    <input type="text" class="form-control" id="productSearchInput" data-lang-kor-placeholder="제품코드 또는 제품명으로 검색" data-lang-eng-placeholder="Search by product code or name" placeholder="제품코드 또는 제품명으로 검색">
+                </div>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th width="50">
+                                    <input type="checkbox" id="selectAllProducts">
+                                </th>
+                                <th data-lang-kor="제품코드" data-lang-eng="Product Code">제품코드</th>
+                                <th data-lang-kor="제품명" data-lang-eng="Product Name">제품명</th>
+                                <th data-lang-kor="프라이스북 단가" data-lang-eng="Price Book Unit Price">프라이스북 단가</th>
+                                <th class="hide-purchase-cost" data-lang-kor="구매가 원가" data-lang-eng="Purchase Price">구매가 원가</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productSearchResults">
+                            <!-- 검색 결과가 여기에 표시됩니다 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="productSearchStatus" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-lang-kor="취소" data-lang-eng="Cancel">취소</button>
+                <button type="button" class="btn btn-primary" id="addSelectedProductsBtn" data-lang-kor="선택한 제품 추가" data-lang-eng="Add Selected Products">선택한 제품 추가</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let products = [];
+let exchangeRate = 1700;
+let usdPerEur = 1.15;
+let selectedQuoteCurrency = 'KRW';
+let allAvailableProducts = []; // 조회 가능한 모든 제품 목록
+let setCodeInfo = null; // 세트코드 정보 (제품정보 카드 위에 표시)
+let setCodeNames = {}; // 세트코드별 이름 저장 (키: 세트코드, 값: 이름)
+
+function applyExchangeRateSelection(payload) {
+    if (!payload) return;
+    const currency = (payload.currency || 'KRW').toUpperCase();
+    selectedQuoteCurrency = currency;
+    if (payload.eur_krw) exchangeRate = Number(payload.eur_krw) || exchangeRate;
+    if (payload.eur_usd) usdPerEur = Number(payload.eur_usd) || usdPerEur;
+    const rateInput = document.getElementById('krwExchangeRate');
+    const prefix = document.getElementById('fxRatePrefix');
+    const suffix = document.getElementById('fxRateSuffix');
+    if (currency === 'USD') {
+        if (rateInput) rateInput.value = Number(payload.eur_usd || usdPerEur).toFixed(4);
+        if (prefix) prefix.textContent = '1 EUR =';
+        if (suffix) suffix.textContent = 'USD';
+    } else if (currency === 'EUR') {
+        if (rateInput) rateInput.value = '1.0000';
+        if (prefix) prefix.textContent = '1 EUR =';
+        if (suffix) suffix.textContent = 'EUR';
+    } else {
+        if (rateInput) rateInput.value = Number(payload.eur_krw || exchangeRate).toFixed(2);
+        if (prefix) prefix.textContent = '1 EUR =';
+        if (suffix) suffix.textContent = 'KRW';
+    }
+    document.querySelectorAll('.currency-clickable').forEach(function (el) {
+        el.classList.toggle('table-warning', el.getAttribute('data-currency') === currency);
+    });
+    updateCalculations();
+}
+
+function initExportQuotationFxPublic() {
+    if (!window.PnsExchangeRates) return;
+    window.PnsExchangeRates.fetch(false).then(function (rates) {
+        if (rates.eur_krw) {
+            exchangeRate = Number(rates.eur_krw);
+            const rateInput = document.getElementById('krwExchangeRate');
+            if (rateInput) rateInput.value = Number(rates.eur_krw).toFixed(2);
+        }
+        if (rates.eur_usd) usdPerEur = Number(rates.eur_usd);
+        updateCalculations();
+    });
+    window.PnsExchangeRates.buildSelectableTable('exportFxRateTablePublic', {
+        selectedCurrency: 'KRW',
+        lang: (typeof currentLang !== 'undefined' && currentLang === 'ENG') ? 'eng' : 'kor',
+        onApply: applyExchangeRateSelection
+    });
+    document.querySelectorAll('.currency-clickable').forEach(function (el) {
+        el.addEventListener('click', function () {
+            const currency = el.getAttribute('data-currency');
+            window.PnsExchangeRates.fetch(false).then(function (rates) {
+                applyExchangeRateSelection({
+                    currency: currency,
+                    eur_krw: rates.eur_krw,
+                    eur_usd: rates.eur_usd,
+                    usd_krw: rates.usd_krw,
+                    rates: rates
+                });
+            });
+        });
+    });
+}
+
+// 페이지 로드 시
+document.addEventListener('DOMContentLoaded', function() {
+    // 언어 다시 확인 (sessionStorage에서)
+    const savedLang = sessionStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (savedLang) {
+        currentLang = savedLang.toUpperCase();
+    }
+    // 언어 업데이트
+    updatePageLanguage();
+    initExportQuotationFxPublic();
+    // 일괄삭제 버튼 클릭 이벤트
+    document.getElementById('bulkDeleteBtn').addEventListener('click', function() {
+        if (products.length === 0) {
+            const noProductsText = currentLang === 'ENG' 
+                ? 'No products to delete.'
+                : '삭제할 제품이 없습니다.';
+            alert(noProductsText);
+            return;
+        }
+        
+        const confirmText = currentLang === 'ENG' 
+            ? t('confirmDeleteAll')
+            : t('confirmDeleteAll');
+        
+        if (confirm(confirmText)) {
+            deleteAllProducts();
+        }
+    });
+    
+    // 조회 버튼 클릭 이벤트
+    document.getElementById('searchProductsBtn').addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('searchProductsModal'));
+        modal.show();
+        loadProductList();
+    });
+
+    // PRICE BOOK PDF 다운로드
+    async function downloadPriceBookPdf() {
+        const sourceProducts = (typeof products !== 'undefined' && Array.isArray(products)) ? products : [];
+        const items = sourceProducts
+            .filter(function (p) { return p && !p.isSubItem && p.code; })
+            .map(function (p) {
+                return {
+                    code: p.code,
+                    name: p.name || '',
+                    quantity: p.quantity || 1,
+                    priceBookPrice: p.priceBookPrice
+                };
+            });
+        if (!items.length) {
+            alert(currentLang === 'ENG'
+                ? 'No products to download. Please add products first.'
+                : '다운로드할 제품이 없습니다. 제품을 먼저 추가해 주세요.');
+            return;
+        }
+        const btn = document.getElementById('priceBookPdfBtn');
+        const prevHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="lang-text">' + (currentLang === 'ENG' ? 'Downloading...' : '다운로드 중...') + '</span>';
+        }
+        try {
+            const response = await fetch('/api/export_quotation/pricebook_pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ items: items })
+            });
+            const contentType = response.headers.get('Content-Type') || '';
+            if (!response.ok || contentType.indexOf('application/pdf') === -1) {
+                let message = currentLang === 'ENG' ? 'PDF download failed.' : 'PDF 다운로드에 실패했습니다.';
+                try {
+                    const data = await response.json();
+                    if (data && data.error) message = data.error;
+                } catch (e) { /* ignore */ }
+                throw new Error(message);
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'PNS_Price_Book.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            alert(err.message || (currentLang === 'ENG' ? 'PDF download failed.' : 'PDF 다운로드에 실패했습니다.'));
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = prevHtml || '<span class="lang-text">PRICE BOOK 다운</span>';
+            }
+        }
+    }
+
+    const priceBookPdfBtn = document.getElementById('priceBookPdfBtn');
+    if (priceBookPdfBtn) {
+        priceBookPdfBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            downloadPriceBookPdf();
+        });
+    }
+    
+    // 제품 검색 입력 이벤트
+    document.getElementById('productSearchInput').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.trim();
+        loadProductList(searchTerm);
+    });
+    
+    // 전체 선택 체크박스
+    document.getElementById('selectAllProducts').addEventListener('change', function(e) {
+        const checkboxes = document.querySelectorAll('#productSearchResults input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+        });
+    });
+    
+    // 선택한 제품 추가 버튼
+    document.getElementById('addSelectedProductsBtn').addEventListener('click', function() {
+        const checkboxes = document.querySelectorAll('#productSearchResults input[type="checkbox"]:checked');
+        const selectedProducts = [];
+        
+        checkboxes.forEach(checkbox => {
+            const row = checkbox.closest('tr.product-search-row');
+            const productData = window.ProductNameGlossary
+                ? window.ProductNameGlossary.readProductFromSearchRow(row)
+                : null;
+            if (productData && productData.code) {
+                selectedProducts.push({
+                    code: productData.code,
+                    name: productData.name,
+                    priceBookPrice: productData.priceBookPrice,
+                    purchasePrice: productData.purchasePrice,
+                    quantity: 1
+                });
+                return;
+            }
+            const fallbackRow = checkbox.closest('tr');
+            const code = fallbackRow.querySelector('td:nth-child(2)').textContent.trim();
+            const name = fallbackRow.getAttribute('data-product-name') || fallbackRow.querySelector('td:nth-child(3)').textContent.trim();
+            const priceBookPriceText = fallbackRow.querySelector('td:nth-child(4)').textContent.trim().replace(/,/g, '');
+            const priceBookPrice = parseFloat(priceBookPriceText) || 0;
+            const purchasePriceText = fallbackRow.querySelector('td:nth-child(5)').textContent.trim().replace(/,/g, '');
+            const purchasePrice = parseFloat(purchasePriceText) || 0;
+            
+            selectedProducts.push({
+                code: code,
+                name: name,
+                priceBookPrice: priceBookPrice,
+                purchasePrice: purchasePrice,
+                quantity: 1
+            });
+        });
+        
+        if (selectedProducts.length === 0) {
+            alert(t('selectProductsToAdd'));
+            return;
+        }
+        
+        // 선택한 제품들을 테이블에 추가
+        selectedProducts.forEach(productData => {
+            addProduct(productData);
+        });
+        
+        // 모달 닫기
+        const modal = bootstrap.Modal.getInstance(document.getElementById('searchProductsModal'));
+        if (modal) {
+            modal.hide();
+        }
+    });
+    
+    // 초기 계산
+    updateCalculations();
+    
+    // 접기/펼치기 버튼 초기 숨김
+    const toggleBtn = document.getElementById('toggleProductInfoBtn');
+    if (toggleBtn) {
+        toggleBtn.style.display = 'none';
+    }
+    
+    // URL 파라미터에서 SAP 코드, 세트코드, 가격 정보 확인 및 제품 자동 추가
+    const urlParams = new URLSearchParams(window.location.search);
+    const sapCodesParam = urlParams.get('sap_codes');
+    const setCode = urlParams.get('set_code');
+    const originalPrice = urlParams.get('original_price');
+    const discountedPrice = urlParams.get('discounted_price');
+    
+    // 세트코드 정보 표시 (수출견적서(스태프)와 동일하게 구현)
+    if (setCode) {
+        // 세트코드 이름 저장 (URL 파라미터에는 이름이 없으므로 빈 문자열로 초기화)
+        setCodeNames[setCode] = '';
+        
+        // setCodeInfo 설정 (나중에 updateSetCodeCard() 호출 시에도 유지되도록)
+        setCodeInfo = {
+            code: setCode,
+            name: '', // URL 파라미터에는 이름이 없으므로 나중에 제품 정보에서 가져올 수 있음
+            quantity: 1,
+            priceBookPrice: originalPrice ? parseFloat(originalPrice) : 0
+        };
+        
+        const setCodeCard = document.getElementById('setCodeCard');
+        const setCodeDisplay = document.getElementById('setCodeDisplay');
+        const originalPriceDisplay = document.getElementById('originalPriceDisplay');
+        const discountedPriceDisplay = document.getElementById('discountedPriceDisplay');
+        
+        if (setCodeCard && setCodeDisplay && originalPriceDisplay && discountedPriceDisplay) {
+            // 세트코드 값 표시
+            setCodeDisplay.textContent = setCode;
+            
+            // 원판매가격 표시
+            originalPriceDisplay.textContent = originalPrice 
+                ? `${parseFloat(originalPrice).toFixed(2)} EUR` 
+                : '-';
+            
+            // 할인 판매가격 표시
+            discountedPriceDisplay.textContent = discountedPrice 
+                ? `${parseFloat(discountedPrice).toFixed(2)} EUR` 
+                : '-';
+            
+            // 세트코드 카드 표시
+            setCodeCard.style.display = 'block';
+            
+            // 접기/펼치기 버튼 표시 (제품정보 카드 섹션 접기/펼치기용)
+            const toggleBtn = document.getElementById('toggleProductInfoBtn');
+            if (toggleBtn) {
+                toggleBtn.style.display = 'inline-block';
+            }
+        }
+    }
+    
+    if (sapCodesParam) {
+        console.log('URL에서 SAP 코드 파라미터 발견:', sapCodesParam);
+        const sapCodes = sapCodesParam.split(',').map(code => code.trim()).filter(code => code !== '');
+        console.log('파싱된 SAP 코드:', sapCodes);
+        if (sapCodes.length > 0) {
+            // 제품 목록을 먼저 로드한 후 SAP 코드에 해당하는 제품 추가
+            // 약간의 지연을 두어 DOM이 완전히 로드된 후 실행
+            setTimeout(() => {
+                loadProductList().then(() => {
+                    console.log('제품 목록 로드 완료, 제품 추가 시작');
+                    addProductsBySapCodes(sapCodes);
+                }).catch(error => {
+                    console.error('Error loading products:', error);
+                    alert('제품 목록을 불러오는 중 오류가 발생했습니다: ' + error.message);
+                });
+            }, 500);
+        }
+    }
+    
+    // 엑셀 다운로드 버튼 클릭 이벤트
+    const exportExcelBtn = document.getElementById('exportExcelBtn');
+    if (exportExcelBtn) {
+        exportExcelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof exportToExcel === 'function') {
+                exportToExcel();
+            } else {
+                alert(t('excelDownloadFunctionNotFound'));
+            }
+        });
+    } else {
+        console.error('엑셀 다운로드 버튼을 찾을 수 없습니다.');
+    }
+});
+
+// 제품 목록 불러오기 (조회 모달용)
+function loadProductList(searchTerm = '') {
+    return fetch('/api/export_price/dashboard_new')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                allAvailableProducts = data.products || [];
+                filterAndDisplayProducts(searchTerm);
+                return Promise.resolve();
+            } else {
+                const loadErrorText = currentLang === 'ENG' 
+                    ? 'Unable to load data.'
+                    : '데이터를 불러올 수 없습니다.';
+                document.getElementById('productSearchResults').innerHTML = 
+                    `<tr><td colspan="5" class="text-center text-danger">${loadErrorText}</td></tr>`;
+                return Promise.reject(new Error(data.error || '데이터를 불러올 수 없습니다.'));
+            }
+        })
+        .catch(error => {
+            console.error('Error loading products:', error);
+            const loadErrorText2 = currentLang === 'ENG' 
+                ? 'An error occurred while loading data.'
+                : '데이터를 불러오는 중 오류가 발생했습니다.';
+            document.getElementById('productSearchResults').innerHTML = 
+                `<tr><td colspan="5" class="text-center text-danger">${loadErrorText2}</td></tr>`;
+            return Promise.reject(error);
+        });
+}
+
+// 제품 필터링 및 표시
+function filterAndDisplayProducts(searchTerm = '') {
+    const tbody = document.getElementById('productSearchResults');
+    const searchLower = searchTerm.toLowerCase();
+    
+    let filteredProducts = allAvailableProducts;
+    if (searchTerm) {
+        filteredProducts = allAvailableProducts.filter(product => {
+            const code = (product.code || '').toLowerCase();
+            const name = (product.name || '').toLowerCase();
+            return code.includes(searchLower) || name.includes(searchLower);
+        });
+    }
+    
+    if (filteredProducts.length === 0) {
+        const noResultsText = currentLang === 'ENG' 
+            ? 'No search results found.'
+            : '검색 결과가 없습니다.';
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center">${noResultsText}</td></tr>`;
+        return;
+    }
+    
+    tbody.innerHTML = window.ProductNameGlossary
+        ? window.ProductNameGlossary.buildRowsHtml(filteredProducts, {
+            addedCodes: products.map(function (p) { return p.code; }),
+            hidePurchaseCost: !canViewExportCostNow()
+        })
+        : filteredProducts.map((product, index) => {
+            const isAlreadyAdded = products.some(p => p.code === product.code);
+            return `
+            <tr ${isAlreadyAdded ? 'style="background-color: #ffe6e6;"' : ''}>
+                <td><input type="checkbox" value="${product.id || index}"></td>
+                <td>${product.code || '-'}</td>
+                <td>${product.name || '-'}</td>
+                <td class="text-end">${(product.priceBookPrice || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end hide-purchase-cost">${(product.purchasePrice || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            </tr>`;
+        }).join('');
+
+    if (window.ProductNameGlossary) {
+        window.ProductNameGlossary.initToggleHandlers(tbody);
+    }
+    
+    document.getElementById('productSearchStatus').textContent = 
+        currentLang === 'ENG' 
+            ? `Total ${filteredProducts.length} products found.`
+            : `총 ${filteredProducts.length}개의 제품이 검색되었습니다.`;
+}
+
+// SAP 코드로 제품 추가
+async function addProductsBySapCodes(sapCodes) {
+    if (!sapCodes || sapCodes.length === 0) {
+        console.warn('addProductsBySapCodes: sapCodes가 비어있습니다.');
+        return;
+    }
+    
+    console.log('addProductsBySapCodes 호출:', sapCodes);
+    console.log('allAvailableProducts 개수:', allAvailableProducts.length);
+    console.log('allAvailableProducts 샘플:', allAvailableProducts.slice(0, 3));
+    
+    // allAvailableProducts에서 SAP 코드에 해당하는 제품 찾기
+    const foundProducts = [];
+    sapCodes.forEach(sapCode => {
+        const trimmedSapCode = sapCode.trim();
+        console.log(`SAP 코드 "${trimmedSapCode}" 검색 중...`);
+        
+        // 정확히 일치하는 제품 찾기
+        let product = allAvailableProducts.find(p => {
+            const productCode = (p.code || '').trim();
+            return productCode === trimmedSapCode;
+        });
+        
+        // 대소문자 무시하고 찾기
+        if (!product) {
+            product = allAvailableProducts.find(p => {
+                const productCode = (p.code || '').trim().toUpperCase();
+                return productCode === trimmedSapCode.toUpperCase();
+            });
+        }
+        
+        if (product) {
+            console.log(`제품 찾음: ${product.code} - ${product.name}`);
+            foundProducts.push({
+                code: product.code,
+                name: product.name || product.product_name || '',
+                priceBookPrice: product.priceBookPrice || product.price_book_price || 0,
+                purchasePrice: product.purchasePrice || product.purchase_price || 0,
+                quantity: 1
+            });
+        } else {
+            console.warn(`SAP 코드 "${trimmedSapCode}"에 해당하는 제품을 찾을 수 없습니다.`);
+            console.log('사용 가능한 제품 코드들:', allAvailableProducts.map(p => p.code).slice(0, 10));
+        }
+    });
+    
+    console.log(`찾은 제품 수: ${foundProducts.length}`);
+    
+    if (foundProducts.length === 0) {
+        const message = currentLang === 'ENG' 
+            ? 'No products found for the specified SAP codes.'
+            : '지정된 SAP 코드에 해당하는 제품을 찾을 수 없습니다.';
+        alert(message);
+        return;
+    }
+    
+    // 찾은 제품들을 추가 (async 함수이므로 await 사용)
+    for (const productData of foundProducts) {
+        console.log('제품 추가:', productData);
+        await addProduct(productData);
+    }
+    
+    // 계산 업데이트 (명시적으로 호출)
+    updateCalculations();
+    
+    const message = currentLang === 'ENG' 
+        ? `${foundProducts.length} product(s) added successfully.`
+        : `${foundProducts.length}개의 제품이 추가되었습니다.`;
+    console.log(message);
+    alert(message);
+}
+
+// 제품 추가
+async function addProduct(productData) {
+    const productCode = productData.code || '';
+    const addQuantity = parseInt(productData.quantity) || 1;
+    
+    // 같은 제품코드가 이미 있는지 확인
+    const existingProduct = products.find(p => p.code === productCode);
+    
+    if (existingProduct) {
+        // 같은 제품코드가 있으면 수량만 증가
+        existingProduct.quantity += addQuantity;
+    } else {
+        // 같은 제품코드가 없으면 새로 추가
+        const productId = Date.now() + Math.random();
+        const product = {
+            id: productId,
+            code: productCode,
+            name: productData.name || '',
+            quantity: addQuantity,
+            priceBookPrice: parseFloat(productData.priceBookPrice) || 0,
+            purchasePrice: parseFloat(productData.purchasePrice) || 0,
+            isSetCode: false, // 세트코드 여부
+            isSubItem: false  // 하위품목 여부
+        };
+        
+        // P51, P52, P53, P54로 시작하는 제품코드인 경우 세트가격조회 확인 및 하위품목 추가
+        const setCodePattern = /^P5[1-4]\d{6}$/; // P51, P52, P53, P54로 시작하는 9자리 코드
+        
+        if (setCodePattern.test(productCode)) {
+            product.isSetCode = true;
+            
+            try {
+                // 세트가격조회에 등록된 세트코드 목록 조회
+                const setPriceListResponse = await fetch('/api/set_price/list');
+                const setPriceListData = await setPriceListResponse.json();
+                
+                if (setPriceListData.success && setPriceListData.price_list) {
+                    // 해당 제품코드가 세트가격조회에 등록되어 있는지 확인
+                    const setCodeExists = setPriceListData.price_list.some(item => item.set_code === productCode);
+                    
+                    if (setCodeExists) {
+                        // 세트코드 이름 저장
+                        setCodeNames[productCode] = productData.name || '';
+                        
+                        // 세트코드 정보 저장 (제품정보 카드 위에 표시용)
+                        setCodeInfo = {
+                            code: productCode,
+                            name: productData.name || '',
+                            quantity: addQuantity,
+                            priceBookPrice: product.priceBookPrice || 0
+                        };
+                        
+                        // 하위품목 조회
+                        const optionsResponse = await fetch(`/api/set_price/options?set_code=${encodeURIComponent(productCode)}`);
+                        const optionsData = await optionsResponse.json();
+                        
+                        if (optionsData.success && optionsData.options && optionsData.options.length > 0) {
+                            // P51, P52, P53, P54인 경우: 하위품목을 별도 저장하고 products 배열에는 세트코드만 추가
+                            if (setCodePattern.test(productCode)) {
+                                const subItems = [];
+                                optionsData.options.forEach((option, index) => {
+                                    const subItemId = Date.now() + Math.random() + index;
+                                    const subItem = {
+                                        id: subItemId,
+                                        code: option.item_code || option.option_name || '',
+                                        name: option.option_name || '',
+                                        quantity: addQuantity, // 세트코드와 동일한 수량
+                                        priceBookPrice: parseFloat(option.price || option.price_book_price || 0),
+                                        purchasePrice: 0, // 하위품목은 구매가 없을 수 있음
+                                        isSetCode: false,
+                                        isSubItem: true,
+                                        parentSetCode: productCode // 부모 세트코드 저장
+                                    };
+                                    subItems.push(subItem);
+                                });
+                                
+                                // 세트코드에 하위품목과 expanded 속성 추가
+                                product.expandedSubItems = subItems;
+                                product.expanded = false; // 초기값은 접힘 상태
+                                
+                                // 세트코드만 products 배열에 추가
+                                products.push(product);
+                            }
+                            
+                            // 세트코드 정보 카드 표시
+                            updateSetCodeCard();
+                        } else {
+                            // 하위품목이 없어도 세트코드 자체는 추가
+                            products.push(product);
+                        }
+                    } else {
+                        // 세트코드가 등록되어 있지 않아도 세트코드 자체는 추가
+                        products.push(product);
+                    }
+                }
+            } catch (error) {
+                console.error('세트가격조회 확인 중 오류:', error);
+                // 에러 발생 시에도 세트코드 자체는 추가
+                products.push(product);
+            }
+        } else {
+            // 세트코드가 아니면 일반 제품으로 추가
+            products.push(product);
+        }
+    }
+    
+    // 제품 추가/수량 변경 후 계산 업데이트
+    updateCalculations();
+}
+
+// 제품 삭제
+function removeProduct(productId) {
+    const product = products.find(p => p.id === productId);
+    
+    // 하위품목을 삭제하는 경우, 해당 세트코드의 모든 하위품목이 삭제되면 세트코드 정보도 제거
+    if (product && product.isSubItem && product.parentSetCode) {
+        products = products.filter(p => p.id !== productId);
+        
+        // 해당 세트코드의 하위품목이 모두 삭제되었는지 확인
+        const remainingSubItems = products.filter(p => p.isSubItem && p.parentSetCode === product.parentSetCode);
+        if (remainingSubItems.length === 0) {
+            // 세트코드 정보 및 이름 제거
+            if (setCodeInfo && setCodeInfo.code === product.parentSetCode) {
+                setCodeInfo = null;
+            }
+            delete setCodeNames[product.parentSetCode];
+            updateSetCodeCard();
+        }
+    } else {
+        products = products.filter(p => p.id !== productId);
+    }
+    
+    updateCalculations();
+}
+
+// 모든 제품 일괄 삭제
+function deleteAllProducts() {
+    products = [];
+    setCodeInfo = null; // 세트코드 정보도 초기화
+    setCodeNames = {}; // 세트코드 이름 맵도 초기화
+    updateSetCodeCard(); // 세트코드 카드 숨기기
+    updateCalculations();
+    
+    const message = currentLang === 'ENG' 
+        ? t('allProductsDeleted')
+        : t('allProductsDeleted');
+    alert(message);
+}
+
+// 세트코드 정보 카드 업데이트
+function updateSetCodeCard() {
+    const setCodeCard = document.getElementById('setCodeCard');
+    const setCodeDisplay = document.getElementById('setCodeDisplay');
+    const setCodeNameDisplay = document.getElementById('setCodeNameDisplay');
+    const originalPriceDisplay = document.getElementById('originalPriceDisplay');
+    const discountedPriceDisplay = document.getElementById('discountedPriceDisplay');
+    
+    // URL 파라미터에서 세트코드 정보 확인 (setCodeInfo가 없을 경우 대비)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSetCode = urlParams.get('set_code');
+    const urlOriginalPrice = urlParams.get('original_price');
+    const urlDiscountedPrice = urlParams.get('discounted_price');
+    
+    // setCodeInfo가 있거나 URL 파라미터에 세트코드가 있는 경우
+    if ((setCodeInfo || urlSetCode) && setCodeCard && setCodeDisplay) {
+        const currentSetCode = setCodeInfo ? setCodeInfo.code : urlSetCode;
+        
+        // 세트코드 정보 표시
+        setCodeDisplay.textContent = currentSetCode;
+        
+        // 세트코드 이름 표시
+        if (setCodeNameDisplay) {
+            if (setCodeInfo && setCodeInfo.name) {
+                setCodeNameDisplay.textContent = `(${setCodeInfo.name})`;
+            } else {
+                setCodeNameDisplay.textContent = '';
+            }
+        }
+        
+        // 원판매가격 계산
+        let originalPrice = 0;
+        if (setCodeInfo) {
+            // 하위품목들의 가격 합계 계산
+            const subItems = products.filter(p => p.isSubItem && p.parentSetCode === currentSetCode);
+            if (subItems.length > 0) {
+                subItems.forEach(item => {
+                    originalPrice += (item.priceBookPrice || 0) * (item.quantity || 1);
+                });
+            } else if (setCodeInfo.priceBookPrice && setCodeInfo.priceBookPrice > 0) {
+                // 하위품목이 없고 setCodeInfo에 가격이 있으면 사용
+                originalPrice = setCodeInfo.priceBookPrice;
+            }
+        }
+        
+        // URL 파라미터에서 가격이 있고 하위품목이 없는 경우 URL 파라미터 가격 사용
+        if (originalPrice === 0 && urlOriginalPrice) {
+            originalPrice = parseFloat(urlOriginalPrice);
+        }
+        
+        // 할인 판매가격 계산
+        const discountRate = parseFloat(document.getElementById('discountRateSales').value) || 0;
+        let discountedPrice = originalPrice * (1 - discountRate / 100);
+        
+        // URL 파라미터에서 할인 가격이 있고 하위품목이 없는 경우 URL 파라미터 가격 사용
+        if (urlDiscountedPrice && (!setCodeInfo || products.filter(p => p.isSubItem && p.parentSetCode === currentSetCode).length === 0)) {
+            discountedPrice = parseFloat(urlDiscountedPrice);
+        }
+        
+        if (originalPriceDisplay) {
+            originalPriceDisplay.textContent = originalPrice > 0 
+                ? `${originalPrice.toFixed(2)} EUR` 
+                : '-';
+        }
+        
+        if (discountedPriceDisplay) {
+            discountedPriceDisplay.textContent = discountedPrice > 0 
+                ? `${discountedPrice.toFixed(2)} EUR` 
+                : '-';
+        }
+        
+        setCodeCard.style.display = 'block';
+        
+        // 접기/펼치기 버튼 표시
+        const toggleBtn = document.getElementById('toggleProductInfoBtn');
+        if (toggleBtn) {
+            toggleBtn.style.display = 'inline-block';
+        }
+    } else if (setCodeCard) {
+        // 세트코드 정보가 없으면 카드 숨기기
+        setCodeCard.style.display = 'none';
+    }
+}
+
+// 계산 업데이트
+function updateCalculations() {
+    const discountRate = parseFloat(document.getElementById('discountRateSales').value) || 0;
+    const shippingSales = parseFloat(document.getElementById('shippingSales').value) || 0;
+    const shippingPurchase = 0; // 구매 칸 삭제로 인해 항상 0
+    const incidentalExpenseSales = 0; // 판매 쪽 부대비용은 사용하지 않음
+    const incidentalExpensePurchase = 0; // 구매 칸 삭제로 인해 항상 0
+    exchangeRate = (selectedQuoteCurrency === 'KRW')
+        ? (parseFloat(document.getElementById('krwExchangeRate').value) || exchangeRate || 1700)
+        : exchangeRate;
+    if (selectedQuoteCurrency === 'USD') {
+        const v = parseFloat(document.getElementById('krwExchangeRate').value);
+        if (Number.isFinite(v) && v > 0) usdPerEur = v;
+    }
+    
+    if (products.length === 0) {
+        document.getElementById('productTableBody').innerHTML = 
+            `<tr><td colspan="11" class="text-center" style="width: 100%;">${t('noProducts')}</td></tr>`;
+        return;
+    }
+    
+    // 부대비용은 비율 기반으로 계산 (제품별로 계산됨)
+    
+    // 합계는 항상 전체 제품 기준으로 계산
+    let totalQuantity = 0;
+    let totalPriceBookUnit = 0; // 프라이스북 단가 총합계
+    let totalPriceBook = 0;
+    let totalDiscounted = 0;
+    let totalShippingSales = 0;
+    let totalFinalSalesUnit = 0; // 최종 판매가 단가 총합계
+    let totalFinalSales = 0;
+    let totalPurchase = 0;
+    let totalShippingPurchase = 0;
+    let totalIncidental = 0;
+    let totalFinalCost = 0;
+    
+    const tbody = document.getElementById('productTableBody');
+    
+    if (products.length === 0) {
+        const noProductsText = currentLang === 'ENG' 
+            ? 'Please search and add products.'
+            : '제품을 조회하여 추가해주세요.';
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center" style="width: 100%;">${noProductsText}</td></tr>`;
+        // 합계 초기화
+        document.getElementById('totalQuantity').textContent = '0';
+        document.getElementById('totalPriceBookUnit').textContent = '';
+        document.getElementById('totalPriceBook').textContent = '';
+        document.getElementById('totalDiscounted').textContent = '';
+        document.getElementById('totalShippingSales').textContent = '';
+        document.getElementById('totalFinalSalesUnit').textContent = '';
+        document.getElementById('totalFinalSales').textContent = '';
+        document.getElementById('totalPurchase').textContent = '';
+        document.getElementById('totalShippingPurchase').textContent = '';
+        document.getElementById('totalIncidental').textContent = '';
+        document.getElementById('totalFinalCost').textContent = '';
+        document.getElementById('totalTableMarginRate').textContent = '0%';
+        updateSummary(0, 0);
+        return;
+    }
+    
+    // 먼저 전체 프라이스북 총 합계와 구매가 총 합계를 계산 (전체 제품 기준)
+    let totalPriceBookSum = 0;
+    let totalPurchaseSum = 0;
+    products.forEach(product => {
+        const quantity = product.quantity || 1;
+        const priceBookPrice = product.priceBookPrice || 0;
+        const purchasePrice = product.purchasePrice || 0;
+        totalPriceBookSum += priceBookPrice * quantity;
+        totalPurchaseSum += purchasePrice * quantity;
+    });
+    
+    // 제품 정렬: 세트코드별로 그룹화하고, 각 그룹 내에서는 이름 순서로 정렬
+    // 1. 세트코드별로 그룹화 (P51-P54는 제외, expandedSubItems로 별도 관리)
+    const setCodeGroups = {};
+    const nonSetCodeProducts = [];
+    
+    products.forEach(product => {
+        // P51-P54 세트코드이고 expandedSubItems가 있는 경우는 nonSetCodeProducts에 포함
+        if (product.isSetCode && product.expandedSubItems && /^P5[1-4]\d{6}$/.test(product.code)) {
+            nonSetCodeProducts.push(product);
+        } else if (product.isSubItem && product.parentSetCode) {
+            const setCode = product.parentSetCode;
+            // P51-P54 세트코드의 하위품목은 setCodeGroups에 포함하지 않음
+            if (!/^P5[1-4]\d{6}$/.test(setCode)) {
+                if (!setCodeGroups[setCode]) {
+                    setCodeGroups[setCode] = [];
+                }
+                setCodeGroups[setCode].push(product);
+            }
+        } else {
+            nonSetCodeProducts.push(product);
+        }
+    });
+    
+    // 2. 각 세트코드 그룹 내에서 이름 순서로 정렬
+    Object.keys(setCodeGroups).forEach(setCode => {
+        setCodeGroups[setCode].sort((a, b) => {
+            return (a.name || '').localeCompare(b.name || '');
+        });
+    });
+    
+    // 3. 세트코드 그룹을 P51, P52, P53, P54 순서로 정렬
+    const setCodeOrder = ['P51', 'P52', 'P53', 'P54'];
+    const sortedSetCodes = Object.keys(setCodeGroups).sort((a, b) => {
+        const prefixA = a.substring(0, 3);
+        const prefixB = b.substring(0, 3);
+        const indexA = setCodeOrder.indexOf(prefixA);
+        const indexB = setCodeOrder.indexOf(prefixB);
+        
+        if (indexA !== -1 && indexB !== -1) {
+            if (indexA !== indexB) {
+                return indexA - indexB;
+            }
+            // 같은 prefix면 숫자로 정렬
+            return parseInt(a.substring(3)) - parseInt(b.substring(3));
+        }
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
+    });
+    
+    // 4. 각 세트코드 그룹별 소계 계산 함수
+    const calculateSetCodeSubtotal = (setCodeProducts) => {
+        let subQuantity = 0;
+        let subPriceBookUnit = 0;
+        let subPriceBook = 0;
+        let subDiscounted = 0;
+        let subShippingSales = 0;
+        let subFinalSales = 0;
+        let subPurchase = 0;
+        let subShippingPurchase = 0;
+        let subIncidental = 0;
+        let subFinalCost = 0;
+        
+        setCodeProducts.forEach(product => {
+            const quantity = product.quantity || 1;
+            const priceBookPrice = product.priceBookPrice || 0;
+            const purchasePrice = product.purchasePrice || 0;
+            
+            const discountedPrice = priceBookPrice * (1 - discountRate / 100);
+            const priceBookItem = priceBookPrice * quantity;
+            const shippingSalesForProduct = totalPriceBookSum > 0 ? (priceBookItem / totalPriceBookSum) * shippingSales : 0;
+            const shippingSalesPerProduct = quantity > 0 ? Math.round(shippingSalesForProduct / quantity) : 0;
+            const finalSalesPrice = shippingSalesPerProduct + discountedPrice;
+            const finalSalesPriceTotal = finalSalesPrice * quantity;
+            
+            const purchaseItem = purchasePrice * quantity;
+            const shippingPurchaseForProduct = totalPurchaseSum > 0 ? (purchaseItem / totalPurchaseSum) * shippingPurchase : 0;
+            const shippingPurchasePerProduct = quantity > 0 ? Math.round(shippingPurchaseForProduct / quantity) : 0;
+            const incidentalForProduct = totalPurchaseSum > 0 ? (purchaseItem / totalPurchaseSum) * incidentalExpensePurchase : 0;
+            const incidentalPurchasePerProduct = quantity > 0 ? Math.round(incidentalForProduct / quantity) : 0;
+            const finalCost = purchasePrice + shippingPurchasePerProduct + incidentalPurchasePerProduct;
+            const finalCostTotal = finalCost * quantity;
+            
+            subQuantity += quantity;
+            subPriceBookUnit += priceBookPrice;
+            subPriceBook += priceBookPrice * quantity;
+            subDiscounted += discountedPrice * quantity;
+            subShippingSales += shippingSalesForProduct;
+            subFinalSales += finalSalesPriceTotal;
+            subPurchase += purchasePrice * quantity;
+            subShippingPurchase += shippingPurchaseForProduct;
+            subIncidental += incidentalForProduct;
+            subFinalCost += finalCostTotal;
+        });
+        
+        return {
+            quantity: subQuantity,
+            priceBookUnit: subPriceBookUnit,
+            priceBook: subPriceBook,
+            discounted: subDiscounted,
+            shippingSales: subShippingSales,
+            finalSales: subFinalSales,
+            purchase: subPurchase,
+            shippingPurchase: subShippingPurchase,
+            incidental: subIncidental,
+            finalCost: subFinalCost
+        };
+    };
+    
+    // 5. 최종 정렬된 제품 배열 생성 (세트코드 그룹별로, 각 그룹의 첫 번째에 헤더, 마지막에 소계 추가)
+    const sortedProducts = [];
+    const setCodeSubtotals = {}; // 세트코드별 소계 저장
+    
+    sortedSetCodes.forEach(setCode => {
+        sortedProducts.push({ isSetCodeHeader: true, setCode: setCode, name: '' }); // 헤더 행
+        sortedProducts.push(...setCodeGroups[setCode]);
+        // 소계 계산 및 저장
+        setCodeSubtotals[setCode] = calculateSetCodeSubtotal(setCodeGroups[setCode]);
+        sortedProducts.push({ isSetCodeSubtotal: true, setCode: setCode }); // 소계 행
+    });
+    sortedProducts.push(...nonSetCodeProducts);
+    
+    tbody.innerHTML = sortedProducts.map((product, index) => {
+        // 세트코드 헤더 행인 경우
+        if (product.isSetCodeHeader) {
+            const setCode = product.setCode;
+            // 세트코드 이름 가져오기
+            const setCodeName = setCodeNames[setCode] || '';
+            
+            return `
+                <tr style="background-color: #d0e8ff !important; border-top: 3px solid #0066cc !important;">
+                    <td colspan="11" style="background-color: #d0e8ff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important; font-size: 0.9rem !important; color: #0066cc !important;">
+                        <i class="fas fa-box me-2"></i>세트코드: <strong>${setCode}</strong>${setCodeName ? ` - ${setCodeName}` : ''}
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // 세트코드 소계 행인 경우
+        if (product.isSetCodeSubtotal) {
+            const setCode = product.setCode;
+            const subtotal = setCodeSubtotals[setCode];
+            if (!subtotal) return '';
+            
+            // 소계 마진율 계산
+            const subMargin = subtotal.finalSales - subtotal.finalCost;
+            const subMarginRate = subtotal.finalSales > 0 ? ((subMargin / subtotal.finalSales) * 100).toFixed(1) : '0.0';
+            
+            return `
+                <tr style="background-color: #b8daff !important; border-bottom: 2px solid #0066cc !important; font-weight: bold !important;">
+                    <td colspan="2" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; border-right: 3px solid #ffffff !important; text-align: right !important; padding: 0.5rem !important; font-weight: bold !important;">
+                        소계 (${setCode})
+                    </td>
+                    <td class="text-center" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; border-right: 3px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.quantity}</td>
+                    <td class="text-end sales-price-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.priceBookUnit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-end sales-price-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.priceBook.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-end sales-price-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
+                    <td class="text-end sales-price-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.discounted.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-end sales-price-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
+                    <td class="text-end sales-price-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${Math.round(subtotal.shippingSales).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                    <td class="text-end sales-price-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
+                    <td class="text-end sales-price-column" style="background-color: #b8daff !important; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.finalSales.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-end cost-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
+                    <td class="text-end cost-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.purchase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-end cost-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
+                    <td class="text-end cost-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${Math.round(subtotal.shippingPurchase).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                    <td class="text-end cost-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
+                    <td class="text-end cost-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${Math.round(subtotal.incidental).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                    <td class="text-end cost-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
+                    <td class="text-end cost-column" style="background-color: #b8daff !important; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.finalCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-end margin-column" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subMarginRate}%</td>
+                </tr>
+            `;
+        }
+        const quantity = product.quantity || 1;
+        const priceBookPrice = product.priceBookPrice || 0;
+        const purchasePrice = product.purchasePrice || 0;
+        
+        // 할인가 단가 계산
+        const discountedPrice = priceBookPrice * (1 - discountRate / 100);
+        
+        // 운임(판매) 합계: ((프라이스북항목 / 프라이스북 총 합계) * 100%) * 추가비용에 운임판매 금액
+        // 예시: 수량 1일 때 ((1,497/15,917)*100%)*1500=141
+        // 예시: 수량 2일 때 ((2,994/17,414)*100%)*1500=258
+        const priceBookItem = priceBookPrice * quantity; // 프라이스북 항목 합계
+        const shippingSalesForProduct = totalPriceBookSum > 0 ? (priceBookItem / totalPriceBookSum) * shippingSales : 0;
+        // 운임(판매) 단가: 운임(판매) 합계 / 수량 (ROUND)
+        // 예시: 수량 1일 때 141/1=141, 수량 2일 때 258/2=129
+        const shippingSalesPerProduct = quantity > 0 ? Math.round(shippingSalesForProduct / quantity) : 0;
+        
+        // 최종 판매가 단가 = 운임(판매) 단가 + 할인가 단가
+        // 예시: 수량 1일 때 141+1,347=1,488, 수량 2일 때 129+1,347=1,476
+        const finalSalesPrice = shippingSalesPerProduct + discountedPrice;
+        // 최종 판매가 합계 = 최종 판매가 단가 * 수량
+        // 예시: 수량 1일 때 1,488*1=1,488, 수량 2일 때 1,476*2=2,952
+        const finalSalesPriceTotal = finalSalesPrice * quantity;
+        
+        // 운임(구매) 합계: ((구매가항목 / 구매가 총 합계) * 100%) * 추가비용에 운임구매 금액
+        // 예시: 수량 1일 때 ((534/5,709)*100%)*150=14.1, 수량 2일 때 ((1,068/6,234)*100%)*150=25.65 (ROUND)
+        const purchaseItem = purchasePrice * quantity; // 구매가 항목 합계
+        const shippingPurchaseForProduct = totalPurchaseSum > 0 ? (purchaseItem / totalPurchaseSum) * shippingPurchase : 0;
+        // 운임(구매) 단가: 운임(구매) 합계 / 수량 (ROUND)
+        // 예시: 수량 1일 때 14/1=14, 수량 2일 때 26/2=13
+        const shippingPurchasePerProduct = quantity > 0 ? Math.round(shippingPurchaseForProduct / quantity) : 0;
+        
+        // 부대비용 합계: ((구매가 원가 / 구매가 총 합계) * 100%) * 추가비용에 부대비용금액
+        // 예시: 수량 1일 때 ((534/5,709)*100%)*10=0.935 (ROUND), 수량 2일 때 ((1,068/6,234)*100%)*10=1.71 (ROUND)
+        const incidentalForProduct = totalPurchaseSum > 0 ? (purchaseItem / totalPurchaseSum) * incidentalExpensePurchase : 0;
+        // 부대비용 단가: 부대비용 합계 / 수량 (ROUND)
+        // 예시: 수량 1일 때 1/1=1, 수량 2일 때 2/2=1
+        const incidentalPurchasePerProduct = quantity > 0 ? Math.round(incidentalForProduct / quantity) : 0;
+        
+        // 최종 원가 단가 = 구매가 단가 + 운임(구매) 단가 + 부대비용 단가
+        // 예시: 수량 1일 때 534+14+1=549, 수량 2일 때 534+13+1=548
+        const finalCost = purchasePrice + shippingPurchasePerProduct + incidentalPurchasePerProduct;
+        // 최종 원가 합계 = 최종 원가 단가 * 수량
+        // 예시: 수량 1일 때 549*1=549, 수량 2일 때 548*2=1,096
+        const finalCostTotal = finalCost * quantity;
+        
+        // 마진율: (최종판매가 합계 - 최종원가 합계) / 최종판매가 합계 * 100% (백분율)
+        // 예시: 수량 1일 때 (1,488-549)/1,488=63.1%
+        // 예시: 수량 2일 때 (2,952-1,096)/2,952=62.9%
+        const marginTotal = finalSalesPriceTotal - finalCostTotal;
+        const marginRate = finalSalesPriceTotal > 0 ? ((marginTotal / finalSalesPriceTotal) * 100).toFixed(1) : '0.0';
+        
+        totalQuantity += quantity;
+        totalPriceBookUnit += priceBookPrice; // 프라이스북 단가 총합계
+        totalPriceBook += priceBookPrice * quantity;
+        totalDiscounted += discountedPrice * quantity;
+        totalShippingSales += shippingSalesForProduct; // 운임(판매) 합계 누적
+        totalFinalSalesUnit += finalSalesPrice; // 최종 판매가 단가 총합계
+        totalFinalSales += finalSalesPriceTotal; // 최종 판매가 합계 누적
+        totalPurchase += purchasePrice * quantity;
+        totalShippingPurchase += shippingPurchaseForProduct; // 운임(구매) 합계 누적
+        totalIncidental += incidentalForProduct; // 부대비용 합계 누적
+        totalFinalCost += finalCostTotal; // 최종 원가 합계 누적
+        
+        // P51-P54 세트코드인지 확인
+        const isP5SetCode = product.isSetCode && product.expandedSubItems && /^P5[1-4]\d{6}$/.test(product.code);
+        
+        // 하위품목인 경우 배경색 변경
+        const rowBgColor = product.isSubItem ? '#e6f3ff' : '#ffffcc';
+        const codeBgColor = product.isSubItem ? '#d6e9ff' : '#e0e0e0';
+        const indentStyle = product.isSubItem ? 'padding-left: 20px;' : '';
+        
+        // P51-P54 세트코드 행 HTML 생성
+        let rowHtml = `
+            <tr ${isP5SetCode ? `onclick="toggleP52SetCode(${product.id})" style="cursor: pointer;"` : ''}>
+                <td style="background-color: ${rowBgColor}; border: 2px solid #ffffff !important; border-right: 3px solid #ffffff !important; width: 120px !important; min-width: 120px !important; max-width: 120px !important; overflow: hidden !important; box-sizing: border-box !important;">
+                    <div style="display: flex; align-items: center; gap: 3px; width: 100% !important; max-width: 100% !important; overflow: hidden !important; box-sizing: border-box !important;">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="event.stopPropagation(); removeProduct(${product.id})" style="padding: 0.1rem 0.2rem; font-size: 0.7rem; flex-shrink: 0 !important; width: auto !important;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        ${isP5SetCode ? `<i class="fas fa-chevron-${product.expanded ? 'down' : 'right'}" style="margin-right: 3px; color: #0066cc;"></i>` : ''}
+                        <input type="text" class="form-control form-control-sm" value="${(product.code || '').replace(/"/g, '&quot;')}" 
+                               disabled style="background-color: ${codeBgColor}; color: #000000; font-weight: bold; flex: 1; min-width: 0 !important; max-width: calc(100% - 30px) !important; font-size: 0.8rem; padding: 0.2rem; overflow: hidden !important; text-overflow: ellipsis !important; box-sizing: border-box !important;">
+                    </div>
+                </td>
+                <td style="background-color: ${rowBgColor}; border: 2px solid #ffffff !important; width: 300px !important; max-width: 300px !important; overflow: visible !important; box-sizing: border-box !important;">
+                    <div class="code-name-tooltip" data-tooltip="${(product.name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/&/g, '&amp;')}" title="${(product.name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/&/g, '&amp;')}" style="max-width: 100% !important; overflow: visible !important; position: relative !important; ${indentStyle}">
+                        <input type="text" class="form-control form-control-sm" value="${(product.name || '').replace(/"/g, '&quot;')}" 
+                               disabled style="background-color: ${codeBgColor}; color: #000000; font-weight: bold; font-size: 0.8rem; padding: 0.2rem; max-width: 100% !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; box-sizing: border-box !important;">
+                    </div>
+                </td>
+                <td class="text-center" style="background-color: ${product.isSubItem ? '#e6f3ff' : '#ffcccc'}; border: 2px solid #ffffff !important; border-right: 3px solid #ffffff !important; width: 20px !important; min-width: 20px !important; max-width: 20px !important; padding: 0.1rem !important; overflow: hidden !important; box-sizing: border-box !important; vertical-align: middle !important;">
+                    <input type="number" class="form-control form-control-sm text-center quantity-input" value="${quantity}" min="1" 
+                           onchange="event.stopPropagation(); updateProductQuantity(${product.id}, this.value)" style="background-color: transparent !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; font-size: 0.85rem !important; font-family: inherit !important; font-weight: inherit !important; padding: 0 !important; text-align: center !important; box-sizing: border-box !important; border: none !important; border-width: 0 !important; border-style: none !important; border-color: transparent !important; border-top: none !important; border-right: none !important; border-bottom: none !important; border-left: none !important; outline: none !important; outline-width: 0 !important; outline-style: none !important; outline-color: transparent !important; outline-offset: 0 !important; box-shadow: none !important; -webkit-box-shadow: none !important; -moz-box-shadow: none !important; vertical-align: middle !important; line-height: inherit !important; margin: 0 !important; appearance: none !important; -webkit-appearance: none !important; -moz-appearance: textfield !important; height: auto !important;">
+                </td>
+                <td class="text-end sales-price-column" style="background-color: ${codeBgColor} !important; border: 2px solid #ffffff !important;">
+                    <input type="number" class="form-control form-control-sm text-end" value="${priceBookPrice.toFixed(2)}" step="0.01" min="0" 
+                           disabled style="background-color: ${codeBgColor} !important; color: #000000 !important; font-weight: bold !important; font-size: 0.8rem; padding: 0.2rem;">
+                </td>
+                <td class="text-end sales-price-column" style="background-color: ${codeBgColor} !important; border: 2px solid #ffffff !important; font-weight: bold !important; color: #000000 !important;">${(priceBookPrice * quantity).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end sales-price-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${discountedPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end sales-price-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${(discountedPrice * quantity).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end sales-price-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${shippingSalesPerProduct.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                <td class="text-end sales-price-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${Math.round(shippingSalesForProduct).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                <td class="text-end sales-price-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${finalSalesPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end sales-price-column" style="background-color: ${codeBgColor}; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;">${finalSalesPriceTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end cost-column" style="background-color: ${product.isSubItem ? '#d6e9ff' : '#ffcccc'}; border: 2px solid #ffffff !important;">
+                    <input type="number" class="form-control form-control-sm text-end" value="${purchasePrice.toFixed(2)}" step="0.01" min="0" 
+                           onchange="event.stopPropagation(); updateProductPurchase(${product.id}, this.value)" style="background-color: ${product.isSubItem ? '#d6e9ff' : '#ffcccc'}; font-size: 0.8rem; padding: 0.2rem;">
+                </td>
+                <td class="text-end cost-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${(purchasePrice * quantity).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end cost-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${shippingPurchasePerProduct.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                <td class="text-end cost-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${Math.round(shippingPurchaseForProduct).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                <td class="text-end cost-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${incidentalPurchasePerProduct.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                <td class="text-end cost-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${Math.round(incidentalForProduct).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                <td class="text-end cost-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${finalCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end cost-column" style="background-color: ${codeBgColor}; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;">${finalCostTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end margin-column" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${marginRate}%</td>
+            </tr>
+        `;
+        
+        // P51-P54 세트코드이고 expanded가 true인 경우 하위품목 렌더링
+        if (isP5SetCode && product.expanded && product.expandedSubItems && product.expandedSubItems.length > 0) {
+            product.expandedSubItems.forEach(subItem => {
+                const subQuantity = subItem.quantity || 1;
+                
+                // 하위품목의 판매가칸은 숨김 처리 (제품정보칸만 표시)
+                rowHtml += `
+                    <tr style="background-color: #e6f3ff;">
+                        <td style="background-color: #e6f3ff; border: 2px solid #ffffff !important; border-right: 3px solid #ffffff !important; padding-left: 30px !important;">
+                            <div style="display: flex; align-items: center; gap: 3px;">
+                                <input type="text" class="form-control form-control-sm" value="${(subItem.code || '').replace(/"/g, '&quot;')}" 
+                                       disabled style="background-color: #d6e9ff; color: #000000; font-weight: bold; flex: 1; font-size: 0.8rem; padding: 0.2rem;">
+                            </div>
+                        </td>
+                        <td style="background-color: #e6f3ff; border: 2px solid #ffffff !important; padding-left: 30px !important;">
+                            <div class="code-name-tooltip" data-tooltip="${(subItem.name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/&/g, '&amp;')}" title="${(subItem.name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/&/g, '&amp;')}" style="max-width: 100% !important; overflow: visible !important; position: relative !important;">
+                                <input type="text" class="form-control form-control-sm" value="${(subItem.name || '').replace(/"/g, '&quot;')}" 
+                                       disabled style="background-color: #d6e9ff; color: #000000; font-weight: bold; font-size: 0.8rem; padding: 0.2rem; max-width: 100% !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; box-sizing: border-box !important;">
+                            </div>
+                        </td>
+                        <td class="text-center" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; border-right: 3px solid #ffffff !important;">${subQuantity}</td>
+                        <td class="text-end sales-price-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end sales-price-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end sales-price-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end sales-price-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end sales-price-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end sales-price-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end sales-price-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end sales-price-column" style="background-color: #e6f3ff; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end cost-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end cost-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end cost-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end cost-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end cost-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end cost-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end cost-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end cost-column" style="background-color: #e6f3ff; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; display: none !important;"></td>
+                        <td class="text-end margin-column" style="background-color: #e6f3ff; border: 2px solid #ffffff !important; display: none !important;"></td>
+                    </tr>
+                `;
+            });
+        }
+        
+        return rowHtml;
+    }).join('');
+    
+    // 합계 행 업데이트
+    document.getElementById('totalQuantity').textContent = totalQuantity;
+    // 프라이스북 단가 총합계 표시
+    document.getElementById('totalPriceBookUnit').textContent = totalPriceBookUnit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    // 프라이스북 합계 표시
+    document.getElementById('totalPriceBook').textContent = totalPriceBook.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    // 할인가 합계만 표시 (단가 칸은 빈칸)
+    document.getElementById('totalDiscounted').textContent = totalDiscounted.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    // 운임(판매) 합계만 표시 (단가 칸은 빈칸)
+    document.getElementById('totalShippingSales').textContent = shippingSales.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    // 최종 판매가 단가 총합계는 표시하지 않음 (빈칸)
+    // 최종 판매가 합계 표시
+    document.getElementById('totalFinalSales').textContent = totalFinalSales.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    // 구매가 원가 합계만 표시 (단가 칸은 빈칸)
+    document.getElementById('totalPurchase').textContent = totalPurchase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    // 운임(구매) 합계만 표시 (단가 칸은 빈칸)
+    document.getElementById('totalShippingPurchase').textContent = shippingPurchase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    // 부대비용 합계만 표시 (단가 칸은 빈칸)
+    document.getElementById('totalIncidental').textContent = incidentalExpensePurchase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    // 최종 원가 합계 표시
+    document.getElementById('totalFinalCost').textContent = totalFinalCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    
+    // 총합계 마진율 계산: (최종판매가 합계 - 최종원가 합계) / 최종판매가 합계 * 100%
+    // 예시: (15,825 - 5,869) / 15,825 = 62.9%
+    const totalMargin = totalFinalSales - totalFinalCost;
+    const totalMarginRate = totalFinalSales > 0 ? ((totalMargin / totalFinalSales) * 100).toFixed(1) : '0.0';
+    // 총합계 행의 마진율 표시
+    document.getElementById('totalTableMarginRate').textContent = totalMarginRate + '%';
+    
+    // 요약 업데이트
+    updateSummary(totalFinalSales, totalFinalCost);
+    
+    // 세트코드 정보 카드 업데이트
+    updateSetCodeCard();
+}
+
+// 제품 코드 업데이트
+function updateProductCode(productId, code) {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        product.code = code;
+    }
+}
+
+// 제품명 업데이트
+function updateProductName(productId, name) {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        product.name = name;
+    }
+}
+
+// P51-P54 세트코드 토글 함수
+function toggleP52SetCode(productId) {
+    const product = products.find(p => p.id === productId);
+    if (product && product.expandedSubItems) {
+        product.expanded = !product.expanded;
+        updateCalculations();
+    }
+}
+
+// 제품 수량 업데이트
+function updateProductQuantity(productId, quantity) {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        product.quantity = parseFloat(quantity) || 1;
+        updateCalculations();
+    }
+}
+
+// 제품 프라이스북 가격 업데이트
+function updateProductPriceBook(productId, price) {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        product.priceBookPrice = parseFloat(price) || 0;
+        updateCalculations();
+    }
+}
+
+// 제품 구매가 업데이트
+function updateProductPurchase(productId, price) {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        product.purchasePrice = parseFloat(price) || 0;
+        updateCalculations();
+    }
+}
+
+// 요약 업데이트
+function updateSummary(totalFinalSales, totalFinalCost) {
+    // EURO 표시
+    document.getElementById('totalSalesEUR').textContent = '€ ' + totalFinalSales.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const salesProfitEUR = (totalFinalSales - (totalFinalCost || 0));
+    document.getElementById('salesProfitEUR').textContent = '€ ' + salesProfitEUR.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    const totalSalesUSDEl = document.getElementById('totalSalesUSD');
+    const salesProfitUSDEl = document.getElementById('salesProfitUSD');
+    if (totalSalesUSDEl) {
+        totalSalesUSDEl.textContent = '$ ' + (totalFinalSales * (usdPerEur || 1.15)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    if (salesProfitUSDEl) {
+        salesProfitUSDEl.textContent = '$ ' + (salesProfitEUR * (usdPerEur || 1.15)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    
+    // KRW 표시
+    const totalSalesKRW = totalFinalSales * exchangeRate;
+    const salesProfitKRW = salesProfitEUR * exchangeRate;
+    
+    document.getElementById('totalSalesKRW').textContent = '₩ ' + Math.round(totalSalesKRW).toLocaleString('en-US');
+    document.getElementById('salesProfitKRW').textContent = '₩ ' + Math.round(salesProfitKRW).toLocaleString('en-US');
+    
+    // 마진율 계산: (최종판매가 합계 - 최종원가 합계) / 최종판매가 합계 * 100%
+    const totalMargin = totalFinalSales - (totalFinalCost || 0);
+    const totalMarginRate = totalFinalSales > 0 ? ((totalMargin / totalFinalSales) * 100).toFixed(1) : '0.0';
+    document.getElementById('totalMarginRate').textContent = totalMarginRate + '%';
+}
+
+// 엑셀 다운로드 함수 (일반유저용 - 표시된 값만)
+function exportToExcel() {
+    if (products.length === 0) {
+        alert(t('noProductsToDownload'));
+        return;
+    }
+    
+    const discountRate = parseFloat(document.getElementById('discountRateSales').value) || 0;
+    const shippingSales = parseFloat(document.getElementById('shippingSales').value) || 0;
+    
+    // 전체 프라이스북 총 합계 계산
+    let totalPriceBookSum = 0;
+    products.forEach(product => {
+        const quantity = product.quantity || 1;
+        const priceBookPrice = product.priceBookPrice || 0;
+        totalPriceBookSum += priceBookPrice * quantity;
+    });
+    
+    // 엑셀 다운로드용 제품 데이터 준비 (표시된 값만)
+    const exportProducts = products.map(product => {
+        const quantity = product.quantity || 1;
+        const priceBookPrice = product.priceBookPrice || 0;
+        
+        // 할인가 단가 계산
+        const discountedPrice = priceBookPrice * (1 - discountRate / 100);
+        
+        // 운임(판매) 계산
+        const priceBookItem = priceBookPrice * quantity;
+        const shippingSalesForProduct = totalPriceBookSum > 0 ? (priceBookItem / totalPriceBookSum) * shippingSales : 0;
+        const shippingSalesPerProduct = quantity > 0 ? Math.round(shippingSalesForProduct / quantity) : 0;
+        
+        // 최종 판매가 계산
+        const finalSalesPrice = shippingSalesPerProduct + discountedPrice;
+        const finalSalesPriceTotal = finalSalesPrice * quantity;
+        
+        // 표시된 값만 포함 (원가 관련 제외)
+        return {
+            code: product.code || '',
+            name: product.name || '',
+            quantity: quantity,
+            priceBookPrice: priceBookPrice,
+            priceBookTotal: priceBookPrice * quantity,
+            discountedPrice: discountedPrice,
+            discountedTotal: discountedPrice * quantity,
+            shippingSalesPerProduct: shippingSalesPerProduct,
+            shippingSalesTotal: shippingSalesForProduct,
+            finalSalesPrice: finalSalesPrice,
+            finalSalesPriceTotal: finalSalesPriceTotal
+        };
+    });
+    
+    // 합계 계산 (표시된 값만)
+    const totals = {
+        totalQuantity: exportProducts.reduce((sum, p) => sum + p.quantity, 0),
+        totalPriceBook: exportProducts.reduce((sum, p) => sum + p.priceBookTotal, 0),
+        totalDiscounted: exportProducts.reduce((sum, p) => sum + p.discountedTotal, 0),
+        totalShippingSales: shippingSales,
+        totalFinalSales: exportProducts.reduce((sum, p) => sum + p.finalSalesPriceTotal, 0)
+    };
+    
+    // 엑셀 다운로드 데이터 준비 (일반유저용 - 표시된 값만)
+    const exportData = {
+        products: exportProducts,
+        settings: {
+            discountRate: discountRate,
+            shippingSales: shippingSales
+        },
+        totals: totals,
+        isPublicUser: true
+    };
+    
+    // 버튼 비활성화 및 로딩 표시
+    const downloadBtn = document.getElementById('exportExcelBtn');
+    const originalText = downloadBtn ? downloadBtn.innerHTML : '';
+    if (downloadBtn) {
+        downloadBtn.disabled = true;
+        const downloadingText = currentLang === 'ENG' ? 'Downloading...' : '다운로드 중...';
+        downloadBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i>${downloadingText}`;
+    }
+    
+    // 타임아웃 설정 (5분)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000);
+    
+    // 엑셀 생성 API 호출
+    fetch('/api/export_quotation/new/download_excel', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(exportData),
+        signal: controller.signal
+    })
+    .then(response => {
+        clearTimeout(timeoutId);
+        if (!response.ok) {
+            return response.text().then(text => {
+                let errorMsg = `서버 오류 (${response.status})`;
+                try {
+                    const errorData = JSON.parse(text);
+                    if (errorData.error) {
+                        errorMsg += ': ' + errorData.error;
+                    }
+                } catch (e) {
+                    errorMsg += ': ' + text.substring(0, 200);
+                }
+                throw new Error(errorMsg);
+            });
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        if (!blob || blob.size === 0) {
+            throw new Error('다운로드할 파일이 비어있습니다.');
+        }
+        
+        // Blob을 파일로 다운로드
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        a.download = `수출견적서(고객)_${dateStr}.xlsx`;
+        document.body.appendChild(a);
+        
+        // 다운로드 트리거
+        try {
+            a.click();
+            if (window.PnsTracking) {
+                const dlName = currentLang === 'ENG'
+                    ? 'Export_Quotation_Customer_' + dateStr + '.xlsx'
+                    : '수출견적서(고객)_' + dateStr + '.xlsx';
+                window.PnsTracking.logQuoteDownload(
+                    'export_quotation_customer',
+                    (products || []).map(function (p) {
+                        return { code: p.code, categoryNumber: p.categoryNumber || p.category_number };
+                    }),
+                    dlName
+                );
+            }
+        } catch (error) {
+            console.warn('다운로드 클릭 오류:', error);
+        }
+        
+        // 다운로드 완료 후 정리 및 버튼 복원
+        setTimeout(() => {
+            try {
+                window.URL.revokeObjectURL(url);
+                if (document.body.contains(a)) {
+                    document.body.removeChild(a);
+                }
+            } catch (error) {
+                console.warn('URL 정리 중 오류:', error);
+            }
+            
+            if (downloadBtn) {
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = originalText;
+            }
+        }, 500);
+    })
+    .catch(error => {
+        clearTimeout(timeoutId);
+        alert(t('excelDownloadError') + error.message);
+        if (downloadBtn) {
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = originalText;
+        }
+    });
+}
+
+// 제품정보 섹션 접기/펼치기 함수
+function toggleProductInfo() {
+    const productInfoCardBody = document.getElementById('productInfoCardBody');
+    const toggleIcon = document.getElementById('toggleProductInfoIcon');
+    const toggleText = document.getElementById('toggleProductInfoText');
+    
+    if (!productInfoCardBody || !toggleIcon || !toggleText) {
+        return;
+    }
+    
+    const isCollapsed = productInfoCardBody.style.display === 'none';
+    
+    if (isCollapsed) {
+        // 펼치기
+        productInfoCardBody.style.display = '';
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleText.textContent = currentLang === 'ENG' ? 'Collapse' : '접기';
+        toggleText.setAttribute('data-lang-kor', '접기');
+        toggleText.setAttribute('data-lang-eng', 'Collapse');
+    } else {
+        // 접기
+        productInfoCardBody.style.display = 'none';
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+        toggleText.textContent = currentLang === 'ENG' ? 'Expand' : '펼치기';
+        toggleText.setAttribute('data-lang-kor', '펼치기');
+        toggleText.setAttribute('data-lang-eng', 'Expand');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    applyExportCostVisibility();
+});
+</script>
+
+{% endblock %}
+

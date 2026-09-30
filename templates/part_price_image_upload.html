@@ -1,0 +1,879 @@
+{% extends "base.html" %}
+
+{% block title %}파트가격조회 이미지 업로드 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                파트가격조회 이미지 업로드
+            </h2>
+            <div>
+                <button type="button" class="btn btn-outline-secondary" onclick="location.href='/'">
+                    <i class="fas fa-home me-1"></i>홈으로
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 폴더 선택 섹션 -->
+<div class="row mb-4" id="folderSelectionSection">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-burgundy d-flex justify-content-between align-items-center">
+                <h5 class="mb-0" style="color: #ffffff !important;">
+                    폴더 선택
+                </h5>
+                <button type="button" class="btn btn-dark btn-sm" onclick="openAddFolderModal()">
+                    폴더 추가
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row" id="foldersContainer">
+                    <!-- 폴더 목록이 여기에 동적으로 표시됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 하위 폴더 선택 섹션 (초기에는 숨김) -->
+<div class="row mb-4" id="subfolderSection" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-burgundy d-flex justify-content-between align-items-center">
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-light me-2" onclick="goBackToFolders()">
+                        <i class="fas fa-arrow-left me-1"></i>폴더 목록으로
+                    </button>
+                    <h5 class="mb-0 d-inline" style="color: #ffffff !important;" id="currentFolderName">하위 폴더</h5>
+                </div>
+                <button type="button" class="btn btn-dark btn-sm" onclick="openAddSubfolderModal()">
+                    하위 폴더 추가
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row" id="subfoldersContainer">
+                    <!-- 하위 폴더 목록이 여기에 동적으로 표시됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 이미지 업로드 섹션 (초기에는 숨김) -->
+<div class="row mb-4" id="imageUploadSection" style="display: none;">
+    <div class="col-12 mb-3">
+        <button type="button" class="btn btn-outline-secondary" onclick="goBackToSubfolders()">
+            <i class="fas fa-arrow-left me-2"></i>하위 폴더 목록으로 돌아가기
+        </button>
+    </div>
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-burgundy">
+                <h5 class="mb-0" style="color: #ffffff !important;" id="currentSubfolderName">이미지 업로드</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2 mb-3">
+                    <button type="button" class="btn btn-primary" onclick="openImageUploadModal()">
+                        이미지 업로드
+                    </button>
+                </div>
+                <div id="imageList" class="mt-3">
+                    <!-- 업로드된 이미지 목록이 여기에 표시됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 폴더 추가 모달 -->
+<div class="modal fade" id="addFolderModal" tabindex="-1" aria-labelledby="addFolderModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-burgundy">
+                <h5 class="modal-title" id="addFolderModalLabel" style="color: #ffffff !important;">폴더 추가</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addFolderForm">
+                    <div class="mb-3">
+                        <label for="folderName" class="form-label">폴더 이름</label>
+                        <input type="text" class="form-control" id="folderName" placeholder="폴더 이름을 입력하세요" required>
+                    </div>
+                    <div id="folderAddStatus" class="mt-3"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="addFolderBtn">추가</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 하위 폴더 추가 모달 -->
+<div class="modal fade" id="addSubfolderModal" tabindex="-1" aria-labelledby="addSubfolderModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-burgundy">
+                <h5 class="modal-title" id="addSubfolderModalLabel" style="color: #ffffff !important;">하위 폴더 추가</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addSubfolderForm">
+                    <div class="mb-3">
+                        <label for="subfolderName" class="form-label">하위 폴더 이름</label>
+                        <input type="text" class="form-control" id="subfolderName" placeholder="하위 폴더 이름을 입력하세요" required>
+                    </div>
+                    <div id="subfolderAddStatus" class="mt-3"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="addSubfolderBtn">추가</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 이미지 업로드 모달 -->
+<div class="modal fade" id="imageUploadModal" tabindex="-1" aria-labelledby="imageUploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-burgundy">
+                <h5 class="modal-title" id="imageUploadModalLabel" style="color: #1a1a1a !important;">이미지 업로드</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="imageUploadForm">
+                    <input type="hidden" id="uploadCategory" value="">
+                    <div class="mb-3">
+                        <label for="imageFile" class="form-label">이미지 파일 선택</label>
+                        <input type="file" class="form-control" id="imageFile" accept="image/*" multiple>
+                        <small class="form-text text-muted">이미지 파일(.jpg, .jpeg, .png, .gif)을 선택하세요. 여러 파일을 선택할 수 있습니다.</small>
+                    </div>
+                    <div id="imagePreview" class="mb-3"></div>
+                    <div id="uploadStatus" class="mt-3"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="uploadImageBtn">업로드</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentCategory = '';
+let currentFolder = '';
+let currentSubfolder = '';
+let currentSubfolderName = '';
+let currentFolderName = '';
+
+// 하위 폴더 이름을 category로 변환
+function getCategoryFromSubfolderName(subfolderName) {
+    if (!subfolderName) return '';
+    const name = subfolderName.toLowerCase();
+    if (name.includes('cooling unit') || name.includes('coolingunit')) {
+        return 'cooling_unit';
+    } else if (name.includes('trolley')) {
+        return 'trolley';
+    }
+    // 카테고리를 추출할 수 없으면 빈 문자열 반환 (서버에서 subfolder_id로 자동 처리)
+    return '';
+}
+
+// 폴더 목록 로드
+function loadFolders() {
+    fetch('/api/part_price/folders')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayFolders(data.folders || []);
+            } else {
+                // 기본 폴더 표시 (하위 호환성)
+                displayFolders([{ id: 'super_m500', folder_name: 'SUPER M500 Spare Parts' }]);
+            }
+        })
+        .catch(error => {
+            console.error('폴더 목록 로드 오류:', error);
+            // 기본 폴더 표시
+            displayFolders([{ id: 'super_m500', folder_name: 'SUPER M500 Spare Parts' }]);
+        });
+}
+
+// 폴더 표시
+function displayFolders(folders) {
+    const container = document.getElementById('foldersContainer');
+    if (!folders || folders.length === 0) {
+        container.innerHTML = '<div class="col-12"><p class="text-muted">폴더가 없습니다. 폴더를 추가해주세요.</p></div>';
+        return;
+    }
+    
+    let html = '';
+    folders.forEach(folder => {
+        const folderId = folder.id || folder.folder_name;
+        const folderName = folder.folder_name || folder.name || '이름 없음';
+        html += `
+            <div class="col-md-4 mb-3">
+                <div class="card folder-card" style="position: relative; transition: all 0.3s;">
+                    <button type="button" class="btn btn-sm btn-danger" 
+                            style="position: absolute; top: 5px; right: 5px; z-index: 10;"
+                            onclick="event.stopPropagation(); deleteFolder(${folderId}, '${folderName.replace(/'/g, "\\'")}')"
+                            title="폴더 삭제">
+                        삭제
+                    </button>
+                    <div class="card-body text-center" 
+                         style="cursor: pointer;"
+                         onclick="selectFolder('${folderId}')"
+                         onmouseover="this.closest('.folder-card').style.transform='scale(1.05)'; this.closest('.folder-card').style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+                         onmouseout="this.closest('.folder-card').style.transform='scale(1)'; this.closest('.folder-card').style.boxShadow=''">
+                        <i class="fas fa-folder fa-3x mb-3" style="color: #800020;"></i>
+                        <h5 class="card-title">${folderName}</h5>
+                        <p class="text-muted small">클릭하여 하위 카테고리 보기</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+// 폴더 추가 모달 열기
+function openAddFolderModal() {
+    const modal = new bootstrap.Modal(document.getElementById('addFolderModal'));
+    document.getElementById('folderName').value = '';
+    document.getElementById('folderAddStatus').innerHTML = '';
+    modal.show();
+}
+
+// 폴더 선택
+function selectFolder(folderId) {
+    currentFolder = folderId;
+    // 폴더 이름 찾기
+    const folders = document.querySelectorAll('.folder-card');
+    folders.forEach(card => {
+        const onclick = card.querySelector('.card-body').getAttribute('onclick');
+        if (onclick && onclick.includes(`'${folderId}'`)) {
+            const title = card.querySelector('.card-title');
+            if (title) {
+                currentFolderName = title.textContent.trim();
+            }
+        }
+    });
+    
+    // 폴더 선택 시 하위 폴더 섹션 표시
+    document.getElementById('folderSelectionSection').style.display = 'none';
+    document.getElementById('subfolderSection').style.display = 'block';
+    document.getElementById('imageUploadSection').style.display = 'none';
+    document.getElementById('currentFolderName').textContent = currentFolderName || '하위 폴더';
+    
+    // 하위 폴더 목록 로드
+    loadSubfolders(folderId);
+}
+
+// 폴더 삭제
+function deleteFolder(folderId, folderName) {
+    if (!confirm(`"${folderName}" 폴더를 삭제하시겠습니까?\n\n주의: 폴더와 함께 해당 폴더의 모든 하위 폴더와 이미지도 삭제됩니다.`)) {
+        return;
+    }
+    
+    // folderId가 숫자가 아닌 경우 처리
+    const numericFolderId = parseInt(folderId);
+    if (isNaN(numericFolderId)) {
+        alert('유효하지 않은 폴더 ID입니다.');
+        console.error('Invalid folder ID:', folderId);
+        return;
+    }
+    
+    console.log('폴더 삭제 요청:', { folderId: numericFolderId, folderName });
+    
+    fetch(`/api/part_price/folders/${numericFolderId}`, {
+        method: 'DELETE'
+    })
+    .then(response => {
+        console.log('삭제 응답 상태:', response.status);
+        const contentType = response.headers.get('Content-Type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                console.error('서버 응답 (HTML):', text.substring(0, 500));
+                throw new Error('서버에서 JSON 응답을 받지 못했습니다.');
+            });
+        }
+    })
+    .then(data => {
+        console.log('삭제 응답 데이터:', data);
+        if (data.success) {
+            alert('폴더가 삭제되었습니다.');
+            loadFolders();
+            
+            // 메뉴 트리 새로고침
+            if (typeof window.loadPartPriceMenu === 'function') {
+                window.loadPartPriceMenu();
+            } else {
+                // base.html이 로드되지 않았을 수 있으므로 약간의 지연 후 재시도
+                setTimeout(() => {
+                    if (typeof window.loadPartPriceMenu === 'function') {
+                        window.loadPartPriceMenu();
+                    }
+                }, 500);
+            }
+        } else {
+            alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('삭제 중 오류가 발생했습니다: ' + error.message);
+    });
+}
+
+// 하위 폴더 목록 로드
+function loadSubfolders(folderId) {
+    fetch(`/api/part_price/subfolders?folder_id=${folderId}`)
+        .then(response => {
+            const contentType = response.headers.get('Content-Type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            } else {
+                return response.text().then(text => {
+                    console.error('서버 응답 (HTML):', text.substring(0, 500));
+                    throw new Error('서버에서 JSON 응답을 받지 못했습니다.');
+                });
+            }
+        })
+        .then(data => {
+            if (data.success) {
+                displaySubfolders(data.subfolders || []);
+            } else {
+                // 기본 하위 폴더 표시 (하위 호환성)
+                displaySubfolders([
+                    { id: 'cooling_unit', subfolder_name: 'Cooling Unit Spare Parts List' },
+                    { id: 'trolley', subfolder_name: 'Trolley Spare Parts List' }
+                ]);
+            }
+        })
+        .catch(error => {
+            console.error('하위 폴더 목록 로드 오류:', error);
+            // 기본 하위 폴더 표시
+            displaySubfolders([
+                { id: 'cooling_unit', subfolder_name: 'Cooling Unit Spare Parts List' },
+                { id: 'trolley', subfolder_name: 'Trolley Spare Parts List' }
+            ]);
+        });
+}
+
+// 하위 폴더 표시
+function displaySubfolders(subfolders) {
+    const container = document.getElementById('subfoldersContainer');
+    if (!subfolders || subfolders.length === 0) {
+        container.innerHTML = '<div class="col-12"><p class="text-muted">하위 폴더가 없습니다. 하위 폴더를 추가해주세요.</p></div>';
+        return;
+    }
+    
+    let html = '';
+    subfolders.forEach(subfolder => {
+        const subfolderId = subfolder.id || subfolder.subfolder_name;
+        const subfolderName = subfolder.subfolder_name || subfolder.name || '이름 없음';
+        html += `
+            <div class="col-md-4 mb-3">
+                <div class="card subfolder-card" style="position: relative; transition: all 0.3s;">
+                    <button type="button" class="btn btn-sm btn-danger" 
+                            style="position: absolute; top: 5px; right: 5px; z-index: 10;"
+                            onclick="event.stopPropagation(); deleteSubfolder(${subfolderId}, '${subfolderName.replace(/'/g, "\\'")}')"
+                            title="하위 폴더 삭제">
+                        삭제
+                    </button>
+                    <div class="card-body text-center" 
+                         style="cursor: pointer;"
+                         onclick="selectSubfolder(${subfolderId}, '${subfolderName.replace(/'/g, "\\'")}')"
+                         onmouseover="this.closest('.subfolder-card').style.transform='scale(1.05)'; this.closest('.subfolder-card').style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+                         onmouseout="this.closest('.subfolder-card').style.transform='scale(1)'; this.closest('.subfolder-card').style.boxShadow=''">
+                        <i class="fas fa-folder fa-3x mb-3" style="color: #800020;"></i>
+                        <h5 class="card-title">${subfolderName}</h5>
+                        <p class="text-muted small">클릭하여 이미지 업로드</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+// 하위 폴더 추가 모달 열기
+function openAddSubfolderModal() {
+    if (!currentFolder) {
+        alert('먼저 폴더를 선택해주세요.');
+        return;
+    }
+    const modal = new bootstrap.Modal(document.getElementById('addSubfolderModal'));
+    document.getElementById('subfolderName').value = '';
+    document.getElementById('subfolderAddStatus').innerHTML = '';
+    modal.show();
+}
+
+// 하위 폴더 선택
+function selectSubfolder(subfolderId, subfolderName) {
+    currentSubfolder = subfolderId;
+    currentSubfolderName = subfolderName;
+    // 하위 폴더 이름에서 category 추출
+    currentCategory = getCategoryFromSubfolderName(subfolderName);
+    
+    // 하위 폴더 선택 시 이미지 업로드 섹션 표시
+    document.getElementById('subfolderSection').style.display = 'none';
+    document.getElementById('imageUploadSection').style.display = 'block';
+    document.getElementById('currentSubfolderName').textContent = subfolderName || '이미지 업로드';
+    
+    // 이미지 목록 로드
+    loadSubfolderImages(subfolderId);
+}
+
+// 하위 폴더 이미지 목록 로드
+function loadSubfolderImages(subfolderId) {
+    // category는 하위 폴더 이름에서 추출한 값 사용 (없어도 subfolder_id로 필터링 가능)
+    const category = currentCategory || getCategoryFromSubfolderName(currentSubfolderName) || '';
+    let url = `/api/part_price/image/list?subfolder_id=${subfolderId}`;
+    if (category) {
+        url += `&category=${category}`;
+    }
+    if (currentFolder) {
+        url += `&folder_id=${currentFolder}`;
+    }
+    fetch(url)
+        .then(response => {
+            const contentType = response.headers.get('Content-Type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            } else {
+                return response.text().then(text => {
+                    console.error('서버 응답 (HTML):', text.substring(0, 500));
+                    throw new Error('서버에서 JSON 응답을 받지 못했습니다.');
+                });
+            }
+        })
+        .then(data => {
+            if (data.success) {
+                const container = document.getElementById('imageList');
+                
+                if (data.images && data.images.length > 0) {
+                    let html = '<h6>업로드된 이미지:</h6><div class="row">';
+                    data.images.forEach(image => {
+                        html += `
+                            <div class="col-md-4 mb-3">
+                                <div class="card">
+                                    <img src="/api/part_price/image/${image.id}" class="card-img-top" style="max-height: 200px; object-fit: cover; cursor: pointer;" onclick="viewImage('${image.id}')">
+                                    <div class="card-body p-2">
+                                        <small class="text-muted">${image.filename}</small>
+                                        <button class="btn btn-sm btn-danger mt-1" onclick="deleteImage('${image.id}', '${subfolderId}')">
+                                            삭제
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p class="text-muted">업로드된 이미지가 없습니다.</p>';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error loading images:', error);
+            const container = document.getElementById('imageList');
+            container.innerHTML = '<p class="text-muted">이미지 목록을 불러오는 중 오류가 발생했습니다.</p>';
+        });
+}
+
+// 하위 폴더 삭제
+function deleteSubfolder(subfolderId, subfolderName) {
+    if (!confirm(`"${subfolderName}" 하위 폴더를 삭제하시겠습니까?\n\n주의: 하위 폴더와 함께 해당 하위 폴더의 모든 이미지도 삭제됩니다.`)) {
+        return;
+    }
+    
+    fetch(`/api/part_price/subfolders/${subfolderId}?folder_id=${currentFolder}`, {
+        method: 'DELETE'
+    })
+    .then(response => {
+        const contentType = response.headers.get('Content-Type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                console.error('서버 응답 (HTML):', text.substring(0, 500));
+                throw new Error('서버에서 JSON 응답을 받지 못했습니다.');
+            });
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            alert('하위 폴더가 삭제되었습니다.');
+            loadSubfolders(currentFolder);
+        } else {
+            alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('삭제 중 오류가 발생했습니다: ' + error.message);
+    });
+}
+
+// 하위 폴더 목록으로 돌아가기
+function goBackToSubfolders() {
+    document.getElementById('subfolderSection').style.display = 'block';
+    document.getElementById('imageUploadSection').style.display = 'none';
+    if (currentFolder) {
+        loadSubfolders(currentFolder);
+    }
+}
+
+// 폴더 목록으로 돌아가기
+function goBackToFolders() {
+    document.getElementById('folderSelectionSection').style.display = 'block';
+    document.getElementById('subfolderSection').style.display = 'none';
+    document.getElementById('imageUploadSection').style.display = 'none';
+    currentFolder = '';
+    currentSubfolder = '';
+    currentFolderName = '';
+}
+
+function openImageUploadModal() {
+    if (!currentSubfolder) {
+        alert('하위 폴더를 선택해주세요.');
+        return;
+    }
+    // category는 하위 폴더 이름에서 추출한 값 사용
+    const category = currentCategory || getCategoryFromSubfolderName(currentSubfolderName);
+    const modal = new bootstrap.Modal(document.getElementById('imageUploadModal'));
+    const modalLabel = document.getElementById('imageUploadModalLabel');
+    const subfolderName = document.getElementById('currentSubfolderName').textContent;
+    modalLabel.textContent = subfolderName + ' - 이미지 업로드';
+    
+    document.getElementById('uploadCategory').value = category;
+    document.getElementById('imageFile').value = '';
+    document.getElementById('imagePreview').innerHTML = '';
+    document.getElementById('uploadStatus').innerHTML = '';
+    
+    modal.show();
+}
+
+// 이미지 미리보기
+document.getElementById('imageFile').addEventListener('change', function(e) {
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    
+    const files = e.target.files;
+    if (files.length > 0) {
+        preview.innerHTML = '<h6>선택된 이미지:</h6><div class="row">';
+        
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-4 mb-2';
+                    col.innerHTML = `
+                        <div class="card">
+                            <img src="${e.target.result}" class="card-img-top" style="max-height: 150px; object-fit: cover;">
+                            <div class="card-body p-2">
+                                <small class="text-muted">${file.name}</small>
+                            </div>
+                        </div>
+                    `;
+                    preview.querySelector('.row').appendChild(col);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        preview.innerHTML += '</div>';
+    }
+});
+
+// 이미지 업로드
+document.getElementById('uploadImageBtn').addEventListener('click', function() {
+    const fileInput = document.getElementById('imageFile');
+    const files = fileInput.files;
+    const category = document.getElementById('uploadCategory').value;
+    const statusDiv = document.getElementById('uploadStatus');
+    
+    if (files.length === 0) {
+        statusDiv.innerHTML = '<div class="alert alert-warning">이미지 파일을 선택해주세요.</div>';
+        return;
+    }
+    
+    const formData = new FormData();
+    // category는 하위 폴더 이름에서 추출한 값 사용 (없으면 서버에서 subfolder_id로 자동 처리)
+    const uploadCategory = currentCategory || getCategoryFromSubfolderName(currentSubfolderName) || category || '';
+    formData.append('category', uploadCategory);
+    if (currentFolder) {
+        formData.append('folder_id', currentFolder);
+    }
+    if (currentSubfolder) {
+        formData.append('subfolder_id', currentSubfolder);
+    }
+    for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+    }
+    
+    statusDiv.innerHTML = '<div class="alert alert-info">업로드 중...</div>';
+    document.getElementById('uploadImageBtn').disabled = true;
+    
+    fetch('/api/part_price/image/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        const contentType = response.headers.get('Content-Type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                throw new Error('서버에서 JSON 응답을 받지 못했습니다. 서버 오류가 발생했을 수 있습니다.');
+            });
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            statusDiv.innerHTML = `<div class="alert alert-success">${data.message || '이미지가 성공적으로 업로드되었습니다.'}</div>`;
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(document.getElementById('imageUploadModal')).hide();
+                if (currentSubfolder) {
+                    loadSubfolderImages(currentSubfolder);
+                } else {
+                    loadImages(category);
+                }
+            }, 1500);
+        } else {
+            statusDiv.innerHTML = `<div class="alert alert-danger">업로드 실패: ${data.error || '알 수 없는 오류'}</div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        statusDiv.innerHTML = `<div class="alert alert-danger">업로드 중 오류가 발생했습니다: ${error.message}</div>`;
+    })
+    .finally(() => {
+        document.getElementById('uploadImageBtn').disabled = false;
+    });
+});
+
+// 업로드된 이미지 목록 로드
+function loadImages(category) {
+    fetch(`/api/part_price/image/list?category=${category}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const containerId = category === 'cooling_unit' ? 'coolingUnitImageList' : 'trolleyImageList';
+                const container = document.getElementById(containerId);
+                
+                if (data.images && data.images.length > 0) {
+                    let html = '<h6>업로드된 이미지:</h6><div class="row">';
+                    data.images.forEach(image => {
+                        html += `
+                            <div class="col-md-4 mb-3">
+                                <div class="card">
+                                    <img src="/api/part_price/image/${image.id}" class="card-img-top" style="max-height: 200px; object-fit: cover; cursor: pointer;" onclick="viewImage('${image.id}')">
+                                    <div class="card-body p-2">
+                                        <small class="text-muted">${image.filename}</small>
+                                        <button class="btn btn-sm btn-danger mt-1" onclick="deleteImage('${image.id}', '${category}')">
+                                            <i class="fas fa-trash"></i> 삭제
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p class="text-muted">업로드된 이미지가 없습니다.</p>';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error loading images:', error);
+        });
+}
+
+// 이미지 보기
+function viewImage(imageId) {
+    window.open(`/api/part_price/image/${imageId}`, '_blank');
+}
+
+// 이미지 삭제
+function deleteImage(imageId, category) {
+    if (!confirm('이미지를 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    fetch(`/api/part_price/image/${imageId}`, {
+        method: 'DELETE'
+    })
+    .then(response => {
+        const contentType = response.headers.get('Content-Type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                console.error('서버 응답 (HTML):', text.substring(0, 500));
+                throw new Error('서버에서 JSON 응답을 받지 못했습니다.');
+            });
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            alert('이미지가 삭제되었습니다.');
+            if (currentSubfolder) {
+                loadSubfolderImages(currentSubfolder);
+            } else {
+                loadImages(category);
+            }
+        } else {
+            alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('삭제 중 오류가 발생했습니다: ' + error.message);
+    });
+}
+
+// 폴더 추가
+document.getElementById('addFolderBtn').addEventListener('click', function() {
+    const folderName = document.getElementById('folderName').value.trim();
+    const statusDiv = document.getElementById('folderAddStatus');
+    
+    if (!folderName) {
+        statusDiv.innerHTML = '<div class="alert alert-warning">폴더 이름을 입력해주세요.</div>';
+        return;
+    }
+    
+    const btn = this;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '추가 중...';
+    
+    fetch('/api/part_price/folders', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            folder_name: folderName
+        })
+    })
+    .then(response => {
+        const contentType = response.headers.get('Content-Type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                console.error('서버 응답 (HTML):', text.substring(0, 500));
+                throw new Error('서버에서 JSON 응답을 받지 못했습니다.');
+            });
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            statusDiv.innerHTML = '<div class="alert alert-success">폴더가 추가되었습니다.</div>';
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(document.getElementById('addFolderModal')).hide();
+                loadFolders();
+            }, 1000);
+        } else {
+            statusDiv.innerHTML = `<div class="alert alert-danger">추가 실패: ${data.error || '알 수 없는 오류'}</div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        statusDiv.innerHTML = `<div class="alert alert-danger">추가 중 오류가 발생했습니다: ${error.message}</div>`;
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+});
+
+// 하위 폴더 추가
+document.getElementById('addSubfolderBtn').addEventListener('click', function() {
+    const subfolderName = document.getElementById('subfolderName').value.trim();
+    const statusDiv = document.getElementById('subfolderAddStatus');
+    
+    if (!subfolderName) {
+        statusDiv.innerHTML = '<div class="alert alert-warning">하위 폴더 이름을 입력해주세요.</div>';
+        return;
+    }
+    
+    if (!currentFolder) {
+        statusDiv.innerHTML = '<div class="alert alert-warning">먼저 폴더를 선택해주세요.</div>';
+        return;
+    }
+    
+    const btn = this;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '추가 중...';
+    
+    fetch('/api/part_price/subfolders', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            folder_id: currentFolder,
+            subfolder_name: subfolderName
+        })
+    })
+    .then(response => {
+        const contentType = response.headers.get('Content-Type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                console.error('서버 응답 (HTML):', text.substring(0, 500));
+                throw new Error('서버에서 JSON 응답을 받지 못했습니다.');
+            });
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            statusDiv.innerHTML = '<div class="alert alert-success">하위 폴더가 추가되었습니다.</div>';
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(document.getElementById('addSubfolderModal')).hide();
+                loadSubfolders(currentFolder);
+            }, 1000);
+        } else {
+            statusDiv.innerHTML = `<div class="alert alert-danger">추가 실패: ${data.error || '알 수 없는 오류'}</div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        statusDiv.innerHTML = `<div class="alert alert-danger">추가 중 오류가 발생했습니다: ${error.message}</div>`;
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+});
+
+// 페이지 로드 시 폴더 목록 로드
+document.addEventListener('DOMContentLoaded', function() {
+    // 초기에는 폴더 선택 화면만 표시
+    document.getElementById('folderSelectionSection').style.display = 'block';
+    document.getElementById('subfolderSection').style.display = 'none';
+    document.getElementById('imageUploadSection').style.display = 'none';
+    // 폴더 목록 로드
+    loadFolders();
+});
+</script>
+{% endblock %}
+
+

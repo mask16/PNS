@@ -1,0 +1,673 @@
+{% extends "base.html" %}
+
+{% block title %}프라이스북 페이지 등록 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<style>
+    .pb-panel {
+        border: 1.5px solid #c9b3bb;
+        border-radius: 0.625rem;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(128, 0, 32, 0.06);
+        margin-bottom: 1.25rem;
+    }
+    .pb-panel__header {
+        padding: 0.9rem 1.15rem;
+        border-bottom: 1px solid #660019;
+        background-color: #800020 !important;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .pb-panel__header,
+    .pb-panel__header * {
+        color: #fff !important;
+    }
+    .pb-panel__header h5 {
+        font-weight: 600;
+        margin: 0;
+    }
+    .pb-panel__header .btn-outline-light {
+        color: #fff !important;
+        border-color: rgba(255, 255, 255, 0.75);
+    }
+    .pb-panel__header .btn-outline-light:hover {
+        color: #800020 !important;
+        background-color: #fff;
+        border-color: #fff;
+    }
+    .pb-panel__body {
+        padding: 1.15rem;
+        background: #fff;
+    }
+    .folder-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 0.75rem;
+    }
+    .folder-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 0.8rem 0.9rem;
+        background: #fff;
+        cursor: pointer;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .folder-card:hover {
+        border-color: #800020;
+        box-shadow: 0 2px 8px rgba(128, 0, 32, 0.12);
+    }
+    .folder-card__title {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 0.2rem;
+        word-break: break-word;
+    }
+    .folder-card__meta {
+        font-size: 0.8125rem;
+        color: #6b7280;
+        margin-bottom: 0.35rem;
+    }
+    .folder-card__count {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #800020;
+        line-height: 1.4;
+    }
+    .pb-tabs {
+        display: flex;
+        gap: 0.4rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .pb-tab-btn {
+        border: 1.5px solid #c9b3bb;
+        background: #fff;
+        color: #800020;
+        font-weight: 600;
+        border-radius: 0.4rem;
+        padding: 0.45rem 0.9rem;
+        cursor: pointer;
+    }
+    .pb-tab-btn.is-active {
+        background: #800020;
+        border-color: #800020;
+        color: #fff;
+    }
+    .pb-preview {
+        margin-top: 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 0.85rem;
+        background: #fcfafb;
+    }
+    .pb-preview__meta {
+        font-size: 0.9rem;
+        color: #374151;
+        margin-bottom: 0.65rem;
+    }
+    .pb-preview img {
+        max-width: 100%;
+        max-height: 280px;
+        display: block;
+        border-radius: 0.35rem;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+    }
+    .pb-empty {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+    .pb-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+    .type-section {
+        border: 1.5px solid #c9b3bb;
+        border-radius: 0.625rem;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+    .type-section__header {
+        padding: 0.75rem 1rem;
+        background-color: #800020;
+        border-bottom: 1px solid #660019;
+        color: #fff !important;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .type-section__header,
+    .type-section__header * {
+        color: #fff !important;
+    }
+    .type-section__body {
+        padding: 1rem;
+        background: #fff;
+    }
+    .image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    .image-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        background: #fff;
+    }
+    .image-card img {
+        width: 100%;
+        height: 140px;
+        object-fit: contain;
+        background: #f9fafb;
+        display: block;
+    }
+    .image-card__body {
+        padding: 0.65rem;
+    }
+    .image-card__name {
+        font-size: 0.8rem;
+        color: #374151;
+        word-break: break-all;
+        margin-bottom: 0.5rem;
+    }
+    .image-card__actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+    .image-card__actions .btn-view-large {
+        color: #800020 !important;
+        border-color: #800020 !important;
+        background: #fff !important;
+    }
+    .image-card__actions .btn-view-large:hover {
+        color: #fff !important;
+        background: #800020 !important;
+    }
+    #pbImageViewModal .modal-header {
+        background-color: #800020;
+        border-bottom: 1px solid #660019;
+        color: #fff;
+    }
+    #pbImageViewModal .modal-title {
+        color: #fff;
+        font-weight: 600;
+        margin: 0;
+        font-size: 1rem;
+        word-break: break-all;
+    }
+    #pbImageViewModal .modal-body {
+        background: #f3f4f6;
+        padding: 1rem;
+        text-align: center;
+        max-height: 80vh;
+        overflow: auto;
+    }
+    #pbImageViewModal .modal-body img {
+        max-width: 100%;
+        height: auto;
+        display: inline-block;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12">
+            <h2 style="color: #000000 !important;">프라이스북 페이지 등록</h2>
+            <p class="text-muted mb-0">1페이지·마지막페이지는 메인에서 공통 등록하고, 파워소스 폴더를 눌러 해당 모델 이미지를 등록합니다.</p>
+        </div>
+    </div>
+
+    <div id="alertMessage" class="alert d-none" role="alert"></div>
+
+    <div id="mainView">
+        <div class="pb-panel" id="uploadPanel">
+            <div class="pb-panel__header">
+                <h5>공통 페이지 등록</h5>
+            </div>
+            <div class="pb-panel__body">
+                <div class="row g-3">
+                    <div class="col-12 col-lg-6">
+                        <div class="type-section">
+                            <div class="type-section__header">
+                                <span>1페이지 업로드</span>
+                                <span class="small" id="firstStatusLabel">미등록</span>
+                            </div>
+                            <div class="type-section__body">
+                                <label for="firstPageFile" class="form-label">파일 선택</label>
+                                <input type="file" class="form-control" id="firstPageFile" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp">
+                                <div class="form-text">.pdf, .png, .jpg, .jpeg, .gif, .webp</div>
+                                <button type="button" class="btn btn-primary mt-3 btn-upload-global" data-page-type="first">1페이지 업로드</button>
+                                <div id="firstPreview" class="pb-preview">
+                                    <div class="pb-empty">등록된 1페이지가 없습니다.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <div class="type-section">
+                            <div class="type-section__header">
+                                <span>마지막페이지 업로드</span>
+                                <span class="small" id="lastStatusLabel">미등록</span>
+                            </div>
+                            <div class="type-section__body">
+                                <label for="lastPageFile" class="form-label">파일 선택</label>
+                                <input type="file" class="form-control" id="lastPageFile" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp">
+                                <div class="form-text">.pdf, .png, .jpg, .jpeg, .gif, .webp</div>
+                                <button type="button" class="btn btn-primary mt-3 btn-upload-global" data-page-type="last">마지막페이지 업로드</button>
+                                <div id="lastPreview" class="pb-preview">
+                                    <div class="pb-empty">등록된 마지막페이지가 없습니다.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pb-panel" id="folderPanel">
+            <div class="pb-panel__header">
+                <h5>[1] 파워소스 목록</h5>
+            </div>
+            <div class="pb-panel__body">
+                <div class="form-text mb-2">폴더를 클릭하면 해당 파워소스 이미지를 등록할 수 있습니다. (1페이지/마지막페이지는 위 공통 등록 사용)</div>
+                <div id="folderGrid" class="folder-grid">
+                    <div class="text-muted">불러오는 중...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="pb-panel" id="folderUploadPanel" style="display:none;">
+        <div class="pb-panel__header">
+            <h5 id="folderUploadTitle">이미지 등록</h5>
+            <button type="button" class="btn btn-sm btn-outline-light" id="backToMainBtn">목록으로</button>
+        </div>
+        <div class="pb-panel__body">
+            <div class="pb-tabs" id="folderVariantTabs" role="tablist"></div>
+            <div class="type-section">
+                <div class="type-section__header">
+                    <span>이미지 업로드</span>
+                    <span class="small" id="folderImageCount">0개</span>
+                </div>
+                <div class="type-section__body">
+                    <label for="folderImageFile" class="form-label">파일 선택</label>
+                    <input type="file" class="form-control" id="folderImageFile" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" multiple>
+                    <div class="form-text">.pdf, .png, .jpg, .jpeg, .gif, .webp (여러 파일 가능)</div>
+                    <button type="button" class="btn btn-primary mt-3" id="folderUploadBtn">이미지 업로드</button>
+                    <div id="folderImageGrid" class="image-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 등록 이미지 크게보기 -->
+<div class="modal fade" id="pbImageViewModal" tabindex="-1" aria-labelledby="pbImageViewTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pbImageViewTitle">이미지 크게보기</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="닫기"></button>
+            </div>
+            <div class="modal-body">
+                <img id="pbImageViewImg" src="" alt="">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    let currentFolder = null;
+    let folderVariant = 'std';
+
+    function showAlert(message, type) {
+        const el = document.getElementById('alertMessage');
+        if (!el) return;
+        el.textContent = message;
+        el.className = 'alert alert-' + type;
+        el.classList.remove('d-none');
+        window.setTimeout(function () { el.classList.add('d-none'); }, 5000);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+
+    function isImage(filename) {
+        return /\.(png|jpe?g|gif|webp)$/i.test(filename || '');
+    }
+
+    function renderGlobalPreview(pageType, page) {
+        const previewId = pageType === 'last' ? 'lastPreview' : 'firstPreview';
+        const statusId = pageType === 'last' ? 'lastStatusLabel' : 'firstStatusLabel';
+        const preview = document.getElementById(previewId);
+        const status = document.getElementById(statusId);
+        if (!preview) return;
+        if (!page) {
+            preview.innerHTML = '<div class="pb-empty">등록된 ' + (pageType === 'last' ? '마지막페이지' : '1페이지') + '가 없습니다.</div>';
+            if (status) status.textContent = '미등록';
+            return;
+        }
+        if (status) status.textContent = '등록됨';
+        let media = isImage(page.filename)
+            ? '<img src="' + escapeHtml(page.url) + '" alt="' + escapeHtml(page.filename) + '">'
+            : '<div class="pb-empty">PDF 파일이 등록되어 있습니다. 미리보기는 다운로드로 확인하세요.</div>';
+        preview.innerHTML =
+            '<div class="pb-preview__meta"><div><strong>' + escapeHtml(page.filename) + '</strong></div>' +
+            '<div>' + escapeHtml(page.size_kb) + ' KB · ' + escapeHtml(page.created_at || '') + '</div></div>' +
+            media +
+            '<div class="pb-actions">' +
+            '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(page.url) + '" target="_blank" rel="noopener">다운로드/보기</a>' +
+            '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-page" data-page-id="' + page.id + '">삭제</button>' +
+            '</div>';
+    }
+
+    function loadGlobalPages() {
+        fetch('/api/pricebook_pages?variant=std', { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.error || '목록을 불러오지 못했습니다.');
+                renderGlobalPreview('first', data.latest && data.latest.first ? data.latest.first : null);
+                renderGlobalPreview('last', data.latest && data.latest.last ? data.latest.last : null);
+            })
+            .catch(function (err) {
+                showAlert(err.message || '목록을 불러오지 못했습니다.', 'danger');
+            });
+    }
+
+    function loadFolders() {
+        fetch('/api/pricebook_pages/folders', { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                const grid = document.getElementById('folderGrid');
+                if (!data.success) {
+                    grid.innerHTML = '<div class="text-danger">' + escapeHtml(data.error || '목록을 불러오지 못했습니다.') + '</div>';
+                    return;
+                }
+                const folders = data.folders || [];
+                if (!folders.length) {
+                    grid.innerHTML = '<div class="text-muted">등록된 파워소스 옵션이 없습니다.</div>';
+                    return;
+                }
+                grid.innerHTML = folders.map(function (folder) {
+                    return '<div class="folder-card"' +
+                        ' data-option-item-id="' + folder.option_item_id + '"' +
+                        ' data-folder-label="' + escapeHtml(folder.folder_label) + '"' +
+                        ' data-folder-label-w="' + escapeHtml(folder.folder_label_w || (folder.folder_label + ' W')) + '">' +
+                        '<div class="folder-card__title">' + escapeHtml(folder.folder_label) + '</div>' +
+                        '<div class="folder-card__meta">' + escapeHtml(folder.item_code || '') + '</div>' +
+                        '<div class="folder-card__count">' +
+                        escapeHtml(folder.folder_label) + ' 이미지 ' + (folder.std_count || 0) + '개<br>' +
+                        escapeHtml(folder.folder_label_w || '') + ' 이미지 ' + (folder.w_count || 0) + '개<br>' +
+                        '하단악세서리 ' + (folder.accessory_count || 0) + '개' +
+                        '</div></div>';
+                }).join('');
+            })
+            .catch(function () {
+                document.getElementById('folderGrid').innerHTML = '<div class="text-danger">목록을 불러오지 못했습니다.</div>';
+            });
+    }
+
+    function renderFolderTabs() {
+        const tabs = document.getElementById('folderVariantTabs');
+        if (!tabs || !currentFolder) return;
+        const items = [
+            { variant: 'std', label: currentFolder.folder_label },
+            { variant: 'W', label: currentFolder.folder_label_w },
+            { variant: 'accessory', label: '하단악세서리' }
+        ];
+        tabs.innerHTML = items.map(function (item) {
+            return '<button type="button" class="pb-tab-btn' + (item.variant === folderVariant ? ' is-active' : '') +
+                '" data-variant="' + item.variant + '">' + escapeHtml(item.label) + '</button>';
+        }).join('');
+    }
+
+    function currentFolderMode() {
+        return folderVariant === 'accessory' ? 'accessory' : 'content';
+    }
+
+    function renderFolderImages(images) {
+        const grid = document.getElementById('folderImageGrid');
+        const count = document.getElementById('folderImageCount');
+        const headerLabel = document.querySelector('#folderUploadPanel .type-section__header span:first-child');
+        if (headerLabel) {
+            headerLabel.textContent = folderVariant === 'accessory' ? '하단악세서리 업로드' : '이미지 업로드';
+        }
+        const uploadBtn = document.getElementById('folderUploadBtn');
+        if (uploadBtn) {
+            uploadBtn.textContent = folderVariant === 'accessory' ? '하단악세서리 업로드' : '이미지 업로드';
+        }
+        if (count) count.textContent = (images || []).length + '개';
+        if (!images || !images.length) {
+            grid.innerHTML = '<div class="pb-empty">등록된 이미지가 없습니다.</div>';
+            return;
+        }
+        grid.innerHTML = images.map(function (image) {
+            const media = isImage(image.filename)
+                ? '<img src="' + escapeHtml(image.url) + '" alt="' + escapeHtml(image.filename) + '">'
+                : '<div class="pb-empty" style="padding:1rem;">PDF</div>';
+            return '<div class="image-card">' + media +
+                '<div class="image-card__body">' +
+                '<div class="image-card__name">' + escapeHtml(image.filename) + '</div>' +
+                '<div class="image-card__actions">' +
+                '<button type="button" class="btn btn-sm w-100 btn-view-large"' +
+                ' data-url="' + escapeHtml(image.url) + '"' +
+                ' data-filename="' + escapeHtml(image.filename) + '">크게보기</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-danger w-100 btn-delete-page" data-page-id="' + image.id + '">삭제</button>' +
+                '</div></div></div>';
+        }).join('');
+    }
+
+    function loadFolderImages() {
+        if (!currentFolder) return;
+        let title;
+        if (folderVariant === 'accessory') {
+            title = (currentFolder.folder_label || '') + ' 하단악세서리';
+        } else if (folderVariant === 'W') {
+            title = currentFolder.folder_label_w;
+        } else {
+            title = currentFolder.folder_label;
+        }
+        document.getElementById('folderUploadTitle').textContent = title + ' 이미지 등록';
+        renderFolderTabs();
+        let url = '/api/pricebook_pages?option_item_id=' + encodeURIComponent(currentFolder.option_item_id);
+        if (folderVariant === 'accessory') {
+            url += '&page_type=accessory';
+        } else {
+            url += '&variant=' + encodeURIComponent(folderVariant || 'std');
+        }
+        fetch(url, { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.error || '이미지 목록을 불러오지 못했습니다.');
+                renderFolderImages(data.images || []);
+            })
+            .catch(function (err) {
+                showAlert(err.message || '이미지 목록을 불러오지 못했습니다.', 'danger');
+            });
+    }
+
+    function openFolder(optionItemId, folderLabel, folderLabelW) {
+        currentFolder = {
+            option_item_id: optionItemId,
+            folder_label: folderLabel,
+            folder_label_w: folderLabelW || (folderLabel + ' W')
+        };
+        folderVariant = 'std';
+        document.getElementById('mainView').style.display = 'none';
+        document.getElementById('folderUploadPanel').style.display = '';
+        document.getElementById('folderImageFile').value = '';
+        loadFolderImages();
+    }
+
+    function backToMain() {
+        currentFolder = null;
+        folderVariant = 'std';
+        document.getElementById('folderUploadPanel').style.display = 'none';
+        document.getElementById('mainView').style.display = '';
+        loadFolders();
+        loadGlobalPages();
+    }
+
+    function uploadGlobal(pageType) {
+        const inputId = pageType === 'last' ? 'lastPageFile' : 'firstPageFile';
+        const fileInput = document.getElementById(inputId);
+        if (!fileInput.files || !fileInput.files.length) {
+            showAlert((pageType === 'last' ? '마지막페이지' : '1페이지') + ' 파일을 선택해 주세요.', 'warning');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('page_type', pageType);
+        formData.append('variant', 'std');
+        formData.append('file', fileInput.files[0]);
+        const btn = document.querySelector('.btn-upload-global[data-page-type="' + pageType + '"]');
+        if (btn) btn.disabled = true;
+        fetch('/api/pricebook_pages/upload', { method: 'POST', body: formData, credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.error || '업로드 실패');
+                showAlert(data.message || '업로드되었습니다.', 'success');
+                fileInput.value = '';
+                loadGlobalPages();
+            })
+            .catch(function (err) { showAlert(err.message || '업로드 중 오류가 발생했습니다.', 'danger'); })
+            .finally(function () { if (btn) btn.disabled = false; });
+    }
+
+    function uploadFolderImages() {
+        if (!currentFolder) return;
+        const fileInput = document.getElementById('folderImageFile');
+        if (!fileInput.files || !fileInput.files.length) {
+            showAlert('이미지를 선택해 주세요.', 'warning');
+            return;
+        }
+        const btn = document.getElementById('folderUploadBtn');
+        btn.disabled = true;
+        const files = Array.from(fileInput.files);
+        let chain = Promise.resolve();
+        let okCount = 0;
+        files.forEach(function (file) {
+            chain = chain.then(function () {
+                const formData = new FormData();
+                formData.append('option_item_id', String(currentFolder.option_item_id));
+                formData.append('variant', folderVariant === 'accessory' ? 'std' : (folderVariant || 'std'));
+                formData.append('page_type', currentFolderMode());
+                formData.append('file', file);
+                return fetch('/api/pricebook_pages/upload', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                }).then(function (r) { return r.json(); }).then(function (data) {
+                    if (!data.success) throw new Error(data.error || '업로드 실패');
+                    okCount += 1;
+                });
+            });
+        });
+        chain
+            .then(function () {
+                showAlert(okCount + '개 이미지가 업로드되었습니다.', 'success');
+                fileInput.value = '';
+                loadFolderImages();
+            })
+            .catch(function (err) {
+                showAlert(err.message || '업로드 중 오류가 발생했습니다.', 'danger');
+                loadFolderImages();
+            })
+            .finally(function () { btn.disabled = false; });
+    }
+
+    document.getElementById('folderVariantTabs').addEventListener('click', function (e) {
+        const btn = e.target.closest('.pb-tab-btn');
+        if (!btn) return;
+        folderVariant = btn.getAttribute('data-variant') || 'std';
+        document.getElementById('folderImageFile').value = '';
+        loadFolderImages();
+    });
+
+    document.getElementById('folderGrid').addEventListener('click', function (e) {
+        const card = e.target.closest('.folder-card');
+        if (!card) return;
+        openFolder(
+            card.getAttribute('data-option-item-id'),
+            card.getAttribute('data-folder-label'),
+            card.getAttribute('data-folder-label-w')
+        );
+    });
+
+    document.getElementById('backToMainBtn').addEventListener('click', backToMain);
+    document.getElementById('folderUploadBtn').addEventListener('click', uploadFolderImages);
+
+    document.querySelectorAll('.btn-upload-global').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            uploadGlobal(btn.getAttribute('data-page-type'));
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        const viewBtn = e.target.closest('.btn-view-large');
+        if (viewBtn) {
+            const url = viewBtn.getAttribute('data-url') || '';
+            const filename = viewBtn.getAttribute('data-filename') || '';
+            if (!url) return;
+            if (!isImage(filename)) {
+                window.open(url, '_blank', 'noopener');
+                return;
+            }
+            const titleEl = document.getElementById('pbImageViewTitle');
+            const imgEl = document.getElementById('pbImageViewImg');
+            const modalEl = document.getElementById('pbImageViewModal');
+            if (titleEl) titleEl.textContent = filename || '이미지 크게보기';
+            if (imgEl) {
+                imgEl.src = url;
+                imgEl.alt = filename || '';
+            }
+            if (modalEl && window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            } else if (url) {
+                window.open(url, '_blank', 'noopener');
+            }
+            return;
+        }
+
+        const btn = e.target.closest('.btn-delete-page');
+        if (!btn) return;
+        if (!window.confirm('이 파일을 삭제하시겠습니까?')) return;
+        const pageId = btn.getAttribute('data-page-id');
+        btn.disabled = true;
+        fetch('/api/pricebook_pages/' + encodeURIComponent(pageId), {
+            method: 'DELETE',
+            credentials: 'same-origin'
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.error || '삭제 실패');
+                showAlert(data.message || '삭제되었습니다.', 'success');
+                if (currentFolder) loadFolderImages();
+                else loadGlobalPages();
+                loadFolders();
+            })
+            .catch(function (err) {
+                showAlert(err.message || '삭제 중 오류가 발생했습니다.', 'danger');
+                btn.disabled = false;
+            });
+    });
+
+    loadGlobalPages();
+    loadFolders();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,562 @@
+{% extends "base.html" %}
+
+{% block title %}코드가격관리 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-dollar-sign me-2"></i>
+                코드가격관리
+            </h2>
+            <div>
+                <button type="button" class="btn btn-outline-secondary me-2" onclick="location.href='/'">
+                    <i class="fas fa-home me-1"></i>홈으로
+                </button>
+                <button type="button" class="btn btn-primary me-2" onclick="downloadExcel()">
+                    <i class="fas fa-file-excel me-1"></i>엑셀 다운로드
+                </button>
+                <button type="button" class="btn btn-info me-2" onclick="document.getElementById('excelUploadInput').click()" style="display: none;">
+                    <i class="fas fa-file-upload me-1"></i>엑셀 업로드
+                </button>
+                <input type="file" id="excelUploadInput" accept=".xlsx,.xls" style="display: none;" onchange="uploadExcel(event)">
+                <button type="button" class="btn btn-success" onclick="saveAllPrices()" style="display: none;">
+                    <i class="fas fa-save me-1"></i>모든 가격 저장
+                </button>
+            </div>
+        </div>
+        <p class="text-muted">1~12번 카테고리별 옵션의 기본 가격을 입력할 수 있습니다.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-burgundy">
+                <h5 class="mb-0" style="color: #1a1a1a !important;">
+                    <i class="fas fa-list me-2" style="color: #1a1a1a !important;"></i>
+                    카테고리별 옵션 가격 관리
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="loadingMessage" class="text-center py-5">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">로딩 중...</span>
+                    </div>
+                    <p class="text-muted">옵션 정보를 불러오는 중입니다...</p>
+                </div>
+                
+                <div id="priceManagementContainer" style="display: none;">
+                    <ul class="nav nav-tabs" id="categoryTabs" role="tablist">
+                        <!-- 탭이 동적으로 생성됨 -->
+                    </ul>
+                    <div class="tab-content pt-3" id="categoryTabContent">
+                        <!-- 탭 내용이 동적으로 생성됨 -->
+                    </div>
+                </div>
+                
+                <div id="errorMessage" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="errorText"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="saveMessage" class="alert" style="display: none; position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // API 테스트
+    console.log('Starting to load options and prices...');
+    
+    // 먼저 옵션 API만 테스트
+    fetch('/api/options')
+        .then(r => {
+            console.log('Options API response status:', r.status);
+            return r.json();
+        })
+        .then(data => {
+            console.log('Options API response:', data);
+        })
+        .catch(err => {
+            console.error('Options API error:', err);
+        });
+    
+    loadOptionsAndPrices();
+    
+    // 가격 입력 필드 포맷팅
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('option-price-input')) {
+            formatPriceInput(e.target);
+        }
+    });
+    
+    // 포커스를 잃을 때 소수점 둘째 자리까지 표시
+    document.addEventListener('blur', function(e) {
+        if (e.target.classList.contains('option-price-input')) {
+            const value = e.target.value.trim();
+            if (value !== '' && !isNaN(parseFloat(value))) {
+                const numValue = parseFloat(value);
+                e.target.value = numValue.toFixed(2);
+            }
+        }
+    }, true);
+});
+
+function formatPriceInput(input) {
+    // 숫자와 소수점만 허용 (소수점 둘째 자리까지)
+    let value = input.value.replace(/[^0-9.]/g, '');
+    
+    // 소수점이 여러 개인 경우 첫 번째만 유지
+    const parts = value.split('.');
+    if (parts.length > 2) {
+        value = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    // 소수점 둘째 자리까지만 허용
+    if (parts.length === 2 && parts[1].length > 2) {
+        value = parts[0] + '.' + parts[1].substring(0, 2);
+    }
+    
+    input.value = value;
+}
+
+function loadOptionsAndPrices() {
+    const loadingMessage = document.getElementById('loadingMessage');
+    const priceManagementContainer = document.getElementById('priceManagementContainer');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    loadingMessage.style.display = 'block';
+    priceManagementContainer.style.display = 'none';
+    errorMessage.style.display = 'none';
+    
+    // 타임아웃 설정 (30초)
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('요청 시간이 초과되었습니다.')), 30000);
+    });
+    
+    // 옵션 목록 로드
+    const optionsPromise = fetch('/api/options')
+        .then(r => {
+            if (!r.ok) {
+                throw new Error(`HTTP error! status: ${r.status}`);
+            }
+            return r.json();
+        })
+        .catch(err => {
+            console.error('Error loading options:', err);
+            throw err;
+        });
+    
+    // 기본 가격 목록 로드 (실패해도 계속 진행)
+    const pricesPromise = fetch('/api/option/base_price/list')
+        .then(r => {
+            if (!r.ok) {
+                console.warn('Failed to load base prices, status:', r.status);
+                return { success: true, prices: {} };
+            }
+            return r.json();
+        })
+        .catch(err => {
+            console.warn('Failed to load base prices:', err);
+            return { success: true, prices: {} };
+        });
+    
+    // 타임아웃과 함께 실행
+    Promise.race([
+        Promise.all([optionsPromise, pricesPromise]),
+        timeoutPromise
+    ])
+    .then(([optionsData, pricesData]) => {
+        loadingMessage.style.display = 'none';
+        
+        console.log('Options data:', optionsData);
+        console.log('Prices data:', pricesData);
+        
+        if (!optionsData) {
+            errorMessage.style.display = 'block';
+            document.getElementById('errorText').textContent = '옵션 데이터를 받을 수 없습니다.';
+            return;
+        }
+        
+        if (optionsData.success) {
+            // API 응답에서 options 키 사용
+            const optionsByCategory = optionsData.options || optionsData.options_by_category || {};
+            console.log('Options by category:', optionsByCategory);
+            
+            if (!optionsByCategory || Object.keys(optionsByCategory).length === 0) {
+                errorMessage.style.display = 'block';
+                document.getElementById('errorText').textContent = '옵션 데이터가 없습니다.';
+                return;
+            }
+            
+            displayOptionsByCategory(optionsByCategory, pricesData.prices || {});
+            priceManagementContainer.style.display = 'block';
+        } else {
+            errorMessage.style.display = 'block';
+            document.getElementById('errorText').textContent = 
+                optionsData.error || '데이터를 불러오는 중 오류가 발생했습니다.';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading data:', error);
+        loadingMessage.style.display = 'none';
+        errorMessage.style.display = 'block';
+        document.getElementById('errorText').textContent = '오류가 발생했습니다: ' + error.message + ' (브라우저 콘솔을 확인하세요)';
+    });
+}
+
+function displayOptionsByCategory(optionsByCategory, savedPrices) {
+    const tabList = document.getElementById('categoryTabs');
+    const tabContent = document.getElementById('categoryTabContent');
+    
+    // optionsByCategory가 없거나 객체가 아닌 경우 처리
+    if (!optionsByCategory || typeof optionsByCategory !== 'object') {
+        console.error('Invalid optionsByCategory:', optionsByCategory);
+        document.getElementById('errorText').textContent = '옵션 데이터 형식이 올바르지 않습니다.';
+        document.getElementById('errorMessage').style.display = 'block';
+        return;
+    }
+    
+    // savedPrices가 없거나 객체가 아닌 경우 빈 객체로 초기화
+    if (!savedPrices || typeof savedPrices !== 'object') {
+        savedPrices = {};
+    }
+    
+    const categoryOrder = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    
+    // 탭 생성
+    let tabHTML = '';
+    let contentHTML = '';
+    let firstValidIndex = -1;
+    
+    // 먼저 첫 번째 유효한 카테고리 찾기
+    categoryOrder.forEach((categoryNum, index) => {
+        const category = optionsByCategory[categoryNum];
+        if (category && firstValidIndex === -1) {
+            firstValidIndex = index;
+        }
+    });
+    
+    categoryOrder.forEach((categoryNum, index) => {
+        let category = optionsByCategory[categoryNum];
+        
+        // 카테고리가 없으면 빈 카테고리 생성 (12번 기타용)
+        if (!category) {
+            const categoryNames = {
+                1: "파워소스",
+                2: "타입",
+                3: "와이어피더",
+                4: "토치",
+                5: "호스패키지",
+                6: "어스",
+                7: "트롤리",
+                8: "쿨러",
+                9: "쿨란트",
+                10: "가스호스",
+                11: "용접봉 홀더",
+                12: "기타"
+            };
+            category = {
+                name: categoryNames[categoryNum] || `카테고리 ${categoryNum}`,
+                items: []
+            };
+            optionsByCategory[categoryNum] = category;
+        }
+        
+        // 첫 번째 유효한 카테고리만 활성화
+        const isActiveTab = index === firstValidIndex;
+        tabHTML += `
+            <li class="nav-item" role="presentation">
+                <button class="nav-link ${isActiveTab ? 'active' : ''}" 
+                        id="tab-category-${categoryNum}" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#tab-pane-category-${categoryNum}" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="tab-pane-category-${categoryNum}" 
+                        aria-selected="${isActiveTab ? 'true' : 'false'}">
+                    <strong>[${categoryNum}]</strong> ${category.name || '카테고리 ' + categoryNum}
+                </button>
+            </li>
+        `;
+        
+        // 탭 내용 생성
+        let rows = '';
+        if (category.items && Array.isArray(category.items) && category.items.length > 0) {
+            category.items.forEach(item => {
+                if (!item || !item.name) {
+                    console.warn('Invalid item:', item);
+                    return;
+                }
+                
+                // 12번 카테고리(기타)는 제품코드(item.code)를 사용, 나머지는 옵션명(item.name)을 사용
+                const priceKey = categoryNum === 12 && item.code 
+                    ? `${categoryNum}_${item.code}` 
+                    : `${categoryNum}_${item.name}`;
+                const savedPrice = savedPrices && savedPrices[priceKey] ? savedPrices[priceKey] : null;
+                const priceValue = savedPrice && savedPrice.price !== null && savedPrice.price !== undefined
+                    ? parseFloat(savedPrice.price).toFixed(2)
+                    : '';
+                
+                rows += `
+                    <tr>
+                        <td><strong>${item.name || '-'}</strong></td>
+                        <td>${item.code || '-'}</td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                <input type="text" 
+                                       class="form-control option-price-input" 
+                                       data-category-number="${categoryNum}"
+                                       data-option-name="${categoryNum === 12 && item.code ? item.code : item.name}"
+                                       value="${priceValue}"
+                                       placeholder="가격 입력"
+                                       readonly
+                                       disabled
+                                       style="background-color: #e9ecef; cursor: not-allowed;">
+                                <span class="input-group-text">EUR</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        } else {
+            rows = '<tr><td colspan="3" class="text-center text-muted">등록된 옵션이 없습니다.</td></tr>';
+        }
+        
+        contentHTML += `
+            <div class="tab-pane fade ${isActiveTab ? 'show active' : ''}" 
+                 id="tab-pane-category-${categoryNum}" 
+                 role="tabpanel" 
+                 aria-labelledby="tab-category-${categoryNum}">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 40%;">옵션명</th>
+                                <th style="width: 30%;">SAP 코드</th>
+                                <th style="width: 30%;">가격 (EUR)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    });
+    
+    tabList.innerHTML = tabHTML;
+    tabContent.innerHTML = contentHTML;
+    
+    // Bootstrap 탭 초기화 확인
+    // 모든 탭 패널이 제대로 숨겨지고 활성 탭만 보이도록
+    const allTabPanes = tabContent.querySelectorAll('.tab-pane');
+    allTabPanes.forEach((pane, idx) => {
+        if (!pane.classList.contains('show')) {
+            pane.classList.remove('show', 'active');
+        }
+    });
+}
+
+function saveAllPrices() {
+    const inputs = document.querySelectorAll('.option-price-input');
+    const saveMessage = document.getElementById('saveMessage');
+    
+    if (inputs.length === 0) {
+        showSaveMessage('저장할 옵션이 없습니다.', 'warning');
+        return;
+    }
+    
+    showSaveMessage('가격을 저장하는 중입니다...', 'info');
+    
+    // 모든 가격 데이터를 배열로 수집
+    const prices = [];
+    let errorCount = 0;
+    
+    inputs.forEach(input => {
+        const categoryNumber = parseInt(input.getAttribute('data-category-number'));
+        const optionName = input.getAttribute('data-option-name');
+        let price = input.value.trim();
+        
+        // 빈 입력은 0으로 처리
+        if (price === '') {
+            price = 0;
+        } else {
+            price = parseFloat(price);
+            if (isNaN(price) || price < 0) {
+                errorCount++;
+                return; // 잘못된 값은 건너뛰기
+            }
+            // 소수점 둘째 자리까지 반올림
+            price = Math.round(price * 100) / 100;
+        }
+        
+        prices.push({
+            category_number: categoryNumber,
+            option_name: optionName,
+            price: price
+        });
+    });
+    
+    if (prices.length === 0) {
+        showSaveMessage('저장할 유효한 가격이 없습니다.', 'warning');
+        return;
+    }
+    
+    // 배치 API로 한 번에 저장
+    fetch('/api/option/base_price/batch_update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            prices: prices
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const successCount = data.success_count || prices.length;
+            const errorCount = data.error_count || 0;
+            
+            if (errorCount === 0) {
+                showSaveMessage(`${successCount}개의 옵션 가격이 저장되었습니다.`, 'success');
+            } else {
+                let errorMsg = `${successCount}개 저장 성공, ${errorCount}개 저장 실패`;
+                if (data.errors && data.errors.length > 0) {
+                    errorMsg += '<br>' + data.errors.slice(0, 5).join('<br>');
+                    if (data.errors.length > 5) {
+                        errorMsg += `<br>... 외 ${data.errors.length - 5}개 오류`;
+                    }
+                }
+                showSaveMessage(errorMsg, 'warning');
+            }
+        } else {
+            showSaveMessage('저장 중 오류가 발생했습니다: ' + (data.error || '알 수 없는 오류'), 'danger');
+        }
+    })
+    .catch(error => {
+        showSaveMessage('저장 중 오류가 발생했습니다: ' + error.message, 'danger');
+    });
+}
+
+function showSaveMessage(message, type) {
+    const saveMessage = document.getElementById('saveMessage');
+    const alertClass = {
+        'success': 'alert-success',
+        'error': 'alert-danger',
+        'warning': 'alert-warning',
+        'info': 'alert-info',
+        'danger': 'alert-danger'
+    }[type] || 'alert-info';
+    
+    saveMessage.className = `alert ${alertClass}`;
+    saveMessage.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>${message}`;
+    saveMessage.style.display = 'block';
+    
+    if (type === 'success' || type === 'warning') {
+        setTimeout(() => {
+            saveMessage.style.display = 'none';
+        }, 3000);
+    }
+}
+
+function downloadExcel() {
+    showSaveMessage('엑셀 파일을 생성하는 중입니다...', 'info');
+    
+    fetch('/api/option/base_price/excel/download')
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || '다운로드에 실패했습니다.');
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // 파일 다운로드
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `카테고리별_옵션_가격_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showSaveMessage('엑셀 파일이 다운로드되었습니다.', 'success');
+        })
+        .catch(error => {
+            console.error('Error downloading Excel:', error);
+            showSaveMessage('엑셀 다운로드 중 오류가 발생했습니다: ' + error.message, 'danger');
+        });
+}
+
+function uploadExcel(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
+    
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+        showSaveMessage('엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.', 'warning');
+        event.target.value = '';
+        return;
+    }
+    
+    showSaveMessage('엑셀 파일을 업로드하는 중입니다...', 'info');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    fetch('/api/option/base_price/excel/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const successCount = data.success_count || 0;
+            const errorCount = data.error_count || 0;
+            
+            if (errorCount === 0) {
+                showSaveMessage(`${successCount}개의 옵션 가격이 업로드되었습니다.`, 'success');
+            } else {
+                let errorMsg = `${successCount}개 업로드 성공, ${errorCount}개 업로드 실패`;
+                if (data.errors && data.errors.length > 0) {
+                    errorMsg += '<br>' + data.errors.slice(0, 5).join('<br>');
+                    if (data.errors.length > 5) {
+                        errorMsg += `<br>... 외 ${data.errors.length - 5}개 오류`;
+                    }
+                }
+                showSaveMessage(errorMsg, 'warning');
+            }
+            
+            // 페이지 새로고침하여 업로드된 데이터 반영
+            setTimeout(() => {
+                loadOptionsAndPrices();
+            }, 1000);
+        } else {
+            showSaveMessage('업로드 중 오류가 발생했습니다: ' + (data.error || '알 수 없는 오류'), 'danger');
+        }
+        
+        // 파일 입력 초기화
+        event.target.value = '';
+    })
+    .catch(error => {
+        console.error('Error uploading Excel:', error);
+        showSaveMessage('엑셀 업로드 중 오류가 발생했습니다: ' + error.message, 'danger');
+        event.target.value = '';
+    });
+}
+</script>
+{% endblock %}
+
+

@@ -1,0 +1,2400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>{% block title %}웰딩 장비 옵션 시스템 (PNS){% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body class="theme-burgundy guest-nav{% if portal_landing %} portal-landing-page{% endif %}">
+    {% if not portal_landing %}
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+        <div class="container-fluid container-lg">
+            <a class="navbar-brand" href="{{ url_for('index') }}" id="navbarBrandLink" title="메인화면">
+                <img src="{{ url_for('static', filename='images/hyundai-logo.png.png') }}" alt="HYUNDAI POWER & SYSTEM" class="navbar-logo" onerror="this.style.display='none'">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center">
+                    <li class="nav-item public-nav-item">
+                        <a class="nav-link" href="{{ url_for('super_series') }}" id="homeNavLink">
+                            <span class="nav-text">홈</span>
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown public-nav-item">
+                        <a class="nav-link dropdown-toggle" href="#" id="optionsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="nav-text" data-lang-kor="옵션/조회" data-lang-eng="Options/Lookup">옵션/조회</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="optionsDropdown">
+                            <li class="requires-login requires-role-pns">
+                                <a class="dropdown-item" href="{{ url_for('select_options') }}">
+                                    <i class="fas fa-list me-2"></i>옵션 선택(PNS용)
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('lookup') }}" id="lookupNavLink" data-lang-kor="코드 조회" data-lang-eng="Code Lookup" style="color: #000000 !important;">
+                                    <i class="fas fa-search me-2" style="color: #000000 !important;"></i><span class="nav-text" style="color: #000000 !important;">코드 조회</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('select_options', view='true') }}" id="selectOptionsViewNavLink" data-lang-kor="옵션 선택(조회용)" data-lang-eng="Select Options (View)" style="color: #000000 !important;">
+                                    <i class="fas fa-eye me-2" style="color: #000000 !important;"></i><span class="nav-text" style="color: #000000 !important;">옵션 선택(조회용)</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item public-nav-item">
+                        <a class="nav-link" href="{{ url_for('set_price_view') }}" id="setPriceViewNavLinkPublic" data-lang-kor="세트가격조회" data-lang-eng="Set Price View">
+                            <span class="nav-text">세트가격조회</span>
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown public-nav-item">
+                        <a class="nav-link dropdown-toggle" href="#" id="partPriceNavLink" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" data-lang-kor="파트가격조회" data-lang-eng="Part Price View">
+                            <span class="nav-text">파트가격조회</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" id="partPriceMenu" aria-labelledby="partPriceNavLink">
+                            <!-- 동적으로 생성됩니다 -->
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown public-nav-item">
+                        <a class="nav-link dropdown-toggle" href="/export_quotation_new" id="exportQuotationNavLink" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-lang-kor="수출견적서" data-lang-eng="Export Quotation">
+                            <span class="nav-text">수출견적서</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportQuotationNavLink">
+                            <li class="requires-role-export-staff">
+                                <a class="dropdown-item" href="/export_quotation_new" id="exportQuotationNewLink" data-lang-kor="수출견적서(스태프)" data-lang-eng="Export Quotation (Staff)">
+                                    <i class="fas fa-file-invoice me-2"></i><span class="dropdown-text">수출견적서(스태프)</span>
+                                </a>
+                            </li>
+                            <li class="requires-role-export-customer">
+                                <a class="dropdown-item" href="/export_quotation_new_public" id="exportQuotationNewPublicLink" data-lang-kor="수출견적서(고객)" data-lang-eng="Export Quotation (Customer)">
+                                    <i class="fas fa-file-invoice me-2"></i><span class="dropdown-text">수출견적서(고객)</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item public-nav-item">
+                        <a class="nav-link" href="https://register.hyundaiwelding.com/main/" id="warrantyNavLink" target="_blank" rel="noopener noreferrer" data-lang-kor="워런티" data-lang-eng="Warranty" title="Hyundai Welding Machine Registration System">
+                            <span class="nav-text">워런티</span>
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown requires-login requires-role-pns">
+                        <a class="nav-link dropdown-toggle" href="{{ url_for('option_management') }}" id="codeManagementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            코드 관리
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="codeManagementDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('option_management') }}">
+                                    코드 관리
+                                </a>
+                            </li>
+                            <li style="display: none !important;">
+                                <a class="dropdown-item" href="{{ url_for('option_price_management') }}">
+                                    코드가격관리
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown requires-login requires-role-pns">
+                        <a class="nav-link dropdown-toggle" href="{{ url_for('logic_rules_dashboard') }}" id="logicRulesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            로직 제한조건
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="logicRulesDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('logic_rules_dashboard') }}">
+                                    로직제한조건(조회)
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('logic_rules_settings', view='new') }}">
+                                    로직제한조건(신규설정)
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('logic_rules_settings', view='existing') }}">
+                                    로직제한조건(기존설정 변경)
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown requires-login requires-role-admin nav-menu-hidden">
+                        <a class="nav-link dropdown-toggle" href="#" id="setPriceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="nav-text" data-lang-kor="세트가격" data-lang-eng="Set Price">세트가격</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="setPriceDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('set_price_view') }}" id="setPriceViewNavLink" data-lang-kor="세트가격조회" data-lang-eng="Set Price View" style="color: #000000 !important;">
+                                    <i class="fas fa-search me-2" style="color: #000000 !important;"></i><span class="nav-text" style="color: #000000 !important;">세트가격조회</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('set_price_view_pns') }}" id="setPriceViewPnsNavLink" data-lang-kor="세트가격조회(PNS)" data-lang-eng="Set Price View (PNS)" style="color: #000000 !important;">
+                                    <i class="fas fa-search me-2" style="color: #000000 !important;"></i><span class="nav-text" style="color: #000000 !important;">세트가격조회(PNS)</span>
+                                </a>
+                            </li>
+                            <li style="display: none !important;">
+                                <a class="dropdown-item" href="{{ url_for('set_price_create') }}" style="color: #000000 !important;">
+                                    <i class="fas fa-plus-circle me-2" style="color: #000000 !important;"></i>세트가격신규생성
+                                </a>
+                            </li>
+                            <li style="display: none !important;">
+                                <a class="dropdown-item" href="{{ url_for('set_price_input') }}">
+                                    <i class="fas fa-dollar-sign me-2"></i>세트가격입력
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown requires-login requires-role-pns">
+                        <a class="nav-link dropdown-toggle" href="#" id="managementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            관리
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="managementDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('db_backup_dashboard') }}">
+                                    DB 백업
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('activity_tracking_dashboard') }}">
+                                    사용자 활동 추적
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('quote_template_edit') }}">
+                                    견적서 양식 편집
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/doc_template/contract">
+                                    계약서(엑셀)
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/doc_template/packing_list">
+                                    팩킹리스트(엑셀)
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/doc_template/invoice">
+                                    인보이스(엑셀)
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('db_management') }}">
+                                    DB 관리
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" id="backgroundImageChangeBtn" data-lang-kor="배경화면 교체" data-lang-eng="Change Background">
+                                    <span class="dropdown-text">배경화면 교체</span>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li style="display: none !important;">
+                                <a class="dropdown-item" href="#" id="exportQuotationUploadBtn" style="display: none !important;">
+                                    수출견적서(DAP)가격업로드
+                                </a>
+                            </li>
+                            <li style="display: none !important;">
+                                <a class="dropdown-item" href="/export_price_dashboard" style="display: none !important;">
+                                    수출견적서(DAP) 대시보드
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" id="exportQuotationNewUploadBtn">
+                                    수출견적서(스태프) 가격업로드
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/export_price_dashboard_new">
+                                    수출견적서(스태프) 대시보드
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/option_view_image_upload">
+                                    옵션조회 이미지·영역 매핑
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/part_price_image_upload">
+                                    파트가격조회 이미지 업로드
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('part_price_image_price_match') }}">
+                                    파트가격조회 이미지,가격 매칭
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/export_quotation_new" data-lang-kor="수출견적서(스태프)" data-lang-eng="Export Quotation (Staff)">
+                                    <span class="dropdown-text">수출견적서(스태프)</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/export_quotation_new_public" data-lang-kor="수출견적서(고객)" data-lang-eng="Export Quotation (Customer)">
+                                    <span class="dropdown-text">수출견적서(고객)</span>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="/export_label" data-lang-kor="EXPORT LABEL" data-lang-eng="EXPORT LABEL">
+                                    <span class="dropdown-text">EXPORT LABEL</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/pricebook_page_upload" data-lang-kor="프라이스북 페이지등록" data-lang-eng="Price Book Page Upload">
+                                    <span class="dropdown-text">프라이스북 페이지등록</span>
+                                </a>
+                            </li>
+                            <li style="display: none !important;">
+                                <a class="dropdown-item" href="#" id="partPriceUploadBtn" style="display: none !important;">
+                                    파트가격조회 가격업로드
+                                </a>
+                            </li>
+                            <li style="display: none !important;">
+                                <a class="dropdown-item" href="/part_price_dashboard" style="display: none !important;">
+                                    파트가격조회 대시보드
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-secondary ms-lg-3 mt-2 mt-lg-0" href="https://www.instagram.com/hyundaiwelding/" target="_blank" rel="noopener noreferrer" title="Instagram">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-secondary ms-lg-3 mt-2 mt-lg-0" href="https://www.linkedin.com/company/hyundaiwelding/" target="_blank" rel="noopener noreferrer" title="LinkedIn">
+                            <i class="fab fa-linkedin"></i>
+                        </a>
+                    </li>
+                    <li class="nav-item d-flex align-items-center">
+                        <div id="headerExchangeRates" class="header-exchange-rates ms-lg-2 me-lg-1" aria-label="Exchange rates"></div>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <button class="btn btn-burgundy ms-lg-3 mt-2 mt-lg-0 dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-globe me-1 me-md-2"></i><span id="currentLanguage">KOR</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+                            <li><a class="dropdown-item language-option" href="#" data-lang="KOR">
+                                <i class="fas fa-check me-2" id="checkKOR"></i>KOR
+                            </a></li>
+                            <li><a class="dropdown-item language-option" href="#" data-lang="ENG">
+                                <i class="fas fa-check me-2 d-none" id="checkENG"></i>ENG
+                            </a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <button type="button" class="btn btn-burgundy ms-lg-3 mt-2 mt-lg-0 login-toggle-btn" data-bs-toggle="modal" data-bs-target="#loginModal">
+                            <i class="fas fa-user-lock me-1 me-md-2"></i><span class="d-none d-sm-inline">로그인</span>
+                        </button>
+                        <button type="button" class="btn btn-burgundy ms-lg-3 mt-2 mt-lg-0 d-none logout-btn">
+                            <i class="fas fa-sign-out-alt me-1 me-md-2"></i><span class="d-none d-sm-inline">로그아웃</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div id="adminTrackingBanner" class="admin-tracking-banner d-none" role="status" aria-live="polite">
+        <div class="container-fluid container-lg py-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-danger" id="authRoleBadge"><i class="fas fa-user-shield me-1"></i>관리자</span>
+                <span class="small fw-semibold" id="authRoleBannerText">사용자 활동 추적 모드</span>
+                <span class="text-muted small d-none d-md-inline" id="authRoleBannerHint">— 고객·수출부 체류시간, 관심 제품, 견적 다운로드를 기록합니다.</span>
+            </div>
+            <a href="{{ url_for('activity_tracking_dashboard') }}" class="btn btn-sm btn-outline-danger" id="authTrackingDashLink">
+                <i class="fas fa-chart-line me-1"></i>활동 추적 대시보드
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <header class="portal-topbar">
+        <div class="portal-topbar-inner">
+            <a class="portal-brand" href="{{ url_for('index') }}" id="portalBrandLink" title="메인화면">
+                <img src="{{ url_for('static', filename='images/hyundai-logo.png.png') }}" alt="HYUNDAI POWER & SYSTEM" class="portal-brand-logo" onerror="this.style.display='none'">
+                <span class="portal-brand-text" data-lang-kor="HYUNDAI POWER &amp; SYSTEM" data-lang-eng="HYUNDAI POWER &amp; SYSTEM">HYUNDAI POWER &amp; SYSTEM</span>
+            </a>
+            <div class="portal-topbar-actions">
+                <button class="btn btn-portal-lang dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-globe me-1"></i><span id="currentLanguage">KOR</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+                    <li><a class="dropdown-item language-option" href="#" data-lang="KOR">
+                        <i class="fas fa-check me-2" id="checkKOR"></i>KOR
+                    </a></li>
+                    <li><a class="dropdown-item language-option" href="#" data-lang="ENG">
+                        <i class="fas fa-check me-2 d-none" id="checkENG"></i>ENG
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+    {% endif %}
+
+    <main class="{% if portal_landing %}portal-main{% else %}container-fluid container-lg mt-3 mt-md-4{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% if not portal_landing %}
+    <footer class="bg-white mt-5 py-4 border-top">
+        <div class="container text-center">
+            <p class="text-muted mb-0">
+                <i class="fas fa-copyright me-1"></i>
+                <span id="footerText" data-lang-kor="2025 웰딩 장비 옵션 시스템" data-lang-eng="2025 Welding Equipment Option System">2025 웰딩 장비 옵션 시스템</span>
+            </p>
+        </div>
+    </footer>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/exchange_rates.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/user_tracking.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    
+    <!-- 옵션 관리 모달 -->
+    <div class="modal fade" id="allOptionsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-burgundy">
+                    <h5 class="modal-title">
+                        <i class="fas fa-cogs me-2"></i>
+                        옵션 현황 (1번~11번)
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="allOptionsBody">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">로드 중...</span>
+                        </div>
+                        <p class="text-muted">옵션 정보를 불러오는 중입니다...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 로그인 모달 -->
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-burgundy">
+                    <h5 class="modal-title" id="loginModalLabel">
+                        <i class="fas fa-user-lock me-2"></i>로그인
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm" autocomplete="on">
+                        <div class="mb-3">
+                            <label for="loginId" class="form-label">사용자 ID</label>
+                            <input type="text" class="form-control" id="loginId" name="loginId" placeholder="사용자 ID를 입력하세요" required autocomplete="username">
+                        </div>
+                        <div class="mb-3">
+                            <label for="loginPassword" class="form-label">비밀번호</label>
+                            <input type="password" class="form-control" id="loginPassword" name="loginPassword" placeholder="비밀번호를 입력하세요" required autocomplete="current-password">
+                        </div>
+                    </form>
+                    <div id="loginAlert" class="alert alert-danger d-none" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ID 또는 비밀번호가 올바르지 않습니다. 다시 시도해주세요.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                    <button type="button" class="btn btn-primary" id="loginSubmitBtn">
+                        <i class="fas fa-sign-in-alt me-2"></i>로그인
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .requires-login {
+        display: none !important;
+    }
+    .nav-menu-hidden {
+        display: none !important;
+    }
+    .public-nav-item {
+        display: list-item !important;
+    }
+    body.guest-nav #navbarNav li.requires-login,
+    body.guest-nav #navbarNav li.requires-role-pns,
+    body.guest-nav #navbarNav .nav-menu-hidden {
+        display: none !important;
+    }
+    body.guest-nav #navbarNav li.public-nav-item {
+        display: list-item !important;
+    }
+    body:not(.logged-in) li.requires-login {
+        display: none !important;
+    }
+    .requires-role-pns {
+        display: none !important;
+    }
+    body.logged-in.is-pns-user li.nav-item.requires-role-pns {
+        display: list-item !important;
+    }
+    body.logged-in.is-pns-user li.requires-role-pns:not(.nav-item) {
+        display: list-item !important;
+    }
+    body.logged-in:not(.is-pns-user) .requires-role-pns {
+        display: none !important;
+    }
+    body.logged-in.role-customer .requires-role-export-staff {
+        display: none !important;
+    }
+    body.logged-in.role-export_dept .requires-role-export-customer {
+        display: none !important;
+    }
+    body.logged-in.role-admin .requires-role-export-staff,
+    body.logged-in.role-admin .requires-role-export-customer,
+    body:not(.logged-in) .requires-role-export-staff,
+    body:not(.logged-in) .requires-role-export-customer {
+        display: list-item !important;
+    }
+    body.logged-in.role-export_dept .requires-role-export-staff,
+    body.logged-in.role-customer .requires-role-export-customer {
+        display: list-item !important;
+    }
+    .logout-btn {
+        display: block !important;
+    }
+    body.logged-in .login-toggle-btn {
+        display: none !important;
+    }
+    body.logged-in .logout-btn {
+        display: inline-flex !important;
+    }
+    body:not(.logged-in) .logout-btn {
+        display: none !important;
+    }
+    .admin-tracking-banner {
+        background: linear-gradient(90deg, #fff5f7 0%, #ffffff 100%);
+        border-bottom: 2px solid rgba(128, 0, 32, 0.35);
+    }
+    body.logged-in.is-pns-user #adminTrackingBanner {
+        display: block !important;
+    }
+    body.logged-in:not(.is-pns-user) #adminTrackingBanner {
+        display: none !important;
+    }
+    body.portal-landing-page {
+        overflow-x: hidden;
+    }
+    body.portal-landing-page .portal-main {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    .portal-topbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1030;
+        padding: 0.75rem 1.5rem;
+        background: #ffffff;
+        border-bottom: 1px solid #e8e8e8;
+        box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+    }
+    .portal-topbar-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+    .portal-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-decoration: none;
+        color: #1a1a1a;
+        margin-left: 2rem;
+    }
+    .portal-brand:hover {
+        color: #800020;
+    }
+    .portal-brand-logo {
+        height: 30px;
+        width: auto;
+        filter: none;
+    }
+    .portal-brand-text {
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: #444444;
+    }
+    .btn-portal-lang {
+        background: #ffffff;
+        border: 1px solid #d0d0d0;
+        color: #333333;
+        font-size: 0.82rem;
+        padding: 0.35rem 0.85rem;
+        border-radius: 6px;
+    }
+    .btn-portal-lang:hover,
+    .btn-portal-lang:focus,
+    .btn-portal-lang.show {
+        background: #f8f8f8;
+        border-color: #800020;
+        color: #800020;
+    }
+    .part-brochure-check {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 15px;
+        height: 15px;
+        min-width: 15px;
+        margin: 0 6px 0 10px;
+        border: 1.5px solid #800020;
+        border-radius: 2px;
+        background: #ffffff;
+        cursor: pointer;
+        flex-shrink: 0;
+        align-self: center;
+        position: relative;
+        z-index: 2;
+    }
+    .part-brochure-check:checked {
+        background: #800020;
+        box-shadow: inset 0 0 0 2px #ffffff;
+    }
+    .part-brochure-item {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        padding: 0;
+        min-height: 2rem;
+    }
+    .part-brochure-item .part-price-subfolder-link {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        padding-top: 0.35rem;
+        padding-bottom: 0.35rem;
+        padding-left: 0.25rem;
+        padding-right: 1rem;
+        line-height: 1.4;
+    }
+    #partBrochureDownloadBtn {
+        background-color: #800020;
+        border-color: #800020;
+        color: #ffffff;
+        font-size: 0.82rem;
+        white-space: nowrap;
+    }
+    #partBrochureDownloadBtn:disabled {
+        opacity: 0.55;
+    }
+    .header-exchange-rates {
+        display: flex;
+        align-items: center;
+    }
+    .header-exchange-rates .exchange-rate-widget {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: nowrap;
+        background: #ffffff;
+        border: 1px solid rgba(128, 0, 32, 0.22);
+        border-radius: 0.5rem;
+        padding: 0.28rem 0.4rem 0.28rem 0.35rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        max-width: none;
+        white-space: nowrap;
+    }
+    .header-exchange-rates .er-rates {
+        display: inline-flex;
+        align-items: stretch;
+        gap: 0.3rem;
+    }
+    .header-exchange-rates .er-chip {
+        display: inline-flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 4.6rem;
+        padding: 0.15rem 0.45rem;
+        border-radius: 0.35rem;
+        background: #f8f1f3;
+        line-height: 1.15;
+    }
+    .header-exchange-rates .er-code {
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        color: #800020;
+        text-transform: uppercase;
+    }
+    .header-exchange-rates .er-value {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #222;
+        font-variant-numeric: tabular-nums;
+    }
+    .header-exchange-rates .er-refresh {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.7rem;
+        height: 1.7rem;
+        border: 1px solid rgba(128, 0, 32, 0.25);
+        border-radius: 0.35rem;
+        background: #800020;
+        color: #fff;
+        padding: 0;
+        line-height: 1;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background-color 0.15s ease, transform 0.15s ease;
+    }
+    .header-exchange-rates .er-refresh:hover {
+        background: #9a0030;
+        color: #fff;
+    }
+    .header-exchange-rates .er-refresh:disabled {
+        opacity: 0.7;
+        cursor: wait;
+    }
+    .header-exchange-rates .er-refresh.is-spinning i {
+        animation: er-spin 0.8s linear infinite;
+    }
+    @keyframes er-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    @media (max-width: 1199.98px) {
+        .header-exchange-rates .er-chip {
+            min-width: 4.1rem;
+            padding: 0.12rem 0.35rem;
+        }
+        .header-exchange-rates .er-value {
+            font-size: 0.72rem;
+        }
+    }
+    @media (max-width: 991.98px) {
+        .header-exchange-rates {
+            width: 100%;
+            margin: 0.45rem 0 !important;
+            justify-content: center;
+        }
+        .header-exchange-rates .exchange-rate-widget {
+            width: 100%;
+            justify-content: space-between;
+        }
+        .header-exchange-rates .er-rates {
+            flex: 1;
+            justify-content: space-between;
+        }
+        .header-exchange-rates .er-chip {
+            flex: 1;
+            text-align: center;
+            align-items: center;
+        }
+    }
+    .navbar .dropdown:hover > .dropdown-menu {
+        display: block;
+        margin-top: 0;
+    }
+    .navbar .dropdown-toggle::after {
+        display: none;
+    }
+    </style>
+    <style>
+        /* 버건디 배경일 때 텍스트는 무조건 흰색 (전역 스타일) */
+        .bg-burgundy,
+        .card-header.bg-burgundy,
+        .modal-header.bg-burgundy {
+            color: #ffffff !important;
+        }
+
+        .bg-burgundy *,
+        .card-header.bg-burgundy *,
+        .modal-header.bg-burgundy * {
+            color: #ffffff !important;
+        }
+
+        .bg-burgundy h1,
+        .bg-burgundy h2,
+        .bg-burgundy h3,
+        .bg-burgundy h4,
+        .bg-burgundy h5,
+        .bg-burgundy h6,
+        .card-header.bg-burgundy h1,
+        .card-header.bg-burgundy h2,
+        .card-header.bg-burgundy h3,
+        .card-header.bg-burgundy h4,
+        .card-header.bg-burgundy h5,
+        .card-header.bg-burgundy h6,
+        .modal-header.bg-burgundy h1,
+        .modal-header.bg-burgundy h2,
+        .modal-header.bg-burgundy h3,
+        .modal-header.bg-burgundy h4,
+        .modal-header.bg-burgundy h5,
+        .modal-header.bg-burgundy h6 {
+            color: #ffffff !important;
+        }
+
+        .bg-burgundy .btn-close,
+        .card-header.bg-burgundy .btn-close,
+        .modal-header.bg-burgundy .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+    </style>
+
+    <script>
+    // 모든 모달에 드래그 기능 추가하는 전역 함수
+    function makeModalDraggable(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        
+        const modalDialog = modal.querySelector('.modal-dialog');
+        const modalHeader = modal.querySelector('.modal-header');
+        
+        if (!modalDialog || !modalHeader) return;
+        
+        // 이미 드래그 기능이 추가된 경우 중복 방지
+        if (modalHeader.hasAttribute('data-draggable')) return;
+        modalHeader.setAttribute('data-draggable', 'true');
+        
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+        
+        // 모달 헤더에 커서 스타일 추가
+        modalHeader.style.cursor = 'move';
+        
+        // 드래그 시작
+        modalHeader.addEventListener('mousedown', dragStart);
+        
+        // 드래그 중
+        document.addEventListener('mousemove', drag);
+        
+        // 드래그 종료
+        document.addEventListener('mouseup', dragEnd);
+        
+        function dragStart(e) {
+            // 입력 필드나 버튼을 클릭한 경우 드래그 시작하지 않음
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || 
+                e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA' ||
+                e.target.closest('button') || e.target.closest('input') ||
+                e.target.closest('select') || e.target.closest('textarea') ||
+                e.target.closest('.btn-close')) {
+                return;
+            }
+            
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+            
+            if (e.target === modalHeader || modalHeader.contains(e.target)) {
+                isDragging = true;
+                modalDialog.style.transition = 'none';
+            }
+        }
+        
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                
+                xOffset = currentX;
+                yOffset = currentY;
+                
+                setTranslate(currentX, currentY, modalDialog);
+            }
+        }
+        
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+            modalDialog.style.transition = '';
+        }
+        
+        function setTranslate(xPos, yPos, el) {
+            el.style.transform = `translate(${xPos}px, ${yPos}px)`;
+        }
+        
+        // 모달이 닫힐 때 위치 초기화
+        modal.addEventListener('hidden.bs.modal', function() {
+            xOffset = 0;
+            yOffset = 0;
+            modalDialog.style.transform = '';
+        });
+        
+        // 모달이 열릴 때 위치 초기화
+        modal.addEventListener('shown.bs.modal', function() {
+            xOffset = 0;
+            yOffset = 0;
+            modalDialog.style.transform = '';
+        });
+    }
+    
+    // 페이지 로드 시 모든 모달에 드래그 기능 추가
+    function initializeAllModalsDraggable() {
+        // 모든 모달 찾기
+        const allModals = document.querySelectorAll('.modal');
+        allModals.forEach(modal => {
+            if (modal.id) {
+                makeModalDraggable(modal.id);
+            }
+        });
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // 모든 모달에 드래그 기능 초기화
+        initializeAllModalsDraggable();
+        
+        // 동적으로 추가되는 모달을 위한 MutationObserver
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // Element node
+                        if (node.classList && node.classList.contains('modal') && node.id) {
+                            makeModalDraggable(node.id);
+                        }
+                        // 자식 요소 중 모달 찾기
+                        const modals = node.querySelectorAll && node.querySelectorAll('.modal');
+                        if (modals) {
+                            modals.forEach(modal => {
+                                if (modal.id) {
+                                    makeModalDraggable(modal.id);
+                                }
+                            });
+                        }
+                    }
+                });
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        const loginModal = document.getElementById('loginModal');
+        const loginForm = document.getElementById('loginForm');
+        const loginAlert = document.getElementById('loginAlert');
+        const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+        const loginId = document.getElementById('loginId');
+        const loginPassword = document.getElementById('loginPassword');
+        const logoutBtn = document.querySelector('.logout-btn');
+        const AUTH_STORAGE_KEY = 'pnsLoginAuth';
+        const AUTH_ROLE_KEY = 'pnsLoginRole';
+        const AUTH_USER_KEY = 'pnsLoginUser';
+
+        if (!loginModal || !loginForm || !loginAlert || !loginSubmitBtn || !loginId || !loginPassword || !logoutBtn) {
+            return;
+        }
+
+        function clearRoleClasses() {
+            document.body.classList.remove('role-admin', 'role-export_dept', 'role-customer', 'is-pns-user');
+        }
+
+        function applyGuestNavMenu() {
+            document.body.classList.add('guest-nav');
+            document.body.classList.remove('logged-in');
+            clearRoleClasses();
+            document.querySelectorAll('#navbarNav li.requires-login, #navbarNav li.requires-role-pns, #navbarNav .nav-menu-hidden').forEach(function (el) {
+                el.style.display = 'none';
+            });
+            document.querySelectorAll('#navbarNav li.public-nav-item').forEach(function (el) {
+                el.style.display = '';
+            });
+        }
+
+        function applyRoleUi(userType, userId) {
+            clearRoleClasses();
+            const uid = String(userId || sessionStorage.getItem(AUTH_USER_KEY) || '').trim().toLowerCase();
+            if (userType) {
+                document.body.classList.add('role-' + userType);
+            }
+            if (uid === 'pns') {
+                document.body.classList.add('is-pns-user');
+            }
+            const badge = document.getElementById('authRoleBadge');
+            const bannerText = document.getElementById('authRoleBannerText');
+            const bannerHint = document.getElementById('authRoleBannerHint');
+            const dashLink = document.getElementById('authTrackingDashLink');
+            if (uid === 'pns' && userType === 'admin') {
+                if (badge) badge.innerHTML = '<i class="fas fa-user-shield me-1"></i>관리자(PNS)';
+                if (bannerText) bannerText.textContent = '사용자 활동 추적 모드';
+                if (bannerHint) bannerHint.classList.remove('d-none');
+                if (dashLink) dashLink.classList.remove('d-none');
+            }
+        }
+        
+        function updateLoginState(isLoggedIn, userType, userId) {
+            const trackingBanner = document.getElementById('adminTrackingBanner');
+            const role = userType || sessionStorage.getItem(AUTH_ROLE_KEY) || '';
+            const uid = String(userId || sessionStorage.getItem(AUTH_USER_KEY) || '').trim().toLowerCase();
+            const pnsUser = isLoggedIn && uid === 'pns';
+
+            if (!isLoggedIn) {
+                applyGuestNavMenu();
+                if (trackingBanner) {
+                    trackingBanner.classList.add('d-none');
+                }
+                return;
+            }
+
+            document.body.classList.remove('guest-nav');
+            document.body.classList.add('logged-in');
+            document.querySelectorAll('#navbarNav li.requires-login, #navbarNav li.requires-role-pns, #navbarNav .nav-menu-hidden').forEach(function (el) {
+                el.style.display = '';
+            });
+            document.querySelectorAll('#navbarNav li.public-nav-item').forEach(function (el) {
+                el.style.display = '';
+            });
+            applyRoleUi(role, uid);
+            if (trackingBanner) {
+                if (pnsUser) trackingBanner.classList.remove('d-none');
+                else trackingBanner.classList.add('d-none');
+            }
+        }
+
+        function resetLoginForm() {
+            loginForm.reset();
+            loginAlert.classList.add('d-none');
+        }
+
+        function showLoginError() {
+            loginAlert.classList.remove('d-none');
+            setTimeout(() => {
+                loginAlert.classList.add('d-none');
+            }, 2500);
+        }
+
+        function handleLoginSubmit() {
+            const idValue = loginId.value.trim();
+            const passwordValue = loginPassword.value.trim();
+
+            if (!idValue || !passwordValue) {
+                showLoginError();
+                return;
+            }
+
+            loginSubmitBtn.disabled = true;
+            const doLogin = window.PnsTracking
+                ? window.PnsTracking.unifiedLogin(idValue, passwordValue)
+                : fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ username: idValue, password: passwordValue })
+                }).then(r => r.json()).then(data => {
+                    if (!data.success) throw new Error(data.error || '로그인 실패');
+                    return data;
+                });
+
+            doLogin.then(function (data) {
+                sessionStorage.setItem(AUTH_STORAGE_KEY, 'true');
+                sessionStorage.setItem(AUTH_ROLE_KEY, data.user_type || '');
+                sessionStorage.setItem(AUTH_USER_KEY, data.user_id || '');
+                updateLoginState(true, data.user_type, data.user_id);
+                const modalInstance = bootstrap.Modal.getInstance(loginModal) || new bootstrap.Modal(loginModal);
+                modalInstance.hide();
+                resetLoginForm();
+                alert('로그인에 성공했습니다.');
+            }).catch(function () {
+                showLoginError();
+                loginPassword.value = '';
+                loginPassword.focus();
+            }).finally(function () {
+                loginSubmitBtn.disabled = false;
+            });
+        }
+
+        loginSubmitBtn.addEventListener('click', handleLoginSubmit);
+
+        loginPassword.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                handleLoginSubmit();
+            }
+        });
+
+        loginId.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                loginPassword.focus();
+            }
+        });
+
+        loginModal.addEventListener('shown.bs.modal', function() {
+            resetLoginForm();
+            loginId.focus();
+        });
+
+        logoutBtn.addEventListener('click', function() {
+            const doLogout = window.PnsTracking
+                ? window.PnsTracking.adminLogout()
+                : fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+            Promise.resolve(doLogout).finally(function() {
+                sessionStorage.removeItem(AUTH_STORAGE_KEY);
+                sessionStorage.removeItem(AUTH_ROLE_KEY);
+                sessionStorage.removeItem(AUTH_USER_KEY);
+                updateLoginState(false);
+                alert('로그아웃되었습니다.');
+            });
+        });
+
+        function syncAdminSessionFromServer() {
+            const navbarLoggedIn = sessionStorage.getItem(AUTH_STORAGE_KEY) === 'true';
+            if (!navbarLoggedIn) {
+                updateLoginState(false);
+                return;
+            }
+
+            fetch('/api/auth/session', { credentials: 'same-origin' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success && data.logged_in) {
+                        sessionStorage.setItem(AUTH_STORAGE_KEY, 'true');
+                        sessionStorage.setItem(AUTH_ROLE_KEY, data.user_type || '');
+                        sessionStorage.setItem(AUTH_USER_KEY, data.user_id || '');
+                        updateLoginState(true, data.user_type, data.user_id);
+                        if (window.PnsTracking) {
+                            window.PnsTracking.restoreFromServer();
+                        }
+                    } else {
+                        sessionStorage.removeItem(AUTH_STORAGE_KEY);
+                        sessionStorage.removeItem(AUTH_ROLE_KEY);
+                        sessionStorage.removeItem(AUTH_USER_KEY);
+                        updateLoginState(false);
+                    }
+                })
+                .catch(function() {
+                    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+                    sessionStorage.removeItem(AUTH_ROLE_KEY);
+                    sessionStorage.removeItem(AUTH_USER_KEY);
+                    updateLoginState(false);
+                });
+        }
+
+        syncAdminSessionFromServer();
+
+        document.addEventListener('pnsAuthLoggedIn', function (ev) {
+            const data = (ev && ev.detail) || {};
+            sessionStorage.setItem(AUTH_STORAGE_KEY, 'true');
+            sessionStorage.setItem(AUTH_ROLE_KEY, data.user_type || '');
+            sessionStorage.setItem(AUTH_USER_KEY, data.user_id || '');
+            updateLoginState(true, data.user_type, data.user_id);
+        });
+        document.addEventListener('pnsAuthLoggedOut', function () {
+            sessionStorage.removeItem(AUTH_STORAGE_KEY);
+            sessionStorage.removeItem(AUTH_ROLE_KEY);
+            sessionStorage.removeItem(AUTH_USER_KEY);
+            updateLoginState(false);
+        });
+
+        // 언어 선택 기능
+        const LANGUAGE_STORAGE_KEY = 'pnsLanguage';
+        const currentLanguageSpan = document.getElementById('currentLanguage');
+        const checkKOR = document.getElementById('checkKOR');
+        const checkENG = document.getElementById('checkENG');
+        const languageOptions = document.querySelectorAll('.language-option');
+
+        function updateLanguageDisplay(lang) {
+            if (currentLanguageSpan) {
+                currentLanguageSpan.textContent = lang;
+            }
+            if (checkKOR && checkENG) {
+                if (lang === 'KOR') {
+                    checkKOR.classList.remove('d-none');
+                    checkENG.classList.add('d-none');
+                } else {
+                    checkKOR.classList.add('d-none');
+                    checkENG.classList.remove('d-none');
+                }
+            }
+            
+            // 네비게이션 바 버튼 텍스트 업데이트
+            const homeNavLink = document.getElementById('homeNavLink');
+            const optionsDropdown = document.getElementById('optionsDropdown');
+            const lookupNavLink = document.getElementById('lookupNavLink');
+            const selectOptionsViewNavLink = document.getElementById('selectOptionsViewNavLink');
+            const setPriceViewNavLinkPublic = document.getElementById('setPriceViewNavLinkPublic');
+            const setPriceViewNavLink = document.getElementById('setPriceViewNavLink');
+            const partPriceNavLink = document.getElementById('partPriceNavLink');
+            const exportQuotationNavLink = document.getElementById('exportQuotationNavLink');
+            
+            if (homeNavLink) {
+                const navText = homeNavLink.querySelector('.nav-text');
+                if (navText) {
+                    navText.textContent = lang === 'KOR' ? '홈' : 'Home';
+                }
+            }
+            
+            if (optionsDropdown) {
+                const navText = optionsDropdown.querySelector('.nav-text');
+                if (navText) {
+                    navText.textContent = lang === 'KOR' 
+                        ? navText.getAttribute('data-lang-kor') || '옵션/조회'
+                        : navText.getAttribute('data-lang-eng') || 'Options/Lookup';
+                }
+            }
+            
+            if (lookupNavLink) {
+                const navText = lookupNavLink.querySelector('.nav-text');
+                if (navText) {
+                    navText.textContent = lang === 'KOR' 
+                        ? lookupNavLink.getAttribute('data-lang-kor') 
+                        : lookupNavLink.getAttribute('data-lang-eng');
+                }
+            }
+            
+            if (selectOptionsViewNavLink) {
+                const navText = selectOptionsViewNavLink.querySelector('.nav-text');
+                if (navText) {
+                    navText.textContent = lang === 'KOR' 
+                        ? selectOptionsViewNavLink.getAttribute('data-lang-kor') 
+                        : selectOptionsViewNavLink.getAttribute('data-lang-eng');
+                }
+            }
+            
+            if (setPriceViewNavLinkPublic) {
+                const navText = setPriceViewNavLinkPublic.querySelector('.nav-text');
+                if (navText) {
+                    navText.textContent = lang === 'KOR' 
+                        ? setPriceViewNavLinkPublic.getAttribute('data-lang-kor') 
+                        : setPriceViewNavLinkPublic.getAttribute('data-lang-eng');
+                }
+            }
+            
+            if (setPriceViewNavLink) {
+                const navText = setPriceViewNavLink.querySelector('.nav-text');
+                if (navText) {
+                    navText.textContent = lang === 'KOR' 
+                        ? setPriceViewNavLink.getAttribute('data-lang-kor') 
+                        : setPriceViewNavLink.getAttribute('data-lang-eng');
+                }
+            }
+            
+            if (partPriceNavLink) {
+                const navText = partPriceNavLink.querySelector('.nav-text');
+                if (navText) {
+                    navText.textContent = lang === 'KOR' 
+                        ? partPriceNavLink.getAttribute('data-lang-kor') 
+                        : partPriceNavLink.getAttribute('data-lang-eng');
+                }
+            }
+            
+            if (exportQuotationNavLink) {
+                const navText = exportQuotationNavLink.querySelector('.nav-text');
+                if (navText) {
+                    navText.textContent = lang === 'KOR' 
+                        ? exportQuotationNavLink.getAttribute('data-lang-kor') 
+                        : exportQuotationNavLink.getAttribute('data-lang-eng');
+                }
+            }
+
+            const warrantyNavLink = document.getElementById('warrantyNavLink');
+            if (warrantyNavLink) {
+                const navText = warrantyNavLink.querySelector('.nav-text');
+                if (navText) {
+                    navText.textContent = lang === 'KOR'
+                        ? warrantyNavLink.getAttribute('data-lang-kor')
+                        : warrantyNavLink.getAttribute('data-lang-eng');
+                }
+            }
+            
+            // 드롭다운 메뉴 항목 업데이트 (동적 메뉴는 자동으로 업데이트됨)
+            document.querySelectorAll('.part-price-subfolder-link, [data-folder-id]').forEach(item => {
+                const dropdownText = item.querySelector('.dropdown-text');
+                if (dropdownText && item.hasAttribute('data-lang-kor')) {
+                    dropdownText.textContent = lang === 'KOR' 
+                        ? item.getAttribute('data-lang-kor') 
+                        : item.getAttribute('data-lang-eng');
+                }
+            });
+            
+            // 드롭다운 메뉴 항목 업데이트
+            const exportQuotationNewLink = document.getElementById('exportQuotationNewLink');
+            if (exportQuotationNewLink) {
+                const dropdownText = exportQuotationNewLink.querySelector('.dropdown-text');
+                if (dropdownText) {
+                    dropdownText.textContent = lang === 'KOR' 
+                        ? exportQuotationNewLink.getAttribute('data-lang-kor') 
+                        : exportQuotationNewLink.getAttribute('data-lang-eng');
+                }
+            }
+            
+            const exportQuotationNewPublicLink = document.getElementById('exportQuotationNewPublicLink');
+            if (exportQuotationNewPublicLink) {
+                const dropdownText = exportQuotationNewPublicLink.querySelector('.dropdown-text');
+                if (dropdownText) {
+                    dropdownText.textContent = lang === 'KOR' 
+                        ? exportQuotationNewPublicLink.getAttribute('data-lang-kor') 
+                        : exportQuotationNewPublicLink.getAttribute('data-lang-eng');
+                }
+            }
+            
+            // 코드 관리 드롭다운 내의 항목들도 업데이트
+            document.querySelectorAll('.dropdown-item[data-lang-kor], .dropdown-item[data-lang-eng]').forEach(item => {
+                const dropdownText = item.querySelector('.dropdown-text');
+                if (dropdownText) {
+                    const langText = lang === 'KOR' 
+                        ? item.getAttribute('data-lang-kor') 
+                        : item.getAttribute('data-lang-eng');
+                    if (langText) {
+                        dropdownText.textContent = langText;
+                    }
+                }
+            });
+            
+            // 상단 네비게이션 바 브랜드 텍스트 업데이트
+            const navbarBrandLink = document.getElementById('navbarBrandLink');
+            if (navbarBrandLink) {
+                navbarBrandLink.href = lang === 'ENG' ? '/?lang=ENG' : '/';
+                navbarBrandLink.title = lang === 'ENG' ? 'Main screen' : '메인화면';
+            }
+            const portalBrandLink = document.getElementById('portalBrandLink');
+            if (portalBrandLink) {
+                portalBrandLink.href = lang === 'ENG' ? '/?lang=ENG' : '/';
+                portalBrandLink.title = lang === 'ENG' ? 'Main screen' : '메인화면';
+            }
+            
+            // 하단 푸터 텍스트 업데이트
+            const footerText = document.getElementById('footerText');
+            if (footerText) {
+                footerText.textContent = lang === 'KOR' 
+                    ? footerText.getAttribute('data-lang-kor') 
+                    : footerText.getAttribute('data-lang-eng');
+            }
+        }
+
+        function setLanguage(lang) {
+            sessionStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+            updateLanguageDisplay(lang);
+            
+            // KOR 선택 시 현재 모든 소스에 연결 (기본 동작 유지)
+            if (lang === 'KOR') {
+                // 한국어는 기본값이므로 특별한 처리가 필요 없음
+                console.log('한국어 모드로 설정되었습니다.');
+                
+                // 현재 페이지가 영어 버전이면 한국어 버전으로 리다이렉트
+                const currentPath = window.location.pathname;
+                if (currentPath === '/' || currentPath === '/super-series' || currentPath === '/lookup' || currentPath.includes('/select_options') || currentPath === '/set_price_view') {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('lang');
+                    window.location.href = url.toString();
+                }
+            } else if (lang === 'ENG') {
+                // 영어 모드: 코드 조회 및 옵션 선택(조회용) 페이지를 영어 버전으로 리다이렉트
+                console.log('영어 모드로 설정되었습니다.');
+                
+                const currentPath = window.location.pathname;
+                if (currentPath === '/' || currentPath === '/super-series') {
+                    // 인덱스 페이지
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('lang', 'ENG');
+                    window.location.href = url.toString();
+                } else if (currentPath === '/lookup') {
+                    // 코드 조회 페이지
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('lang', 'ENG');
+                    window.location.href = url.toString();
+                } else if (currentPath === '/select_options') {
+                    // 옵션 선택 페이지
+                    const url = new URL(window.location.href);
+                    const viewParam = url.searchParams.get('view');
+                    if (viewParam === 'true') {
+                        // 조회용 페이지인 경우에만 영어 버전으로 리다이렉트
+                        url.searchParams.set('lang', 'ENG');
+                        window.location.href = url.toString();
+                    }
+                } else if (currentPath === '/set_price_view') {
+                    // 세트가격조회 페이지
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('lang', 'ENG');
+                    window.location.href = url.toString();
+                } else if (currentPath === '/export_quotation_new') {
+                    // 수출견적서(스태프) 페이지
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('lang', 'ENG');
+                    window.location.href = url.toString();
+                } else if (currentPath === '/export_quotation_new_public') {
+                    // 수출견적서(고객) 페이지
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('lang', 'ENG');
+                    window.location.href = url.toString();
+                }
+            }
+        }
+
+        // URL 파라미터에서 언어 확인
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlLang = urlParams.get('lang');
+        
+        // 저장된 언어 설정 불러오기 (URL 파라미터가 있으면 우선)
+        const savedLanguage = urlLang ? urlLang.toUpperCase() : (sessionStorage.getItem(LANGUAGE_STORAGE_KEY) || 'KOR');
+        
+        // URL 파라미터가 있으면 sessionStorage에 저장
+        if (urlLang) {
+            sessionStorage.setItem(LANGUAGE_STORAGE_KEY, savedLanguage);
+        }
+        
+        // 언어 표시만 업데이트 (리다이렉트는 사용자가 언어를 선택했을 때만)
+        updateLanguageDisplay(savedLanguage);
+
+        // 언어 선택 이벤트 리스너
+        languageOptions.forEach(option => {
+            option.addEventListener('click', function(e) {
+                e.preventDefault();
+                const selectedLang = this.getAttribute('data-lang');
+                setLanguage(selectedLang);
+                
+                // 드롭다운 닫기
+                const dropdown = bootstrap.Dropdown.getInstance(document.getElementById('languageDropdown'));
+                if (dropdown) {
+                    dropdown.hide();
+                }
+            });
+        });
+
+        // Code Lookup 버튼 클릭 이벤트
+        const lookupNavLink = document.getElementById('lookupNavLink');
+        if (lookupNavLink) {
+            lookupNavLink.addEventListener('click', function(e) {
+                const currentLang = sessionStorage.getItem(LANGUAGE_STORAGE_KEY) || 'KOR';
+                if (currentLang === 'ENG') {
+                    e.preventDefault();
+                    const url = new URL(this.href);
+                    url.searchParams.set('lang', 'ENG');
+                    window.location.href = url.toString();
+                }
+            });
+        }
+
+        // Select Options (View) 버튼 클릭 이벤트
+        const selectOptionsViewNavLink = document.getElementById('selectOptionsViewNavLink');
+        if (selectOptionsViewNavLink) {
+            selectOptionsViewNavLink.addEventListener('click', function(e) {
+                const currentLang = sessionStorage.getItem(LANGUAGE_STORAGE_KEY) || 'KOR';
+                if (currentLang === 'ENG') {
+                    e.preventDefault();
+                    const url = new URL(this.href);
+                    url.searchParams.set('lang', 'ENG');
+                    window.location.href = url.toString();
+                }
+            });
+        }
+
+        // Home 버튼 클릭 이벤트
+        const homeNavLink = document.getElementById('homeNavLink');
+        if (homeNavLink) {
+            homeNavLink.addEventListener('click', function(e) {
+                const currentLang = sessionStorage.getItem(LANGUAGE_STORAGE_KEY) || 'KOR';
+                if (currentLang === 'ENG') {
+                    e.preventDefault();
+                    const url = new URL(this.href);
+                    url.searchParams.set('lang', 'ENG');
+                    window.location.href = url.toString();
+                }
+            });
+        }
+
+        // Set Price View 버튼 클릭 이벤트
+        const setPriceViewNavLinkPublic = document.getElementById('setPriceViewNavLinkPublic');
+        if (setPriceViewNavLinkPublic) {
+            setPriceViewNavLinkPublic.addEventListener('click', function(e) {
+                const currentLang = sessionStorage.getItem(LANGUAGE_STORAGE_KEY) || 'KOR';
+                if (currentLang === 'ENG') {
+                    e.preventDefault();
+                    const url = new URL(this.href);
+                    url.searchParams.set('lang', 'ENG');
+                    window.location.href = url.toString();
+                }
+            });
+        }
+
+        const PART_BROCHURE_STORAGE_KEY = 'pns_part_brochure_selected';
+
+        function brochureItemKey(item) {
+            return [
+                String(item.folder_id || ''),
+                String(item.subfolder_id || ''),
+                String(item.category || 'trolley')
+            ].join('|');
+        }
+
+        function readBrochureItemFromEl(el) {
+            return {
+                folder_id: el.getAttribute('data-folder-id'),
+                subfolder_id: el.getAttribute('data-subfolder-id'),
+                category: el.getAttribute('data-category') || 'trolley'
+            };
+        }
+
+        function saveBrochureSelectionsFromDom() {
+            const items = Array.from(document.querySelectorAll('.part-brochure-check:checked'))
+                .map(readBrochureItemFromEl);
+            sessionStorage.setItem(PART_BROCHURE_STORAGE_KEY, JSON.stringify(items));
+        }
+
+        function getBrochureSelectionsForDownload() {
+            const domItems = Array.from(document.querySelectorAll('.part-brochure-check:checked'))
+                .map(readBrochureItemFromEl);
+            if (domItems.length) {
+                saveBrochureSelectionsFromDom();
+                return domItems;
+            }
+            try {
+                const stored = JSON.parse(sessionStorage.getItem(PART_BROCHURE_STORAGE_KEY) || '[]');
+                return Array.isArray(stored) ? stored.filter(function (it) {
+                    return it && it.folder_id && it.subfolder_id;
+                }) : [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function restoreBrochureSelections() {
+            let stored = [];
+            try {
+                stored = JSON.parse(sessionStorage.getItem(PART_BROCHURE_STORAGE_KEY) || '[]');
+            } catch (_) {}
+            if (!stored.length) {
+                updatePartBrochureCount();
+                return;
+            }
+            const keys = new Set(stored.map(brochureItemKey));
+            document.querySelectorAll('.part-brochure-check').forEach(function (el) {
+                el.checked = keys.has(brochureItemKey(readBrochureItemFromEl(el)));
+            });
+            updatePartBrochureCount();
+        }
+
+        function updatePartBrochureCount() {
+            const checked = document.querySelectorAll('.part-brochure-check:checked');
+            const countEl = document.getElementById('partBrochureCount');
+            const btn = document.getElementById('partBrochureDownloadBtn');
+            if (countEl) countEl.textContent = String(checked.length);
+            if (btn) btn.disabled = checked.length === 0;
+        }
+
+        function resetPartBrochureButton(btn, original) {
+            if (!btn) return;
+            btn.disabled = false;
+            btn.innerHTML = original;
+            updatePartBrochureCount();
+        }
+
+        function buildSparePartsPdfUrl(item) {
+            const params = new URLSearchParams({
+                folder_id: item.folder_id || '',
+                subfolder_id: item.subfolder_id || '',
+                category: item.category || 'trolley'
+            });
+            return '/api/part_price/spare_parts_pdf?' + params.toString();
+        }
+
+        function downloadSparePartsPdfViaForm(items, btn, original) {
+            let iframe = document.getElementById('partBrochureDownloadFrame');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'partBrochureDownloadFrame';
+                iframe.name = 'partBrochureDownloadFrame';
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+            }
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/api/part_price/spare_parts_pdf_batch';
+            form.target = 'partBrochureDownloadFrame';
+            form.style.display = 'none';
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'items_json';
+            input.value = JSON.stringify(items);
+            form.appendChild(input);
+
+            let settled = false;
+            const finish = function () {
+                if (settled) return;
+                settled = true;
+                resetPartBrochureButton(btn, original);
+            };
+
+            iframe.onload = function () {
+                window.setTimeout(function () {
+                    try {
+                        const doc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
+                        const text = doc && doc.body ? (doc.body.innerText || doc.body.textContent || '').trim() : '';
+                        if (text && text.charAt(0) === '{') {
+                            const data = JSON.parse(text);
+                            if (data && data.error) {
+                                alert(data.error);
+                            }
+                        }
+                    } catch (_) {}
+                    finish();
+                }, 300);
+            };
+
+            document.body.appendChild(form);
+            form.submit();
+            form.remove();
+            window.setTimeout(finish, 8000);
+        }
+
+        function downloadSparePartsPdfViaFetch(items, btn, original) {
+            const controller = new AbortController();
+            const timeoutId = window.setTimeout(function () {
+                controller.abort();
+            }, 180000);
+
+            return fetch('/api/part_price/spare_parts_pdf_batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ items: items }),
+                signal: controller.signal
+            })
+            .then(function (res) {
+                return res.arrayBuffer().then(function (buf) {
+                    const bytes = new Uint8Array(buf);
+                    const isPdf = bytes.length >= 5 &&
+                        bytes[0] === 0x25 && bytes[1] === 0x50 &&
+                        bytes[2] === 0x44 && bytes[3] === 0x46;
+                    if (isPdf) {
+                        const disposition = res.headers.get('content-disposition') || '';
+                        let downloadName = 'Spare_Parts_Selected.pdf';
+                        const simpleMatch = disposition.match(/filename="?([^"]+)"?/i);
+                        if (simpleMatch && simpleMatch[1]) downloadName = simpleMatch[1];
+                        return {
+                            blob: new Blob([buf], { type: 'application/pdf' }),
+                            downloadName: downloadName
+                        };
+                    }
+                    const text = new TextDecoder('utf-8').decode(buf);
+                    let msg = 'PDF 생성에 실패했습니다.';
+                    try {
+                        const data = JSON.parse(text);
+                        if (data.error) msg = data.error;
+                    } catch (_) {
+                        if (res.status === 404) {
+                            msg = 'PDF API를 찾을 수 없습니다. 서버를 재시작한 뒤 다시 시도해주세요.';
+                        } else if (!res.ok) {
+                            msg = 'PDF 생성에 실패했습니다. (HTTP ' + res.status + ')';
+                        }
+                    }
+                    throw new Error(msg);
+                });
+            })
+            .then(function (result) {
+                const link = document.createElement('a');
+                const fileUrl = window.URL.createObjectURL(result.blob);
+                link.href = fileUrl;
+                link.download = result.downloadName;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(fileUrl);
+            })
+            .finally(function () {
+                window.clearTimeout(timeoutId);
+                resetPartBrochureButton(btn, original);
+            });
+        }
+
+        function downloadSelectedSparePartsPdf(items, btn, original) {
+            if (items.length === 1) {
+                const link = document.createElement('a');
+                link.href = buildSparePartsPdfUrl(items[0]);
+                link.target = '_blank';
+                link.rel = 'noopener';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.setTimeout(function () {
+                    resetPartBrochureButton(btn, original);
+                }, 2000);
+                return;
+            }
+
+            downloadSparePartsPdfViaFetch(items, btn, original).catch(function (err) {
+                const msg = (err && err.message) ? err.message : '';
+                if (msg.indexOf('Failed to fetch') >= 0 || msg.indexOf('NetworkError') >= 0 || err.name === 'AbortError') {
+                    downloadSparePartsPdfViaForm(items, btn, original);
+                    return;
+                }
+                alert(msg || 'PDF 다운로드 중 오류가 발생했습니다.');
+                resetPartBrochureButton(btn, original);
+            });
+        }
+
+        function bindPartBrochureDownload() {
+            const menu = document.getElementById('partPriceMenu');
+            if (menu && !menu._brochureBound) {
+                menu._brochureBound = true;
+                menu.addEventListener('click', function (e) {
+                    const check = e.target.closest('.part-brochure-check');
+                    if (check) {
+                        e.stopPropagation();
+                        window.setTimeout(function () {
+                            saveBrochureSelectionsFromDom();
+                            updatePartBrochureCount();
+                        }, 0);
+                    }
+                });
+                menu.addEventListener('change', function (e) {
+                    if (e.target && e.target.classList.contains('part-brochure-check')) {
+                        saveBrochureSelectionsFromDom();
+                        updatePartBrochureCount();
+                    }
+                });
+            }
+            restoreBrochureSelections();
+            const btn = document.getElementById('partBrochureDownloadBtn');
+            if (!btn || btn._bound) return;
+            btn._bound = true;
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const items = getBrochureSelectionsForDownload();
+                if (!items.length) {
+                    alert('다운로드할 항목을 선택해주세요.\n(하위 폴더를 연 뒤 왼쪽 체크박스를 선택하세요)');
+                    return;
+                }
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>생성 중...';
+                downloadSelectedSparePartsPdf(items, btn, original);
+            });
+        }
+
+        // 파트가격조회 메뉴 동적 생성 (전역 함수로 노출)
+        window.loadPartPriceMenu = function loadPartPriceMenu() {
+            const partPriceMenu = document.getElementById('partPriceMenu');
+            if (!partPriceMenu) return;
+            
+            // 폴더 목록 가져오기
+            fetch('/api/part_price/folders')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.folders && data.folders.length > 0) {
+                        partPriceMenu.innerHTML = '';
+                        
+                        // 각 폴더에 대해 메뉴 생성
+                        const folderPromises = data.folders.map(folder => {
+                            const folderId = folder.id;
+                            const folderName = folder.folder_name;
+                            
+                            // 하위 폴더 가져오기
+                            return fetch(`/api/part_price/subfolders?folder_id=${folderId}`)
+                                .then(response => response.json())
+                                .then(subfolderData => {
+                                    if (subfolderData.success && subfolderData.subfolders && subfolderData.subfolders.length > 0) {
+                                        // 하위 폴더가 있으면 서브메뉴 생성
+                                        const submenuId = `submenu-${folderId}`;
+                                        const caretId = `caret-${folderId}`;
+                                        const folderLinkId = `folder-link-${folderId}`;
+                                        
+                                        let submenuHTML = '';
+                                        subfolderData.subfolders.forEach(subfolder => {
+                                            const subfolderName = subfolder.subfolder_name;
+                                            const subfolderId = subfolder.id;
+                                            
+                                            // 하위 폴더 이름에서 category 추출
+                                            let category = '';
+                                            let url = '#';
+                                            if (subfolderName.toLowerCase().includes('cooling unit')) {
+                                                category = 'cooling_unit';
+                                                url = `/part_price/cooling_unit?folder_id=${folderId}&subfolder_id=${subfolderId}`;
+                                            } else if (subfolderName.toLowerCase().includes('trolley')) {
+                                                category = 'trolley';
+                                                url = `/part_price/trolley?folder_id=${folderId}&subfolder_id=${subfolderId}`;
+                                            } else {
+                                                // 카테고리를 추출할 수 없으면 기본값으로 trolley 사용
+                                                category = 'trolley';
+                                                url = `/part_price/trolley?folder_id=${folderId}&subfolder_id=${subfolderId}`;
+                                            }
+                                            
+                                            submenuHTML += `
+                                                <li class="part-brochure-item">
+                                                    <input type="checkbox"
+                                                           class="part-brochure-check"
+                                                           title="PDF 선택"
+                                                           data-folder-id="${folderId}"
+                                                           data-subfolder-id="${subfolderId}"
+                                                           data-category="${category}"
+                                                           data-name="${subfolderName.replace(/"/g, '&quot;')}">
+                                                    <a class="dropdown-item part-price-subfolder-link" 
+                                                       href="${url}" 
+                                                       data-folder-id="${folderId}" 
+                                                       data-subfolder-id="${subfolderId}"
+                                                       data-category="${category}"
+                                                       data-lang-kor="${subfolderName}" 
+                                                       data-lang-eng="${subfolderName}">
+                                                        <i class="fas fa-angle-right me-2"></i><span class="dropdown-text">${subfolderName}</span>
+                                                    </a>
+                                                </li>
+                                            `;
+                                        });
+                                        
+                                        const folderHTML = `
+                                            <li class="dropdown-submenu" style="position: relative;">
+                                                <a class="dropdown-item d-flex justify-content-between align-items-center" 
+                                                   href="#" 
+                                                   id="${folderLinkId}" 
+                                                   data-folder-id="${folderId}"
+                                                   data-lang-kor="${folderName}" 
+                                                   data-lang-eng="${folderName}">
+                                                    <span>
+                                                        <i class="fas fa-folder me-2"></i><span class="dropdown-text">${folderName}</span>
+                                                    </span>
+                                                    <i class="fas fa-chevron-right ms-2" id="${caretId}" aria-hidden="true"></i>
+                                                </a>
+                                                <ul class="dropdown-menu dropdown-menu-start part-price-submenu" 
+                                                    id="${submenuId}" 
+                                                    style="display: none; position: absolute; left: 100%; top: 0; margin-top: 0;">
+                                                    ${submenuHTML}
+                                                </ul>
+                                            </li>
+                                        `;
+                                        
+                                        return { html: folderHTML, folderId, submenuId, caretId, folderLinkId };
+                                    } else {
+                                        // 하위 폴더가 없으면 단순 링크
+                                        const folderHTML = `
+                                            <li>
+                                                <a class="dropdown-item" 
+                                                   href="#" 
+                                                   data-folder-id="${folderId}"
+                                                   data-lang-kor="${folderName}" 
+                                                   data-lang-eng="${folderName}">
+                                                    <i class="fas fa-folder me-2"></i><span class="dropdown-text">${folderName}</span>
+                                                </a>
+                                            </li>
+                                        `;
+                                        return { html: folderHTML, folderId: null };
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('하위 폴더 로드 오류:', error);
+                                    return { html: '', folderId: null };
+                                });
+                        });
+                        
+                        Promise.all(folderPromises).then(results => {
+                            results.forEach(result => {
+                                if (result.html) {
+                                    partPriceMenu.insertAdjacentHTML('beforeend', result.html);
+                                    
+                                    // 서브메뉴 토글 이벤트 추가
+                                    if (result.folderId) {
+                                        const folderLink = document.getElementById(result.folderLinkId);
+                                        const caret = document.getElementById(result.caretId);
+                                        const submenu = document.getElementById(result.submenuId);
+                                        
+                                        if (folderLink && submenu) {
+                                            folderLink.addEventListener('click', function(e) {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                const isExpanded = submenu.style.display !== 'none';
+                                                submenu.style.display = isExpanded ? 'none' : 'block';
+                                                if (caret) {
+                                                    caret.classList.toggle('fa-chevron-right', isExpanded);
+                                                    caret.classList.toggle('fa-chevron-down', !isExpanded);
+                                                }
+                                            });
+                                            
+                                            // 드롭다운이 닫힐 때 서브메뉴도 접기
+                                            const partPriceNavLink = document.getElementById('partPriceNavLink');
+                                            if (partPriceNavLink) {
+                                                const partPriceDropdown = partPriceNavLink.closest('.dropdown');
+                                                if (partPriceDropdown) {
+                                                    partPriceDropdown.addEventListener('hidden.bs.dropdown', function() {
+                                                        submenu.style.display = 'none';
+                                                        if (caret) {
+                                                            caret.classList.add('fa-chevron-right');
+                                                            caret.classList.remove('fa-chevron-down');
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                            
+                                            // 마우스가 서브메뉴 영역을 벗어나면 닫기
+                                            const submenuParent = submenu.closest('.dropdown-submenu');
+                                            if (submenuParent) {
+                                                submenuParent.addEventListener('mouseleave', function() {
+                                                    setTimeout(() => {
+                                                        if (!submenuParent.matches(':hover')) {
+                                                            submenu.style.display = 'none';
+                                                            if (caret) {
+                                                                caret.classList.add('fa-chevron-right');
+                                                                caret.classList.remove('fa-chevron-down');
+                                                            }
+                                                        }
+                                                    }, 200);
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                            partPriceMenu.insertAdjacentHTML('beforeend', `
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="px-2 pb-2 pt-1">
+                                    <button type="button" class="btn btn-sm w-100" id="partBrochureDownloadBtn" disabled>
+                                        <i class="fas fa-file-pdf me-1"></i>선택 PDF 다운로드 (<span id="partBrochureCount">0</span>)
+                                    </button>
+                                </li>
+                            `);
+                            bindPartBrochureDownload();
+                        });
+                    } else {
+                        partPriceMenu.innerHTML = '<li><span class="dropdown-item-text text-muted">폴더가 없습니다.</span></li>';
+                    }
+                })
+                .catch(error => {
+                    console.error('폴더 로드 오류:', error);
+                    partPriceMenu.innerHTML = '<li><span class="dropdown-item-text text-muted">메뉴를 불러올 수 없습니다.</span></li>';
+                });
+        };
+        
+        // 페이지 로드 시 파트가격조회 메뉴 생성
+        loadPartPriceMenu();
+    });
+
+    // 수출견적서가격업로드 버튼 클릭 이벤트
+    const exportQuotationUploadBtn = document.getElementById('exportQuotationUploadBtn');
+    if (exportQuotationUploadBtn) {
+        exportQuotationUploadBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const modal = new bootstrap.Modal(document.getElementById('exportQuotationUploadModal'));
+            modal.show();
+        });
+    }
+    
+    // 수출견적서(스태프) 가격업로드 버튼 클릭 이벤트
+    const exportQuotationNewUploadBtn = document.getElementById('exportQuotationNewUploadBtn');
+    if (exportQuotationNewUploadBtn) {
+        exportQuotationNewUploadBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const modal = new bootstrap.Modal(document.getElementById('exportQuotationNewUploadModal'));
+            modal.show();
+        });
+    }
+    
+    // 파트가격조회 가격업로드 버튼 클릭 이벤트
+    const partPriceUploadBtn = document.getElementById('partPriceUploadBtn');
+    if (partPriceUploadBtn) {
+        partPriceUploadBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const modal = new bootstrap.Modal(document.getElementById('partPriceUploadModal'));
+            modal.show();
+        });
+    }
+    </script>
+    
+    {% block scripts %}{% endblock %}
+
+    <!-- 수출견적서 가격 업로드 모달 -->
+    <div class="modal fade" id="exportQuotationUploadModal" tabindex="-1" aria-labelledby="exportQuotationUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-burgundy">
+                    <h5 class="modal-title" id="exportQuotationUploadModalLabel" style="color: #1a1a1a !important;">수출견적서(DAP) 가격 업로드</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>엑셀 파일을 업로드하여 제품 정보를 불러옵니다.</p>
+                    <p class="text-muted small">엑셀 파일에는 다음 컬럼이 포함되어야 합니다:</p>
+                    <ul class="text-muted small">
+                        <li>제품코드 (또는 Product Code)</li>
+                        <li>제품명 (또는 Product Name)</li>
+                        <li>프라이스북 가격 (또는 Price Book)</li>
+                        <li>수량 (선택사항, 기본값: 1)</li>
+                        <li>원가 (또는 Cost, 선택사항, 기본값: 0)</li>
+                    </ul>
+                    <div class="mb-3">
+                        <label for="exportQuotationFile" class="form-label">엑셀 파일 선택</label>
+                        <input type="file" class="form-control" id="exportQuotationFile" accept=".xlsx,.xls">
+                    </div>
+                    <div id="exportQuotationUploadStatus" class="mt-3"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="exportQuotationUploadConfirmBtn">업로드</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // 수출견적서 가격 업로드 처리
+    document.getElementById('exportQuotationUploadConfirmBtn').addEventListener('click', function() {
+        const fileInput = document.getElementById('exportQuotationFile');
+        const file = fileInput.files[0];
+        const statusDiv = document.getElementById('exportQuotationUploadStatus');
+        
+        if (!file) {
+            statusDiv.innerHTML = '<div class="alert alert-warning">파일을 선택해주세요.</div>';
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        statusDiv.innerHTML = '<div class="alert alert-info">업로드 중...</div>';
+        
+        fetch('/api/export_quotation/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                statusDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                
+                // 수출견적서 페이지로 이동하고 데이터 로드
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('exportQuotationUploadModal'));
+                    modal.hide();
+                    
+                    // 수출견적서 페이지로 이동
+                    window.location.href = '/export_quotation';
+                    
+                    // 페이지 로드 후 데이터 전달을 위해 sessionStorage 사용
+                    sessionStorage.setItem('exportQuotationData', JSON.stringify(data));
+                }, 1000);
+            } else {
+                statusDiv.innerHTML = `<div class="alert alert-danger">오류: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            console.error('업로드 오류:', error);
+            statusDiv.innerHTML = `<div class="alert alert-danger">업로드 중 오류가 발생했습니다: ${error.message}</div>`;
+        });
+    });
+    
+    </script>
+    
+    <!-- 수출견적서(신규) 가격 업로드 모달 -->
+    <div class="modal fade" id="exportQuotationNewUploadModal" tabindex="-1" aria-labelledby="exportQuotationNewUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-burgundy">
+                    <h5 class="modal-title" id="exportQuotationNewUploadModalLabel" style="color: #1a1a1a !important;">수출견적서(스태프) 가격 업로드</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>엑셀 파일을 업로드하여 제품 정보를 불러옵니다.</p>
+                    <p class="text-muted small">엑셀 파일에는 다음 컬럼이 포함되어야 합니다:</p>
+                    <ul class="text-muted small">
+                        <li>제품코드 (또는 Product Code)</li>
+                        <li>제품명 (또는 Product Name)</li>
+                        <li>분류 (또는 Category) - 예: [1] 파워소스 또는 1</li>
+                        <li>프라이스북 단가 (또는 Price Book)</li>
+                        <li>구매가 원가 (또는 Purchase Cost)</li>
+                    </ul>
+                    <div class="mb-3">
+                        <label for="exportQuotationNewFile" class="form-label">엑셀 파일 선택</label>
+                        <input type="file" class="form-control" id="exportQuotationNewFile" accept=".xlsx,.xls">
+                    </div>
+                    <div id="exportQuotationNewUploadStatus" class="mt-3"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="exportQuotationNewUploadConfirmBtn">업로드</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // 수출견적서(스태프) 가격 업로드 처리
+    document.getElementById('exportQuotationNewUploadConfirmBtn').addEventListener('click', function() {
+        const fileInput = document.getElementById('exportQuotationNewFile');
+        const file = fileInput.files[0];
+        const statusDiv = document.getElementById('exportQuotationNewUploadStatus');
+        
+        if (!file) {
+            statusDiv.innerHTML = '<div class="alert alert-warning">파일을 선택해주세요.</div>';
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        statusDiv.innerHTML = '<div class="alert alert-info">업로드 중...</div>';
+        
+        fetch('/api/export_quotation/new/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                statusDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                
+                // 수출견적서(스태프) 대시보드로 이동
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('exportQuotationNewUploadModal'));
+                    modal.hide();
+                    
+                    // 수출견적서(스태프) 대시보드로 이동
+                    window.location.href = '/export_price_dashboard_new';
+                }, 1000);
+            } else {
+                statusDiv.innerHTML = `<div class="alert alert-danger">오류: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            console.error('업로드 오류:', error);
+            statusDiv.innerHTML = `<div class="alert alert-danger">업로드 중 오류가 발생했습니다: ${error.message}</div>`;
+        });
+    });
+    </script>
+    
+    <!-- 파트가격조회 가격 업로드 모달 -->
+    <div class="modal fade" id="partPriceUploadModal" tabindex="-1" aria-labelledby="partPriceUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-burgundy">
+                    <h5 class="modal-title" id="partPriceUploadModalLabel" style="color: #1a1a1a !important;">파트가격조회 가격 업로드</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>엑셀 파일을 업로드하여 부품 가격 정보를 불러옵니다.</p>
+                    <p class="text-muted small">엑셀 파일에는 다음 컬럼이 포함되어야 합니다:</p>
+                    <ul class="text-muted small">
+                        <li>자재코드 (또는 Material Code)</li>
+                        <li>설명 (또는 Description)</li>
+                        <li>가격 (또는 Price)</li>
+                    </ul>
+                    <div class="mb-3">
+                        <label for="partPriceFile" class="form-label">엑셀 파일 선택</label>
+                        <input type="file" class="form-control" id="partPriceFile" accept=".xlsx,.xls">
+                    </div>
+                    <div id="partPriceUploadStatus" class="mt-3"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="partPriceUploadConfirmBtn">업로드</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // 파트가격조회 가격 업로드 처리
+    document.getElementById('partPriceUploadConfirmBtn').addEventListener('click', function() {
+        const fileInput = document.getElementById('partPriceFile');
+        const file = fileInput.files[0];
+        const statusDiv = document.getElementById('partPriceUploadStatus');
+        const uploadBtn = document.getElementById('partPriceUploadConfirmBtn');
+        
+        if (!file) {
+            statusDiv.innerHTML = '<div class="alert alert-warning">파일을 선택해주세요.</div>';
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        statusDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>업로드 중...</div>';
+        uploadBtn.disabled = true;
+        const originalBtnText = uploadBtn.innerHTML;
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>업로드 중...';
+        
+        console.log('파일 업로드 시작:', file.name, file.size, 'bytes');
+        
+        fetch('/api/part_price/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('응답 상태:', response.status, response.statusText);
+            console.log('응답 헤더:', Object.fromEntries(response.headers.entries()));
+            
+            // 응답이 JSON인지 확인
+            const contentType = response.headers.get('content-type') || '';
+            console.log('Content-Type:', contentType);
+            
+            if (contentType.includes('application/json')) {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || `HTTP 오류 (${response.status}): ${response.statusText}`);
+                    });
+                }
+                return response.json();
+            } else {
+                // HTML 응답인 경우 (에러 페이지 등)
+                return response.text().then(text => {
+                    console.error('서버 응답 (HTML, 처음 500자):', text.substring(0, 500));
+                    throw new Error('서버에서 JSON 응답을 받지 못했습니다. 서버 오류가 발생했을 수 있습니다.');
+                });
+            }
+        })
+        .then(data => {
+            console.log('업로드 응답 데이터:', data);
+            
+            if (data.success) {
+                const message = data.message || `${data.total_count || 0}개의 부품이 업로드되었습니다.`;
+                const detailMsg = [];
+                if (data.saved_count > 0) {
+                    detailMsg.push(`신규: ${data.saved_count}개`);
+                }
+                if (data.updated_count > 0) {
+                    detailMsg.push(`업데이트: ${data.updated_count}개`);
+                }
+                const fullMessage = detailMsg.length > 0 ? `${message} (${detailMsg.join(', ')})` : message;
+                
+                statusDiv.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>${fullMessage}</div>`;
+                
+                // 파트가격조회 대시보드로 이동
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('partPriceUploadModal'));
+                    modal.hide();
+                    
+                    // 파트가격조회 대시보드로 이동
+                    window.location.href = '/part_price_dashboard';
+                }, 1500);
+            } else {
+                statusDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>오류: ${data.error || '알 수 없는 오류가 발생했습니다.'}</div>`;
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = originalBtnText;
+            }
+        })
+        .catch(error => {
+            console.error('업로드 오류:', error);
+            statusDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>업로드 중 오류가 발생했습니다: ${error.message}</div>`;
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = originalBtnText;
+        });
+    });
+    </script>
+    
+    <!-- 배경화면 교체 모달 -->
+    <div class="modal fade" id="backgroundImageChangeModal" tabindex="-1" aria-labelledby="backgroundImageChangeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-burgundy">
+                    <h5 class="modal-title" id="backgroundImageChangeModalLabel" style="color: #1a1a1a !important;" data-lang-kor="배경화면 교체" data-lang-eng="Change Background">배경화면 교체</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p data-lang-kor="메인 화면의 배경 이미지를 변경할 수 있습니다." data-lang-eng="You can change the background image of the main screen.">메인 화면의 배경 이미지를 변경할 수 있습니다.</p>
+                    <p class="text-muted small" data-lang-kor="지원 형식: JPG, JPEG, PNG, GIF, WEBP" data-lang-eng="Supported formats: JPG, JPEG, PNG, GIF, WEBP">지원 형식: JPG, JPEG, PNG, GIF, WEBP</p>
+                    <div class="mb-3">
+                        <label for="backgroundImageFile" class="form-label" data-lang-kor="이미지 파일 선택" data-lang-eng="Select Image File">이미지 파일 선택</label>
+                        <input type="file" class="form-control" id="backgroundImageFile" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp">
+                    </div>
+                    <div id="backgroundImageUploadStatus" class="mt-3"></div>
+                    <div id="currentBackgroundPreview" class="mt-3" style="display: none;">
+                        <p class="small mb-2" data-lang-kor="현재 배경 이미지:" data-lang-eng="Current background image:">현재 배경 이미지:</p>
+                        <img id="currentBackgroundImage" src="" alt="Current Background" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-lang-kor="닫기" data-lang-eng="Close">닫기</button>
+                    <button type="button" class="btn btn-primary" id="backgroundImageUploadConfirmBtn" data-lang-kor="업로드" data-lang-eng="Upload">업로드</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // 배경화면 교체 버튼 클릭 이벤트
+    const backgroundImageChangeBtn = document.getElementById('backgroundImageChangeBtn');
+    if (backgroundImageChangeBtn) {
+        backgroundImageChangeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const modal = new bootstrap.Modal(document.getElementById('backgroundImageChangeModal'));
+            modal.show();
+            
+            // 현재 배경 이미지 로드
+            loadCurrentBackgroundImage();
+        });
+    }
+    
+    // 현재 배경 이미지 로드
+    function loadCurrentBackgroundImage() {
+        fetch('/api/background_image')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.filename) {
+                    const previewDiv = document.getElementById('currentBackgroundPreview');
+                    const previewImg = document.getElementById('currentBackgroundImage');
+                    if (previewDiv && previewImg) {
+                        previewImg.src = data.url + '?t=' + new Date().getTime(); // 캐시 방지
+                        previewDiv.style.display = 'block';
+                    }
+                } else {
+                    const previewDiv = document.getElementById('currentBackgroundPreview');
+                    if (previewDiv) {
+                        previewDiv.style.display = 'none';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('배경 이미지 조회 오류:', error);
+            });
+    }
+    
+    // 배경 이미지 업로드 처리
+    const backgroundImageUploadConfirmBtn = document.getElementById('backgroundImageUploadConfirmBtn');
+    if (backgroundImageUploadConfirmBtn) {
+        backgroundImageUploadConfirmBtn.addEventListener('click', function() {
+            const fileInput = document.getElementById('backgroundImageFile');
+            const file = fileInput.files[0];
+            const statusDiv = document.getElementById('backgroundImageUploadStatus');
+            
+            if (!file) {
+                const currentLang = sessionStorage.getItem('pnsLanguage') || 'KOR';
+                const message = currentLang === 'ENG' ? 'Please select a file.' : '파일을 선택해주세요.';
+                statusDiv.innerHTML = '<div class="alert alert-warning">' + message + '</div>';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const currentLang = sessionStorage.getItem('pnsLanguage') || 'KOR';
+            const uploadingMsg = currentLang === 'ENG' ? 'Uploading...' : '업로드 중...';
+            statusDiv.innerHTML = '<div class="alert alert-info">' + uploadingMsg + '</div>';
+            
+            // API 엔드포인트 URL 확인
+            const uploadUrl = '/api/background_image/upload';
+            console.log('업로드 URL:', uploadUrl);
+            
+            fetch(uploadUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                // 응답 상태 확인
+                if (!response.ok) {
+                    // HTTP 오류 상태인 경우
+                    return response.text().then(text => {
+                        // JSON 형식인지 확인
+                        try {
+                            const jsonData = JSON.parse(text);
+                            return jsonData;
+                        } catch (e) {
+                            // JSON이 아닌 경우
+                            throw new Error(`서버 오류 (${response.status}): ${text.substring(0, 200)}`);
+                        }
+                    });
+                }
+                
+                // 응답이 JSON인지 확인
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    // JSON이 아닌 경우 (HTML 에러 페이지 등)
+                    return response.text().then(text => {
+                        throw new Error('서버에서 JSON 응답을 받지 못했습니다. 응답: ' + text.substring(0, 200));
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const successMsg = currentLang === 'ENG' 
+                        ? 'Background image uploaded successfully. The page will refresh.' 
+                        : '배경 이미지가 업로드되었습니다. 페이지가 새로고침됩니다.';
+                    statusDiv.innerHTML = '<div class="alert alert-success">' + successMsg + '</div>';
+                    
+                    // 페이지 새로고침
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    const errorMsg = currentLang === 'ENG' 
+                        ? 'Error: ' + (data.error || 'Unknown error')
+                        : '오류: ' + (data.error || '알 수 없는 오류');
+                    statusDiv.innerHTML = '<div class="alert alert-danger">' + errorMsg + '</div>';
+                }
+            })
+            .catch(error => {
+                console.error('업로드 오류:', error);
+                const currentLang = sessionStorage.getItem('pnsLanguage') || 'KOR';
+                let errorMsg = '';
+                if (error.message && error.message.includes('서버에서 JSON 응답을 받지 못했습니다')) {
+                    errorMsg = currentLang === 'ENG' 
+                        ? 'Server error occurred. Please check the file size (max 10MB) and try again.'
+                        : '서버 오류가 발생했습니다. 파일 크기(최대 10MB)를 확인하고 다시 시도해주세요.';
+                } else {
+                    errorMsg = currentLang === 'ENG' 
+                        ? 'An error occurred during upload: ' + (error.message || 'Unknown error')
+                        : '업로드 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류');
+                }
+                statusDiv.innerHTML = '<div class="alert alert-danger">' + errorMsg + '</div>';
+            });
+        });
+    }
+    
+    // 언어 변경 시 모달 텍스트 업데이트
+    document.addEventListener('DOMContentLoaded', function() {
+        const languageOptions = document.querySelectorAll('.language-option');
+        languageOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                setTimeout(() => {
+                    updateBackgroundModalLanguage();
+                }, 100);
+            });
+        });
+    });
+    
+    function updateBackgroundModalLanguage() {
+        const currentLang = sessionStorage.getItem('pnsLanguage') || 'KOR';
+        const modal = document.getElementById('backgroundImageChangeModal');
+        if (!modal) return;
+        
+        // 모달 제목
+        const modalTitle = modal.querySelector('#backgroundImageChangeModalLabel');
+        if (modalTitle) {
+            modalTitle.textContent = currentLang === 'ENG' 
+                ? modalTitle.getAttribute('data-lang-eng')
+                : modalTitle.getAttribute('data-lang-kor');
+        }
+        
+        // 모든 data-lang 속성을 가진 요소 업데이트
+        modal.querySelectorAll('[data-lang-kor], [data-lang-eng]').forEach(element => {
+            if (element.tagName === 'BUTTON' || element.tagName === 'A' || element.tagName === 'P' || element.tagName === 'LABEL') {
+                element.textContent = currentLang === 'ENG' 
+                    ? element.getAttribute('data-lang-eng')
+                    : element.getAttribute('data-lang-kor');
+            }
+        });
+        
+        // 드롭다운 메뉴 항목 업데이트
+        const backgroundImageChangeBtn = document.getElementById('backgroundImageChangeBtn');
+        if (backgroundImageChangeBtn) {
+            const dropdownText = backgroundImageChangeBtn.querySelector('.dropdown-text');
+            if (dropdownText) {
+                dropdownText.textContent = currentLang === 'ENG' 
+                    ? backgroundImageChangeBtn.getAttribute('data-lang-eng')
+                    : backgroundImageChangeBtn.getAttribute('data-lang-kor');
+            }
+        }
+    }
+    </script>
+</body>
+</html>

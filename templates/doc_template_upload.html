@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 style="color: #000000 !important;">
+            <i class="fas fa-file-excel me-2"></i>
+            {{ title }}
+        </h2>
+        <p style="color: #000000 !important;">엑셀 파일(.xlsx, .xls)을 업로드하여 {{ title }} 양식을 등록하세요.</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                <h5 class="mb-0" style="color: #ffffff !important;">
+                    <i class="fas fa-upload me-2"></i>엑셀 업로드
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="alertMessage" class="alert d-none" role="alert"></div>
+                <form id="uploadForm">
+                    <div class="mb-3">
+                        <label for="excelFileInput" class="form-label">엑셀 파일 선택</label>
+                        <input type="file" class="form-control" id="excelFileInput" accept=".xlsx,.xls" required>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" id="uploadBtn">
+                            <i class="fas fa-upload me-1"></i>업로드
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="downloadBtn">
+                            <i class="fas fa-file-excel me-1"></i>현재 양식 다운로드
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const docType = '{{ doc_type }}';
+    const apiBase = '/api/doc_template/' + docType + '/excel';
+
+    function showAlert(message, type) {
+        const el = document.getElementById('alertMessage');
+        el.textContent = message;
+        el.className = 'alert alert-' + type;
+        el.classList.remove('d-none');
+        setTimeout(function() { el.classList.add('d-none'); }, 5000);
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const fileInput = document.getElementById('excelFileInput');
+        if (!fileInput.files || !fileInput.files[0]) {
+            showAlert('파일을 선택해주세요.', 'warning');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        const btn = document.getElementById('uploadBtn');
+        const origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>업로드 중...';
+        fetch(apiBase, {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+            if (data.success) {
+                showAlert(data.message || '업로드되었습니다.', 'success');
+                fileInput.value = '';
+            } else {
+                showAlert(data.error || '업로드에 실패했습니다.', 'danger');
+            }
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+            showAlert('업로드 중 오류가 발생했습니다.', 'danger');
+        });
+    });
+
+    document.getElementById('downloadBtn').addEventListener('click', function() {
+        fetch(apiBase)
+            .then(function(r) {
+                if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || '다운로드 실패'); });
+                return r.blob();
+            })
+            .then(function(blob) {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = '{{ doc_type }}_template.xlsx';
+                a.click();
+                URL.revokeObjectURL(a.href);
+                showAlert('다운로드되었습니다.', 'success');
+            })
+            .catch(function(err) {
+                showAlert(err.message || '등록된 엑셀 파일이 없습니다.', 'warning');
+            });
+    });
+})();
+</script>
+{% endblock %}

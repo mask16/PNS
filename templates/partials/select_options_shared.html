@@ -1,0 +1,154 @@
+<!-- 진행현황 표시 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-burgundy">
+                <h5 class="mb-0" style="color: #1a1a1a !important;">
+                    선택 진행현황
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="progress mb-2" style="height: 25px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                 id="progressBar" role="progressbar" style="width: 0%">
+                                <span id="progressText">0 / 12 항목 선택됨</span>
+                            </div>
+                        </div>
+                        <div class="text-muted small">
+                            <i class="fas fa-info-circle me-1"></i>
+                            총 12개 카테고리 중 <span id="selectedCount">0</span>개 선택됨
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="h4 mb-0 text-primary" id="percentage">0%</div>
+                        <small class="text-muted">완료율</small>
+                    </div>
+                </div>
+                
+                <!-- 선택된 항목 미리보기 -->
+                <div id="selectedItemsPreview" class="mt-3" style="display: none;">
+                    <h6 class="text-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        선택된 항목들:
+                    </h6>
+                    <div id="selectedItemsList" class="row">
+                        <!-- 선택된 항목들이 여기에 표시됩니다 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <form id="optionsForm">
+            <div class="row">
+                {% for category in categories %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100" data-category-id="{{ category.id }}" data-category-number="{{ category.category_number }}">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                [{{ category.category_number }}] {{ category.category_name }}
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="select_{{ category.category_number }}" class="form-label">
+                                    <i class="fas fa-list me-2"></i>
+                                    {{ category.category_name }} 선택
+                                </label>
+                                <select class="form-select" 
+                                        id="select_{{ category.category_number }}" 
+                                        name="category_{{ category.category_number }}"
+                                        onchange="updateSelection(this)">
+                                    <option value="선택없음" selected>선택없음</option>
+                                    {% for option in category_options[category.id] %}
+                                    <option value="{{ option.item_name }}" 
+                                            data-code="{{ option.item_code }}"
+                                            data-description="{{ option.description }}"
+                                            data-item-id="{{ option.id }}">
+                                        {{ option.item_name }}
+                                        {% if option.item_code %} ({{ option.item_code }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="text-muted small mb-3">
+                                <i class="fas fa-info-circle me-1"></i>
+                                총 {{ category_options[category.id]|length }}개 옵션
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 코드 입력 모달 -->
+<div class="modal fade" id="codeInputModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-burgundy">
+                <h5 class="modal-title">
+                    <i class="fas fa-barcode me-2"></i>
+                    코드 입력
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="codeInputForm">
+                    <div class="mb-3">
+                        <label for="setCodeInput" class="form-label">
+                            세트코드 <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="setCodeInput" placeholder="세트코드를 입력하세요" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="callArcCodeInput" class="form-label">
+                            콜아크코드 <small class="text-muted">(참고용, 선택사항)</small>
+                        </label>
+                        <input type="text" class="form-control" id="callArcCodeInput" placeholder="콜아크코드를 입력하세요 (참고용)">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" onclick="processCodeInput()">
+                    <i class="fas fa-check me-2"></i>코드 생성
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 결과 모달 -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>
+                    코드 생성 결과
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="resultContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-success" id="downloadBtn" style="display: none;">
+                    <i class="fas fa-download me-1"></i>Excel 파일 다운로드
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

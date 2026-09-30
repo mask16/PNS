@@ -1,0 +1,1557 @@
+{% extends "base.html" %}
+
+{% block title %}Set Price View - Welding Equipment Option System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 style="color: #000000 !important;">
+                    Set Price View
+                </h2>
+                <p style="color: #000000 !important;">You can view the generated set codes and currently entered prices.</p>
+            </div>
+            <div style="display: none;">
+                <a href="/export_quotation" class="btn btn-burgundy">
+                    <i class="fas fa-file-export me-2"></i>Export Quotation
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                <h5 class="mb-0" style="color: #ffffff !important;">
+                    <i class="fas fa-list me-2" style="color: #ffffff !important;"></i>
+                    Set Code List
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="loadingMessage" class="text-center py-5">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted">Loading set code list...</p>
+                </div>
+                
+                <div id="priceListContainer" style="display: none;">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Total Set Codes: <span class="badge bg-burgundy" id="totalCount">0</span></h6>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <small class="text-muted">Sorted by set code number (ascending)</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Currency Selection and Exchange Rate Input Section -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="card border-info">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3">
+                                            <label for="currencySelect" class="form-label mb-0">
+                                                <strong>Currency Selection</strong>
+                                            </label>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <select class="form-select" id="currencySelect">
+                                                <option value="EUR" selected>EUR (Euro)</option>
+                                                <option value="USD">USD (Dollar)</option>
+                                                <option value="KRW">KRW (Won)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <div class="input-group">
+                                                <label for="usdExchangeRate" class="form-label mb-0 me-2 align-self-center" id="exchangeRateLabel">
+                                                    <strong>USD Exchange Rate</strong>
+                                                </label>
+                                                <input type="number" 
+                                                       class="form-control" 
+                                                       id="usdExchangeRate" 
+                                                       min="0" 
+                                                       step="0.01" 
+                                                       value="1.16" 
+                                                       placeholder="Enter exchange rate">
+                                                <span class="input-group-text" id="exchangeRateUnit">USD</span>
+                                            </div>
+                                            <small class="form-text text-muted" id="exchangeRateHelp">Enter exchange rate for 1 EUR</small>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3" id="setPriceFxRateTable"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Discount Rate Input Section -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="card border-primary">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3">
+                                            <label for="discountRate" class="form-label mb-0">
+                                                <strong>Discount Rate</strong>
+                                            </label>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="input-group">
+                                                <input type="number" 
+                                                       class="form-control" 
+                                                       id="discountRate" 
+                                                       min="0" 
+                                                       max="50" 
+                                                       step="1" 
+                                                       value="0" 
+                                                       placeholder="Enter discount rate">
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                            <small class="form-text text-muted">Enter a value between 0 and 50</small>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" id="resetDiscountBtn">
+                                                <i class="fas fa-undo me-1"></i>Reset Discount Rate
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <ul class="nav nav-tabs" id="priceListTab" role="tablist">
+                        <!-- Tabs are dynamically generated -->
+                    </ul>
+                    <div class="tab-content pt-3" id="priceListTabContent">
+                        <!-- Tab content is dynamically generated -->
+                    </div>
+                </div>
+                
+                <div id="errorMessage" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="errorText"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadPriceList();
+    if (window.PnsExchangeRates) {
+        window.PnsExchangeRates.buildSelectableTable('setPriceFxRateTable', {
+            selectedCurrency: 'EUR',
+            lang: 'eng',
+            onApply: function (payload) {
+                const currencySelect = document.getElementById('currencySelect');
+                const usdExchangeRateInput = document.getElementById('usdExchangeRate');
+                if (currencySelect) currencySelect.value = payload.currency;
+                if (usdExchangeRateInput) {
+                    if (payload.currency === 'USD') usdExchangeRateInput.value = Number(payload.eur_usd).toFixed(4);
+                    else if (payload.currency === 'KRW') usdExchangeRateInput.value = Number(payload.eur_krw).toFixed(2);
+                    else usdExchangeRateInput.value = '1.00';
+                }
+                currencySelect && currencySelect.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+    
+    // Currency selection and exchange rate input field event listeners
+    const currencySelect = document.getElementById('currencySelect');
+    const usdExchangeRateInput = document.getElementById('usdExchangeRate');
+    
+    if (currencySelect) {
+        currencySelect.addEventListener('change', function() {
+            const currency = this.value;
+            const exchangeRateLabel = document.getElementById('exchangeRateLabel');
+            const exchangeRateUnit = document.getElementById('exchangeRateUnit');
+            const exchangeRateHelp = document.getElementById('exchangeRateHelp');
+            
+            if (currency === 'USD') {
+                if (exchangeRateLabel) exchangeRateLabel.innerHTML = '<strong>USD Exchange Rate</strong>';
+                if (exchangeRateUnit) exchangeRateUnit.textContent = 'USD';
+                if (exchangeRateHelp) exchangeRateHelp.textContent = 'Auto-applied from Hana Bank (per 1 EUR)';
+                if (window.PnsExchangeRates) {
+                    window.PnsExchangeRates.fetch(false).then(function (rates) {
+                        if (usdExchangeRateInput && rates.eur_usd) usdExchangeRateInput.value = Number(rates.eur_usd).toFixed(4);
+                        updatePricesByCurrency();
+                    });
+                } else if (usdExchangeRateInput && !usdExchangeRateInput.value) {
+                    usdExchangeRateInput.value = 1.16;
+                }
+            } else if (currency === 'KRW') {
+                if (exchangeRateLabel) exchangeRateLabel.innerHTML = '<strong>KRW Exchange Rate</strong>';
+                if (exchangeRateUnit) exchangeRateUnit.textContent = 'KRW';
+                if (exchangeRateHelp) exchangeRateHelp.textContent = 'Auto-applied from Hana Bank (per 1 EUR)';
+                if (window.PnsExchangeRates) {
+                    window.PnsExchangeRates.fetch(false).then(function (rates) {
+                        if (usdExchangeRateInput && rates.eur_krw) usdExchangeRateInput.value = Number(rates.eur_krw).toFixed(2);
+                        updatePricesByCurrency();
+                    });
+                } else if (usdExchangeRateInput && !usdExchangeRateInput.value) {
+                    usdExchangeRateInput.value = 1500;
+                }
+            } else {
+                if (exchangeRateLabel) exchangeRateLabel.innerHTML = '<strong>USD Exchange Rate</strong>';
+                if (exchangeRateUnit) exchangeRateUnit.textContent = 'USD';
+                if (exchangeRateHelp) exchangeRateHelp.textContent = 'Enter exchange rate for 1 EUR';
+            }
+            updatePricesByCurrency();
+        });
+    }
+    
+    if (usdExchangeRateInput) {
+        usdExchangeRateInput.addEventListener('input', function() {
+            const currency = currencySelect?.value || 'EUR';
+            if (currency === 'USD' || currency === 'KRW') {
+                updatePricesByCurrency();
+            }
+        });
+        
+        usdExchangeRateInput.addEventListener('change', function() {
+            const value = parseFloat(this.value);
+            if (isNaN(value) || value <= 0) {
+                const currency = currencySelect?.value || 'EUR';
+                this.value = currency === 'KRW' ? 1500 : 1.0;
+            }
+            const currency = currencySelect?.value || 'EUR';
+            if (currency === 'USD' || currency === 'KRW') {
+                updatePricesByCurrency();
+            }
+        });
+    }
+    
+    // Discount rate input field event listeners
+    const discountRateInput = document.getElementById('discountRate');
+    const resetDiscountBtn = document.getElementById('resetDiscountBtn');
+    
+    if (discountRateInput) {
+        discountRateInput.addEventListener('input', function() {
+            updateDiscountedPrices();
+        });
+        
+        discountRateInput.addEventListener('change', function() {
+            const value = parseFloat(this.value);
+            if (isNaN(value) || value < 0) {
+                this.value = 0;
+            } else if (value > 50) {
+                this.value = 50;
+            }
+            updateDiscountedPrices();
+        });
+    }
+    
+    if (resetDiscountBtn) {
+        resetDiscountBtn.addEventListener('click', function() {
+            discountRateInput.value = 0;
+            updateDiscountedPrices();
+        });
+    }
+});
+
+// Update prices by currency function
+function updatePricesByCurrency() {
+    const currency = document.getElementById('currencySelect')?.value || 'EUR';
+    const exchangeRate = parseFloat(document.getElementById('usdExchangeRate')?.value) || 1.0;
+    const discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
+    
+    // Update set code prices (without API calls, using data-original-price-eur)
+    const setCodeRows = document.querySelectorAll('tbody tr[data-set-code]');
+    setCodeRows.forEach(row => {
+        const originalPriceCell = row.querySelector('.original-price');
+        const discountedPriceCell = row.querySelector('.discounted-price');
+        
+        if (originalPriceCell && discountedPriceCell) {
+            // Get original price from data-original-price-eur attribute (EUR based)
+            let originalPriceEUR = parseFloat(row.getAttribute('data-original-price-eur'));
+            
+            // If data-original-price-eur is not available, try to extract from original price cell
+            if (isNaN(originalPriceEUR) || originalPriceEUR <= 0) {
+                const originalPriceStr = row.getAttribute('data-original-price');
+                if (originalPriceStr && originalPriceStr !== '') {
+                    originalPriceEUR = parseFloat(originalPriceStr);
+                } else {
+                    const originalPriceText = originalPriceCell.textContent.trim();
+                    const priceMatch = originalPriceText.match(/[\d,]+\.?\d*/);
+                    
+                    if (priceMatch) {
+                        const originalPriceValue = parseFloat(priceMatch[0].replace(/,/g, ''));
+                        
+                        if (!isNaN(originalPriceValue) && originalPriceValue > 0) {
+                            // Use displayed value as is (assuming it might be in EUR already)
+                            originalPriceEUR = originalPriceValue;
+                        }
+                    }
+                }
+            }
+            
+            // Display converted price if original price is available
+            if (!isNaN(originalPriceEUR) && originalPriceEUR > 0) {
+                // Display original price
+                if (currency === 'USD') {
+                    originalPriceCell.innerHTML = `${(originalPriceEUR * exchangeRate).toFixed(2)} USD`;
+                } else if (currency === 'KRW') {
+                    originalPriceCell.innerHTML = `${Math.round(originalPriceEUR * exchangeRate).toLocaleString()} KRW`;
+                } else {
+                    originalPriceCell.innerHTML = `${originalPriceEUR.toFixed(2)} EUR`;
+                }
+                
+                // Calculate and display discounted price
+                const discountedPriceEUR = originalPriceEUR * (1 - discountRate / 100);
+                if (currency === 'USD') {
+                    discountedPriceCell.innerHTML = `${(discountedPriceEUR * exchangeRate).toFixed(2)} USD`;
+                } else if (currency === 'KRW') {
+                    discountedPriceCell.innerHTML = `${Math.round(discountedPriceEUR * exchangeRate).toLocaleString()} KRW`;
+                } else {
+                    discountedPriceCell.innerHTML = `${discountedPriceEUR.toFixed(2)} EUR`;
+                }
+            } else {
+                // No price information, display default
+                if (originalPriceCell.textContent.trim() === '' || originalPriceCell.textContent.includes('Loading') || originalPriceCell.textContent.includes('Not entered')) {
+                    originalPriceCell.innerHTML = '<span class="text-muted">Not entered</span>';
+                }
+                if (discountedPriceCell.textContent.trim() === '' || discountedPriceCell.textContent.includes('Loading')) {
+                    discountedPriceCell.innerHTML = '<span class="text-muted">-</span>';
+                }
+            }
+        }
+    });
+    
+    // Update option prices as well
+    updateOptionPrices(discountRate);
+}
+
+// Discounted price update function
+function updateDiscountedPrices() {
+    const discountRate = parseFloat(document.getElementById('discountRate')?.value) || 0;
+    const currency = document.getElementById('currencySelect')?.value || 'EUR';
+    const exchangeRate = parseFloat(document.getElementById('usdExchangeRate')?.value) || 1.0;
+    
+    // Update discounted prices for all set code rows immediately
+    const setCodeRows = document.querySelectorAll('tbody tr[data-set-code]');
+    
+    // Separate rows that need immediate update from rows that need API calls
+    const rowsNeedingAPI = [];
+    
+    setCodeRows.forEach(row => {
+        const originalPriceCell = row.querySelector('.original-price');
+        const discountedPriceCell = row.querySelector('.discounted-price');
+        const setCode = row.getAttribute('data-set-code');
+        
+        if (!originalPriceCell || !discountedPriceCell || !setCode) {
+            return;
+        }
+        
+        // Get original price from data-original-price-eur attribute (priority)
+        let originalPriceEUR = parseFloat(row.getAttribute('data-original-price-eur'));
+        
+        // If data-original-price-eur is not available, try to extract from original price cell
+        if (isNaN(originalPriceEUR) || originalPriceEUR <= 0) {
+            const originalPriceText = originalPriceCell.textContent.trim();
+            
+            // If original price cell is empty or loading, API call needed
+            if (!originalPriceText || originalPriceText === '' || originalPriceText.includes('Loading') || originalPriceText.includes('Not entered')) {
+                rowsNeedingAPI.push({ row, setCode, originalPriceCell, discountedPriceCell });
+                return;
+            }
+            
+            // Extract value from original price cell
+            const priceMatch = originalPriceText.match(/[\d,]+\.?\d*/);
+            if (priceMatch) {
+                const originalPriceValue = parseFloat(priceMatch[0].replace(/,/g, ''));
+                
+                if (!isNaN(originalPriceValue) && originalPriceValue > 0) {
+                    // Check currency from original price cell text
+                    const cellCurrency = originalPriceText.includes('USD') ? 'USD' : 
+                                        (originalPriceText.includes('KRW') ? 'KRW' : 'EUR');
+                    
+                    // Convert to EUR based on currency
+                    if (cellCurrency === 'USD') {
+                        originalPriceEUR = originalPriceValue / exchangeRate;
+                    } else if (cellCurrency === 'KRW') {
+                        originalPriceEUR = originalPriceValue / exchangeRate;
+                    } else {
+                        originalPriceEUR = originalPriceValue;
+                    }
+                    
+                    // Store in data attribute (for faster lookup next time)
+                    row.setAttribute('data-original-price-eur', originalPriceEUR.toFixed(2));
+                }
+            }
+        }
+        
+        // Calculate and display discounted price immediately if original price is available
+        if (!isNaN(originalPriceEUR) && originalPriceEUR > 0) {
+            // Calculate discounted price (EUR based)
+            const discountedPriceInEUR = originalPriceEUR * (1 - discountRate / 100);
+            
+            // Display discounted price immediately
+            if (currency === 'USD') {
+                discountedPriceCell.innerHTML = `${(discountedPriceInEUR * exchangeRate).toFixed(2)} USD`;
+            } else if (currency === 'KRW') {
+                discountedPriceCell.innerHTML = `${Math.round(discountedPriceInEUR * exchangeRate).toLocaleString()} KRW`;
+            } else {
+                discountedPriceCell.innerHTML = `${discountedPriceInEUR.toFixed(2)} EUR`;
+            }
+        }
+    });
+    
+    // Handle rows that need API calls asynchronously
+    if (rowsNeedingAPI.length > 0) {
+        rowsNeedingAPI.forEach(async ({ row, setCode, originalPriceCell, discountedPriceCell }) => {
+            try {
+                const response = await fetch(`/api/set_price/options?set_code=${encodeURIComponent(setCode)}`);
+                const data = await response.json();
+                
+                if (data.success && data.options && data.options.length > 0) {
+                    // Calculate total from option prices
+                    let totalOriginal = 0;
+                    data.options.forEach(option => {
+                        let originalPrice = null;
+                        if (option.price_book_price !== null && option.price_book_price !== undefined && parseFloat(option.price_book_price) > 0) {
+                            originalPrice = parseFloat(option.price_book_price);
+                        } else if (option.price !== null && option.price !== undefined) {
+                            originalPrice = parseFloat(option.price);
+                        }
+                        if (originalPrice !== null) {
+                            totalOriginal += originalPrice;
+                        }
+                    });
+                    
+                    if (totalOriginal > 0) {
+                        const originalPriceEUR = totalOriginal;
+                        // Store in data attribute
+                        row.setAttribute('data-original-price-eur', totalOriginal.toFixed(2));
+                        
+                        // Update original price cell
+                        if (currency === 'USD') {
+                            originalPriceCell.innerHTML = `${(totalOriginal * exchangeRate).toFixed(2)} USD`;
+                        } else if (currency === 'KRW') {
+                            originalPriceCell.innerHTML = `${Math.round(totalOriginal * exchangeRate).toLocaleString()} KRW`;
+                        } else {
+                            originalPriceCell.innerHTML = `${totalOriginal.toFixed(2)} EUR`;
+                        }
+                        
+                        // Calculate and display discounted price
+                        const discountedPriceInEUR = originalPriceEUR * (1 - discountRate / 100);
+                        if (currency === 'USD') {
+                            discountedPriceCell.innerHTML = `${(discountedPriceInEUR * exchangeRate).toFixed(2)} USD`;
+                        } else if (currency === 'KRW') {
+                            discountedPriceCell.innerHTML = `${Math.round(discountedPriceInEUR * exchangeRate).toLocaleString()} KRW`;
+                        } else {
+                            discountedPriceCell.innerHTML = `${discountedPriceInEUR.toFixed(2)} EUR`;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(`Error fetching prices for ${setCode}:`, error);
+            }
+        });
+    }
+    
+    // Update option prices as well
+    updateOptionPrices(discountRate);
+}
+
+function loadPriceList() {
+    const loadingMessage = document.getElementById('loadingMessage');
+    const priceListContainer = document.getElementById('priceListContainer');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    loadingMessage.style.display = 'block';
+    priceListContainer.style.display = 'none';
+    errorMessage.style.display = 'none';
+    
+    fetch('/api/set_price/list')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            loadingMessage.style.display = 'none';
+            
+            console.log('API Response:', data);
+            
+            if (data.success) {
+                if (!data.price_list || !Array.isArray(data.price_list) || data.price_list.length === 0) {
+                    document.getElementById('priceListContainer').innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No registered set codes</h5>
+                            <p class="text-muted">Create a new code on the option selection page.</p>
+                        </div>
+                    `;
+                    priceListContainer.style.display = 'block';
+                } else {
+                    console.log('Calling displayPriceListByGroup with:', data.price_list);
+                    displayPriceListByGroup(data.price_list);
+                }
+            } else {
+                errorMessage.style.display = 'block';
+                document.getElementById('errorText').textContent = data.error || 'An error occurred while loading the set code list.';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading price list:', error);
+            loadingMessage.style.display = 'none';
+            errorMessage.style.display = 'block';
+            document.getElementById('errorText').textContent = 'Network error occurred: ' + error.message;
+        });
+}
+
+function displayPriceListByGroup(priceList) {
+    if (!priceList || !Array.isArray(priceList) || priceList.length === 0) {
+        console.error('priceList is invalid:', priceList);
+        document.getElementById('priceListContainer').innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No registered set codes</h5>
+                <p class="text-muted">Create a new code on the option selection page.</p>
+            </div>
+        `;
+        document.getElementById('priceListContainer').style.display = 'block';
+        return;
+    }
+    
+    const groups = {
+        P51: [],
+        P52: [],
+        P53: [],
+        P54: [],
+        other: []
+    };
+    
+    priceList.forEach(item => {
+        if (!item || !item.set_code || typeof item.set_code !== 'string') {
+            console.warn('Invalid item in priceList:', item);
+            return;
+        }
+        
+        const prefix = item.set_code.substring(0, 3);
+        if (groups[prefix]) {
+            groups[prefix].push(item);
+        } else {
+            groups.other.push(item);
+        }
+    });
+    
+    // Sort by set code number in ascending order within each group
+    Object.keys(groups).forEach(groupKey => {
+        groups[groupKey].sort((a, b) => {
+            if (!a || !a.set_code || !b || !b.set_code) {
+                return 0;
+            }
+            const numA = parseInt(a.set_code.substring(2)) || 0;
+            const numB = parseInt(b.set_code.substring(2)) || 0;
+            return numA - numB;
+        });
+    });
+    
+    const totalCount = priceList.length;
+    document.getElementById('totalCount').textContent = totalCount;
+    
+    const tabList = document.getElementById('priceListTab');
+    const tabContent = document.getElementById('priceListTabContent');
+    
+    const groupOrder = ['P51', 'P52', 'P53', 'P54'];
+    const groupLabels = {
+        'P51': 'Super M',
+        'P52': 'Super C',
+        'P53': 'Super T',
+        'P54': 'Super S'
+    };
+    const hasOthers = groups.other.length > 0;
+    
+    // Create tabs
+    let tabHTML = '';
+    groupOrder.forEach((groupKey, index) => {
+        const label = groupLabels[groupKey] || groupKey;
+        tabHTML += `
+            <li class="nav-item" role="presentation">
+                <button class="nav-link ${index === 0 ? 'active' : ''}" 
+                        id="tab-${groupKey}" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#tab-pane-${groupKey}" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="tab-pane-${groupKey}" 
+                        aria-selected="${index === 0 ? 'true' : 'false'}">
+                    <strong>${label}</strong> <span class="badge bg-burgundy text-white ms-1">${groups[groupKey].length}</span>
+                </button>
+            </li>
+        `;
+    });
+    
+    if (hasOthers) {
+        tabHTML += `
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" 
+                        id="tab-other" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#tab-pane-other" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="tab-pane-other" 
+                        aria-selected="false">
+                    Other <span class="badge bg-burgundy text-white ms-1">${groups.other.length}</span>
+                </button>
+            </li>
+        `;
+    }
+    
+    tabList.innerHTML = tabHTML;
+    
+    // Create tab content
+    const renderGroupTable = (items) => {
+        if (!items || items.length === 0) {
+            return `
+                <div class="py-4 text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>No set codes stored in this group.
+                </div>
+            `;
+        }
+        
+        let rows = '';
+        const currency = document.getElementById('currencySelect')?.value || 'EUR';
+        const exchangeRate = parseFloat(document.getElementById('usdExchangeRate')?.value) || 1.0;
+        
+        items.forEach((item, index) => {
+            if (!item || !item.set_code || typeof item.set_code !== 'string') {
+                console.warn('Invalid item in items array:', item);
+                return;
+            }
+            
+            const safeSetCode = item.set_code.replace(/[^a-zA-Z0-9]/g, '-');
+            rows += `
+                <tr data-set-code="${item.set_code}">
+                    <td>
+                        <a href="/lookup?code=${encodeURIComponent(item.set_code)}&lang=ENG" class="text-decoration-none">
+                            <code class="fs-6 text-primary" style="cursor: pointer;">${item.set_code}</code>
+                        </a>
+                    </td>
+                    <td class="original-price"></td>
+                    <td class="discounted-price"></td>
+                    <td>
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-info toggle-option-prices" 
+                                data-set-code="${item.set_code}"
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#option-prices-${safeSetCode}"
+                                aria-expanded="false">
+                            <i class="fas fa-chevron-down me-1"></i>
+                            Option Prices
+                        </button>
+                    </td>
+                </tr>
+                <tr class="collapse" 
+                    id="option-prices-${safeSetCode}"
+                    data-set-code="${item.set_code}">
+                    <td colspan="4" class="p-0">
+                        <div class="p-3 bg-light">
+                            <div class="text-center py-2">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span class="ms-2 text-muted">Loading option prices...</span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        return `
+            <div class="table-responsive">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div></div>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-primary expand-all-options" title="Expand all option prices">
+                            <i class="fas fa-chevron-down me-1"></i>
+                            Expand All
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary collapse-all-options" title="Collapse all option prices">
+                            <i class="fas fa-chevron-up me-1"></i>
+                            Collapse All
+                        </button>
+                    </div>
+                </div>
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Set Code</th>
+                            <th>Original Price</th>
+                            <th>Discounted Price</th>
+                            <th>Option Prices</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    };
+    
+    let contentHTML = '';
+    groupOrder.forEach((groupKey, index) => {
+        contentHTML += `
+            <div class="tab-pane fade ${index === 0 ? 'show active' : ''}" 
+                 id="tab-pane-${groupKey}" 
+                 role="tabpanel" 
+                 aria-labelledby="tab-${groupKey}">
+                ${renderGroupTable(groups[groupKey])}
+            </div>
+        `;
+    });
+    
+    if (hasOthers) {
+        contentHTML += `
+            <div class="tab-pane fade" 
+                 id="tab-pane-other" 
+                 role="tabpanel" 
+                 aria-labelledby="tab-other">
+                ${renderGroupTable(groups.other)}
+            </div>
+        `;
+    }
+    
+    tabContent.innerHTML = contentHTML;
+    document.getElementById('priceListContainer').style.display = 'block';
+    
+    // Register option price button event listeners
+    setupOptionPriceButtons();
+    
+    // Register expand/collapse all buttons event listeners
+    setupExpandCollapseButtons();
+    
+    // Load all set code prices to display original and discounted prices
+    loadAllSetCodePrices(priceList);
+}
+
+// Option price button event setup
+function setupOptionPriceButtons() {
+    const buttons = document.querySelectorAll('.toggle-option-prices');
+    buttons.forEach(button => {
+        button.addEventListener('click', function() {
+            const setCode = this.getAttribute('data-set-code');
+            const targetId = `option-prices-${setCode.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            const targetElement = document.getElementById(targetId);
+            const icon = this.querySelector('i');
+            
+            // Bootstrap collapse event listener
+            targetElement.addEventListener('shown.bs.collapse', function() {
+                loadOptionPricesForView(setCode, targetId);
+                if (icon) {
+                    icon.className = 'fas fa-chevron-up me-1';
+                }
+                button.setAttribute('aria-expanded', 'true');
+            }, { once: true });
+            
+            targetElement.addEventListener('hidden.bs.collapse', function() {
+                if (icon) {
+                    icon.className = 'fas fa-chevron-down me-1';
+                }
+                button.setAttribute('aria-expanded', 'false');
+            }, { once: true });
+        });
+    });
+}
+
+// Expand/collapse all buttons event setup
+function setupExpandCollapseButtons() {
+    // Expand all button
+    const expandAllButtons = document.querySelectorAll('.expand-all-options');
+    expandAllButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tableResponsive = this.closest('.table-responsive');
+            if (!tableResponsive) {
+                console.error('Table responsive container not found');
+                return;
+            }
+            
+            const table = tableResponsive.querySelector('table');
+            if (!table) {
+                console.error('Table not found');
+                return;
+            }
+            
+            const collapseElements = table.querySelectorAll('.collapse:not(.show)');
+            
+            collapseElements.forEach(collapseEl => {
+                const setCode = collapseEl.getAttribute('data-set-code');
+                const collapseId = collapseEl.id;
+                
+                if (setCode && collapseId) {
+                    // Load option prices when expanding
+                    collapseEl.addEventListener('shown.bs.collapse', function() {
+                        loadOptionPricesForView(setCode, collapseId);
+                    }, { once: true });
+                }
+                
+                const bsCollapse = new bootstrap.Collapse(collapseEl, {
+                    toggle: false
+                });
+                bsCollapse.show();
+            });
+            
+            // Update button icons
+            const toggleButtons = table.querySelectorAll('.toggle-option-prices');
+            toggleButtons.forEach(btn => {
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-chevron-up me-1';
+                }
+                btn.setAttribute('aria-expanded', 'true');
+            });
+        });
+    });
+    
+    // Collapse all button
+    const collapseAllButtons = document.querySelectorAll('.collapse-all-options');
+    collapseAllButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tableResponsive = this.closest('.table-responsive');
+            if (!tableResponsive) {
+                console.error('Table responsive container not found');
+                return;
+            }
+            
+            const table = tableResponsive.querySelector('table');
+            if (!table) {
+                console.error('Table not found');
+                return;
+            }
+            
+            const collapseElements = table.querySelectorAll('.collapse.show');
+            
+            collapseElements.forEach(collapseEl => {
+                const bsCollapse = new bootstrap.Collapse(collapseEl, {
+                    toggle: false
+                });
+                bsCollapse.hide();
+            });
+            
+            // Update button icons
+            const toggleButtons = table.querySelectorAll('.toggle-option-prices');
+            toggleButtons.forEach(btn => {
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-chevron-down me-1';
+                }
+                btn.setAttribute('aria-expanded', 'false');
+            });
+        });
+    });
+}
+
+// Registered product cache + option load concurrency limit
+let registeredProductCodesCache = null;
+const optionPriceLoadState = { running: 0, max: 4, waiters: [] };
+
+function syncRegisteredProductCodes(codes) {
+    if (!codes || !Array.isArray(codes)) {
+        return registeredProductCodesCache;
+    }
+    registeredProductCodesCache = new Set(
+        codes.map(function (code) {
+            return String(code || '').trim().toUpperCase();
+        }).filter(Boolean)
+    );
+    return registeredProductCodesCache;
+}
+
+function getRegisteredProductCodes(optionsData) {
+    if (optionsData && optionsData.registered_product_codes) {
+        syncRegisteredProductCodes(optionsData.registered_product_codes);
+    }
+    return registeredProductCodesCache || new Set();
+}
+
+function runQueuedOptionLoad(task) {
+    return new Promise(function (resolve, reject) {
+        const execute = function () {
+            optionPriceLoadState.running += 1;
+            Promise.resolve()
+                .then(task)
+                .then(resolve, reject)
+                .finally(function () {
+                    optionPriceLoadState.running -= 1;
+                    if (optionPriceLoadState.waiters.length > 0) {
+                        const next = optionPriceLoadState.waiters.shift();
+                        next();
+                    }
+                });
+        };
+        if (optionPriceLoadState.running < optionPriceLoadState.max) {
+            execute();
+        } else {
+            optionPriceLoadState.waiters.push(execute);
+        }
+    });
+}
+
+// Load all set code prices to display original and discounted prices
+async function loadAllSetCodePrices(priceList) {
+    const currency = document.getElementById('currencySelect')?.value || 'EUR';
+    const exchangeRate = parseFloat(document.getElementById('usdExchangeRate')?.value) || 1.0;
+    const discountRate = parseFloat(document.getElementById('discountRate')?.value) || 0;
+
+    try {
+        const response = await fetch(`/api/set_price/summary?discount_rate=${encodeURIComponent(discountRate)}`);
+        const data = await response.json();
+        if (!data.success || !data.summaries) {
+            return;
+        }
+        syncRegisteredProductCodes(data.registered_product_codes);
+
+        priceList.forEach(item => {
+            const summary = data.summaries[item.set_code];
+            if (!summary || summary.original_total <= 0) {
+                return;
+            }
+
+            const setCodeRow = document.querySelector(`tr[data-set-code="${item.set_code}"]`);
+            if (!setCodeRow) {
+                return;
+            }
+
+            const totalOriginal = summary.original_total;
+            const totalDiscounted = summary.discounted_total;
+            setCodeRow.setAttribute('data-original-price-eur', totalOriginal.toFixed(2));
+
+            const originalPriceCell = setCodeRow.querySelector('.original-price');
+            const discountedPriceCell = setCodeRow.querySelector('.discounted-price');
+
+            if (originalPriceCell) {
+                if (currency === 'USD') {
+                    originalPriceCell.innerHTML = `${(totalOriginal * exchangeRate).toFixed(2)} USD`;
+                } else if (currency === 'KRW') {
+                    originalPriceCell.innerHTML = `${Math.round(totalOriginal * exchangeRate).toLocaleString()} KRW`;
+                } else {
+                    originalPriceCell.innerHTML = `${totalOriginal.toFixed(2)} EUR`;
+                }
+            }
+
+            if (discountedPriceCell) {
+                if (currency === 'USD') {
+                    discountedPriceCell.innerHTML = `${(totalDiscounted * exchangeRate).toFixed(2)} USD`;
+                } else if (currency === 'KRW') {
+                    discountedPriceCell.innerHTML = `${Math.round(totalDiscounted * exchangeRate).toLocaleString()} KRW`;
+                } else {
+                    discountedPriceCell.innerHTML = `${totalDiscounted.toFixed(2)} EUR`;
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error loading set price summaries:', error);
+    }
+}
+
+// Option price load function (for viewing)
+function loadOptionPricesForView(setCode, targetId) {
+    const targetElement = document.getElementById(targetId);
+    if (!targetElement) {
+        console.error(`Target element not found: ${targetId}`);
+        return;
+    }
+    
+    const contentDiv = targetElement.querySelector('div');
+    if (!contentDiv) {
+        console.error(`Content div not found in target element: ${targetId}`);
+        return;
+    }
+
+    if (contentDiv.getAttribute('data-loaded') === 'true') {
+        return;
+    }
+    if (contentDiv.getAttribute('data-loading') === 'true') {
+        return;
+    }
+    contentDiv.setAttribute('data-loading', 'true');
+    contentDiv.innerHTML = `
+        <div class="p-3 bg-light text-center text-muted">
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            Loading option prices...
+        </div>
+    `;
+
+    runQueuedOptionLoad(function () {
+        return fetch(`/api/set_price/options?set_code=${encodeURIComponent(setCode)}`)
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    return response.text().then(function () {
+                        throw new Error('Received a non-JSON response from the server.');
+                    });
+                }
+                return response.json();
+            })
+            .then(function (optionsData) {
+                contentDiv.removeAttribute('data-loading');
+                const registeredProductCodes = getRegisteredProductCodes(optionsData);
+            
+            if (optionsData.success && optionsData.options && optionsData.options.length > 0) {
+                const discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
+                const currency = document.getElementById('currencySelect')?.value || 'EUR';
+                const exchangeRate = parseFloat(document.getElementById('usdExchangeRate')?.value) || 1.0;
+                
+                let optionsTable = `
+                    <div class="p-3 bg-light">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">
+                                <i class="fas fa-list me-2"></i>
+                                Option Prices (${optionsData.set_code})
+                            </h6>
+                            <div class="btn-group">
+                                <button type="button" 
+                                        class="btn btn-sm btn-warning export-quotation-public-btn" 
+                                        data-set-code="${optionsData.set_code}"
+                                        title="Move products from option prices to Export Quotation (Customer)">
+                                    <i class="fas fa-file-export me-2"></i>
+                                    Export Quotation (Customer)
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-sm btn-info export-quotation-btn" 
+                                        data-set-code="${optionsData.set_code}"
+                                        title="Move products from option prices to Export Quotation (Staff)">
+                                    <i class="fas fa-file-export me-2"></i>
+                                    Export Quotation (Staff)
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-sm btn-success download-excel-btn" 
+                                        data-set-code="${optionsData.set_code}"
+                                        disabled>
+                                    <i class="fas fa-file-excel me-2"></i>
+                                    Excel Download
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-sm btn-info download-quote-btn" 
+                                        data-set-code="${optionsData.set_code}"
+                                        disabled>
+                                    <i class="fas fa-file-invoice me-2"></i>
+                                    Quote
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-secondary">
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Option Name</th>
+                                        <th>Original Price</th>
+                                        <th>Discounted Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+                
+                // Category name mapping for English version
+                const categoryNameMap = {
+                    1: "Power Source",
+                    2: "Type",
+                    3: "Wire Feeder",
+                    4: "Torch",
+                    5: "Hose Package",
+                    6: "Ground",
+                    7: "Trolley",
+                    8: "Cooler",
+                    9: "Coolant",
+                    10: "Gas Hose",
+                    11: "Electrode Holder"
+                };
+                
+                let totalOriginal = 0;
+                let totalDiscounted = 0;
+                
+                optionsData.options.forEach(option => {
+                    // SAP code uses item_code first, then option_name
+                    const sapCode = (option.item_code || option.option_name || '').trim().toUpperCase();
+                    
+                    // Check if registered in export quotation (staff) dashboard
+                    const isRegistered = registeredProductCodes.has(sapCode);
+                    
+                    // Only display prices for registered products
+                    let originalPrice = null;
+                    if (isRegistered) {
+                        // Use price book price from export quotation (staff) dashboard as original price when material code matches
+                        if (option.price_book_price !== null && option.price_book_price !== undefined && parseFloat(option.price_book_price) > 0) {
+                            // Use price book price as original price if available
+                            originalPrice = parseFloat(option.price_book_price);
+                        } else if (option.price !== null && option.price !== undefined) {
+                            // Use existing price if price book price is not available
+                            originalPrice = parseFloat(option.price);
+                        }
+                    }
+                    
+                    if (originalPrice !== null) {
+                        totalOriginal += originalPrice;
+                        const discountedPrice = originalPrice * (1 - discountRate / 100);
+                        totalDiscounted += discountedPrice;
+                    }
+                    
+                    let originalPriceDisplay = '<span class="text-muted">Not entered</span>';
+                    if (originalPrice !== null) {
+                        if (currency === 'USD') {
+                            const usdPrice = originalPrice * exchangeRate;
+                            originalPriceDisplay = `${usdPrice.toFixed(2)} USD`;
+                        } else if (currency === 'KRW') {
+                            const krwPrice = Math.round(originalPrice * exchangeRate);
+                            originalPriceDisplay = `${krwPrice.toLocaleString()} KRW`;
+                        } else {
+                            originalPriceDisplay = `${originalPrice.toFixed(2)} EUR`;
+                        }
+                    }
+                    
+                    let discountedPriceDisplay = '<span class="text-muted">-</span>';
+                    if (originalPrice !== null) {
+                        const discountedPrice = originalPrice * (1 - discountRate / 100);
+                        if (currency === 'USD') {
+                            const usdDiscountedPrice = discountedPrice * exchangeRate;
+                            discountedPriceDisplay = `${usdDiscountedPrice.toFixed(2)} USD`;
+                        } else if (currency === 'KRW') {
+                            const krwDiscountedPrice = Math.round(discountedPrice * exchangeRate);
+                            discountedPriceDisplay = `${krwDiscountedPrice.toLocaleString()} KRW`;
+                        } else {
+                            discountedPriceDisplay = `${discountedPrice.toFixed(2)} EUR`;
+                        }
+                    }
+                    
+                    // Do not display price for unregistered products
+                    if (!isRegistered) {
+                        originalPriceDisplay = '<span class="text-danger">Not registered</span>';
+                        discountedPriceDisplay = '<span class="text-danger">-</span>';
+                    }
+                    
+                    // Use English category name if available, otherwise use the original
+                    const categoryName = categoryNameMap[option.category_number] || option.category_name;
+                    
+                    optionsTable += `
+                        <tr data-option-original-price="${originalPrice !== null ? originalPrice : '0'}" 
+                            data-sap-code="${sapCode}">
+                            <td><strong>[${option.category_number}]</strong> ${categoryName}</td>
+                            <td>${option.option_name}</td>
+                            <td class="option-original-price">${originalPriceDisplay}</td>
+                            <td class="option-discounted-price">${discountedPriceDisplay}</td>
+                        </tr>
+                    `;
+                });
+                
+                // Add total row (store original price total as data attribute)
+                let totalOriginalDisplay = `${totalOriginal.toFixed(2)} EUR`;
+                let totalDiscountedDisplay = `${totalDiscounted.toFixed(2)} EUR`;
+                if (currency === 'USD') {
+                    totalOriginalDisplay = `${(totalOriginal * exchangeRate).toFixed(2)} USD`;
+                    totalDiscountedDisplay = `${(totalDiscounted * exchangeRate).toFixed(2)} USD`;
+                } else if (currency === 'KRW') {
+                    totalOriginalDisplay = `${Math.round(totalOriginal * exchangeRate).toLocaleString()} KRW`;
+                    totalDiscountedDisplay = `${Math.round(totalDiscounted * exchangeRate).toLocaleString()} KRW`;
+                }
+                
+                optionsTable += `
+                                </tbody>
+                                <tfoot class="table-info">
+                                    <tr data-total-original="${totalOriginal}">
+                                        <th colspan="2" class="text-end">Total:</th>
+                                        <th class="option-total-original">${totalOriginalDisplay}</th>
+                                        <th class="option-total-discounted">${totalDiscountedDisplay}</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                
+                contentDiv.innerHTML = optionsTable;
+                
+                // Display option prices total in original and discounted price cells
+                const setCodeRow = document.querySelector(`tr[data-set-code="${setCode}"]`);
+                if (setCodeRow) {
+                    // Store original price in EUR as data attribute (for quick calculation when discount rate changes)
+                    setCodeRow.setAttribute('data-original-price-eur', totalOriginal.toFixed(2));
+                    
+                    const originalPriceCell = setCodeRow.querySelector('.original-price');
+                    const discountedPriceCell = setCodeRow.querySelector('.discounted-price');
+                    
+                    if (originalPriceCell) {
+                        if (currency === 'USD') {
+                            originalPriceCell.innerHTML = `${(totalOriginal * exchangeRate).toFixed(2)} USD`;
+                        } else if (currency === 'KRW') {
+                            originalPriceCell.innerHTML = `${Math.round(totalOriginal * exchangeRate).toLocaleString()} KRW`;
+                        } else {
+                            originalPriceCell.innerHTML = `${totalOriginal.toFixed(2)} EUR`;
+                        }
+                    }
+                    
+                    if (discountedPriceCell) {
+                        if (currency === 'USD') {
+                            discountedPriceCell.innerHTML = `${(totalDiscounted * exchangeRate).toFixed(2)} USD`;
+                        } else if (currency === 'KRW') {
+                            discountedPriceCell.innerHTML = `${Math.round(totalDiscounted * exchangeRate).toLocaleString()} KRW`;
+                        } else {
+                            discountedPriceCell.innerHTML = `${totalDiscounted.toFixed(2)} EUR`;
+                        }
+                    }
+                }
+                
+                // Current language check (check again after button creation)
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlLang = urlParams.get('lang');
+                const LANGUAGE_STORAGE_KEY = 'pnsLanguage';
+                const currentLanguage = urlLang ? urlLang.toUpperCase() : (sessionStorage.getItem(LANGUAGE_STORAGE_KEY) || 'ENG');
+                
+                // Export Quotation (Customer) button event listener
+                const exportQuotationPublicBtn = contentDiv.querySelector('.export-quotation-public-btn');
+                if (exportQuotationPublicBtn) {
+                    exportQuotationPublicBtn.addEventListener('click', function() {
+                        // Collect SAP codes from option prices table (only registered products)
+                        const optionRows = contentDiv.querySelectorAll('tbody tr[data-sap-code]');
+                        const sapCodes = [];
+                        optionRows.forEach(row => {
+                            const sapCode = row.getAttribute('data-sap-code');
+                            const originalPriceCell = row.querySelector('.option-original-price');
+                            // Exclude unregistered products
+                            if (sapCode && sapCode.trim() !== '' && originalPriceCell && !originalPriceCell.textContent.includes('Not registered')) {
+                                sapCodes.push(sapCode.trim());
+                            }
+                        });
+                        
+                        if (sapCodes.length === 0) {
+                            alert('No registered products found in option prices.');
+                            return;
+                        }
+                        
+                        // Get set code and price information
+                        const setCode = optionsData.set_code || '';
+                        const totalOriginalRow = contentDiv.querySelector('tfoot tr[data-total-original]');
+                        const totalOriginal = totalOriginalRow ? parseFloat(totalOriginalRow.getAttribute('data-total-original')) || 0 : 0;
+                        const discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
+                        const totalDiscounted = totalOriginal * (1 - discountRate / 100);
+                        
+                        // Pass SAP codes, set code, and price information as URL parameters
+                        const sapCodesParam = sapCodes.join(',');
+                        const currentLang = currentLanguage.toLowerCase();
+                        const params = new URLSearchParams({
+                            lang: currentLang,
+                            sap_codes: sapCodesParam,
+                            set_code: setCode,
+                            original_price: totalOriginal.toFixed(2),
+                            discounted_price: totalDiscounted.toFixed(2)
+                        });
+                        window.location.href = `/export_quotation_new_public?${params.toString()}`;
+                    });
+                }
+                
+                // Export Quotation (Staff) button event listener
+                const exportQuotationBtn = contentDiv.querySelector('.export-quotation-btn');
+                if (exportQuotationBtn) {
+                    exportQuotationBtn.addEventListener('click', function() {
+                        // Collect SAP codes from option prices table
+                        const optionRows = contentDiv.querySelectorAll('tbody tr[data-sap-code]');
+                        const sapCodes = [];
+                        optionRows.forEach(row => {
+                            const sapCode = row.getAttribute('data-sap-code');
+                            if (sapCode && sapCode.trim() !== '') {
+                                sapCodes.push(sapCode.trim());
+                            }
+                        });
+                        
+                        if (sapCodes.length === 0) {
+                            alert('No products found in option prices.');
+                            return;
+                        }
+                        
+                        // Get set code and price information
+                        const setCode = optionsData.set_code || '';
+                        const totalOriginalRow = contentDiv.querySelector('tfoot tr[data-total-original]');
+                        const totalOriginal = totalOriginalRow ? parseFloat(totalOriginalRow.getAttribute('data-total-original')) || 0 : 0;
+                        const discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
+                        const totalDiscounted = totalOriginal * (1 - discountRate / 100);
+                        
+                        // Pass SAP codes, set code, and price information as URL parameters
+                        const sapCodesParam = sapCodes.join(',');
+                        const currentLang = currentLanguage.toLowerCase();
+                        const params = new URLSearchParams({
+                            lang: currentLang,
+                            sap_codes: sapCodesParam,
+                            set_code: setCode,
+                            original_price: totalOriginal.toFixed(2),
+                            discounted_price: totalDiscounted.toFixed(2)
+                        });
+                        window.location.href = `/export_quotation_new?${params.toString()}`;
+                    });
+                }
+                
+                // Excel download button disabled
+                const downloadBtn = contentDiv.querySelector('.download-excel-btn');
+                if (downloadBtn) {
+                    // Button disabled (cannot click)
+                    downloadBtn.disabled = true;
+                    downloadBtn.style.cursor = 'not-allowed';
+                    downloadBtn.style.opacity = '0.6';
+                }
+                
+                // Quote button disabled
+                const quoteBtn = contentDiv.querySelector('.download-quote-btn');
+                if (quoteBtn) {
+                    // Button disabled (cannot click)
+                    quoteBtn.disabled = true;
+                    quoteBtn.style.cursor = 'not-allowed';
+                    quoteBtn.style.opacity = '0.6';
+                }
+                
+            } else {
+                contentDiv.innerHTML = `
+                    <div class="p-3 bg-light text-center text-muted">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No registered option prices.
+                    </div>
+                `;
+            }
+            contentDiv.setAttribute('data-loaded', 'true');
+            })
+            .catch(function (error) {
+            contentDiv.removeAttribute('data-loading');
+            console.error('Error loading option prices:', error);
+            contentDiv.innerHTML = `
+                <div class="p-3 bg-light text-center text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    An error occurred while loading option prices: ${error.message}
+                </div>
+            `;
+            });
+    });
+}
+
+// Excel download function
+function downloadOptionPricesExcel(setCode) {
+    const discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
+    
+    const btn = document.querySelector(`.download-excel-btn[data-set-code="${setCode}"]`);
+    if (!btn) {
+        console.error('Download button not found');
+        return;
+    }
+    
+    // Loading indicator
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Downloading...';
+    
+    fetch(`/api/set_price/options/excel?set_code=${encodeURIComponent(setCode)}&discount_rate=${discountRate}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to download Excel file.');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // File download
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `옵션별_가격_${setCode}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            // Restore button
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        })
+        .catch(error => {
+            console.error('Error downloading Excel:', error);
+            alert('Error downloading Excel: ' + error.message);
+            
+            // Restore button
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+}
+
+// Quote download function
+function downloadQuote(setCode) {
+    const discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
+    const currency = document.getElementById('currencySelect')?.value || 'EUR';
+    const exchangeRate = parseFloat(document.getElementById('usdExchangeRate')?.value) || 1.0;
+    
+    // Find button
+    const btn = document.querySelector(`.download-quote-btn[data-set-code="${setCode}"]`);
+    if (!btn) {
+        console.error('Quote button not found');
+        return;
+    }
+    
+    // Loading indicator
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+    
+    fetch(`/api/set_price/quote?set_code=${encodeURIComponent(setCode)}&discount_rate=${discountRate}&currency=${currency}&exchange_rate=${exchangeRate}&lang=ENG`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to generate quote.');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // File download
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `견적서_${setCode}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            // Restore button
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        })
+        .catch(error => {
+            console.error('Error downloading Quote:', error);
+            alert('Error downloading Quote: ' + error.message);
+            
+            // Restore button
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+}
+
+
+// Option price discount rate application update
+function updateOptionPrices(discountRate) {
+    const currency = document.getElementById('currencySelect')?.value || 'EUR';
+    const exchangeRate = parseFloat(document.getElementById('usdExchangeRate')?.value) || 1.0;
+    
+    // Update discounted price for each option row
+    const optionRows = document.querySelectorAll('tbody tr[data-option-original-price]');
+    let totalOriginal = 0;
+    let totalDiscounted = 0;
+    
+    optionRows.forEach(row => {
+        const originalPriceStr = row.getAttribute('data-option-original-price');
+        const originalPrice = parseFloat(originalPriceStr) || 0;
+        const originalPriceCell = row.querySelector('.option-original-price');
+        const discountedCell = row.querySelector('.option-discounted-price');
+        
+        if (originalPrice > 0) {
+            totalOriginal += originalPrice;
+            const discountedPrice = originalPrice * (1 - discountRate / 100);
+            totalDiscounted += discountedPrice;
+            
+            if (currency === 'USD') {
+                const usdPrice = originalPrice * exchangeRate;
+                const usdDiscountedPrice = discountedPrice * exchangeRate;
+                if (originalPriceCell) {
+                    originalPriceCell.innerHTML = `${usdPrice.toFixed(2)} USD`;
+                }
+                if (discountedCell) {
+                    discountedCell.innerHTML = `${usdDiscountedPrice.toFixed(2)} USD`;
+                }
+            } else if (currency === 'KRW') {
+                const krwPrice = Math.round(originalPrice * exchangeRate);
+                const krwDiscountedPrice = Math.round(discountedPrice * exchangeRate);
+                if (originalPriceCell) {
+                    originalPriceCell.innerHTML = `${krwPrice.toLocaleString()} KRW`;
+                }
+                if (discountedCell) {
+                    discountedCell.innerHTML = `${krwDiscountedPrice.toLocaleString()} KRW`;
+                }
+            } else {
+                if (originalPriceCell) {
+                    originalPriceCell.innerHTML = `${originalPrice.toFixed(2)} EUR`;
+                }
+                if (discountedCell) {
+                    discountedCell.innerHTML = `${discountedPrice.toFixed(2)} EUR`;
+                }
+            }
+        } else {
+            if (originalPriceCell) {
+                originalPriceCell.innerHTML = '<span class="text-muted">Not entered</span>';
+            }
+            if (discountedCell) {
+                discountedCell.innerHTML = '<span class="text-muted">-</span>';
+            }
+        }
+    });
+    
+    // Update total row (apply discount rate to original price total)
+    const tfootRows = document.querySelectorAll('tfoot tr[data-total-original]');
+    tfootRows.forEach(tfootRow => {
+        const totalOriginalStr = tfootRow.getAttribute('data-total-original');
+        const totalOriginalValue = parseFloat(totalOriginalStr) || 0;
+        const totalDiscountedValue = totalOriginalValue * (1 - discountRate / 100);
+        
+        const originalSumCell = tfootRow.querySelector('.option-total-original');
+        const discountedSumCell = tfootRow.querySelector('.option-total-discounted');
+        
+        if (originalSumCell && discountedSumCell) {
+            if (currency === 'USD') {
+                originalSumCell.textContent = `${(totalOriginalValue * exchangeRate).toFixed(2)} USD`;
+                discountedSumCell.textContent = `${(totalDiscountedValue * exchangeRate).toFixed(2)} USD`;
+            } else if (currency === 'KRW') {
+                originalSumCell.textContent = `${Math.round(totalOriginalValue * exchangeRate).toLocaleString()} KRW`;
+                discountedSumCell.textContent = `${Math.round(totalDiscountedValue * exchangeRate).toLocaleString()} KRW`;
+            } else {
+                originalSumCell.textContent = `${totalOriginalValue.toFixed(2)} EUR`;
+                discountedSumCell.textContent = `${totalDiscountedValue.toFixed(2)} EUR`;
+            }
+        }
+        
+        // Display option prices total in original and discounted price cells
+        const collapseElement = tfootRow.closest('.collapse');
+        if (collapseElement) {
+            const setCodeAttr = collapseElement.getAttribute('data-set-code');
+            if (setCodeAttr) {
+                const setCodeRow = document.querySelector(`tr[data-set-code="${setCodeAttr}"]`);
+                if (setCodeRow) {
+                    const originalPriceCell = setCodeRow.querySelector('.original-price');
+                    const discountedPriceCell = setCodeRow.querySelector('.discounted-price');
+                    
+                    // Original price = option prices total
+                    if (originalPriceCell) {
+                        if (currency === 'USD') {
+                            originalPriceCell.innerHTML = `${(totalOriginalValue * exchangeRate).toFixed(2)} USD`;
+                        } else if (currency === 'KRW') {
+                            originalPriceCell.innerHTML = `${Math.round(totalOriginalValue * exchangeRate).toLocaleString()} KRW`;
+                        } else {
+                            originalPriceCell.innerHTML = `${totalOriginalValue.toFixed(2)} EUR`;
+                        }
+                    }
+                    
+                    // Discounted price = option prices total with discount rate applied
+                    if (discountedPriceCell) {
+                        if (currency === 'USD') {
+                            discountedPriceCell.innerHTML = `${(totalDiscountedValue * exchangeRate).toFixed(2)} USD`;
+                        } else if (currency === 'KRW') {
+                            discountedPriceCell.innerHTML = `${Math.round(totalDiscountedValue * exchangeRate).toLocaleString()} KRW`;
+                        } else {
+                            discountedPriceCell.innerHTML = `${totalDiscountedValue.toFixed(2)} EUR`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
+
+

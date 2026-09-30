@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}로직 제한조건 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<style>
+    /* SUPER M 탭 - 파란색 */
+    .logic-tab-SUPERM,
+    .nav-link[data-bs-target="#logic-tab-SUPERM"] {
+        background-color: #4A90E2 !important;
+        color: white !important;
+        border-color: #4A90E2 !important;
+    }
+    .logic-tab-SUPERM:hover,
+    .nav-link[data-bs-target="#logic-tab-SUPERM"]:hover {
+        background-color: #357ABD !important;
+        color: white !important;
+    }
+    .logic-tab-SUPERM.active,
+    .nav-link[data-bs-target="#logic-tab-SUPERM"].active {
+        background-color: #2E5C8A !important;
+        color: white !important;
+        font-weight: bold;
+    }
+    
+    /* SUPER C 탭 - 초록색 */
+    .logic-tab-SUPERC,
+    .nav-link[data-bs-target="#logic-tab-SUPERC"] {
+        background-color: #5CB85C !important;
+        color: white !important;
+        border-color: #5CB85C !important;
+    }
+    .logic-tab-SUPERC:hover,
+    .nav-link[data-bs-target="#logic-tab-SUPERC"]:hover {
+        background-color: #449D44 !important;
+        color: white !important;
+    }
+    .logic-tab-SUPERC.active,
+    .nav-link[data-bs-target="#logic-tab-SUPERC"].active {
+        background-color: #3A7A3A !important;
+        color: white !important;
+        font-weight: bold;
+    }
+    
+    /* SUPER T 탭 - 주황색 */
+    .logic-tab-SUPERT,
+    .nav-link[data-bs-target="#logic-tab-SUPERT"] {
+        background-color: #F0AD4E !important;
+        color: white !important;
+        border-color: #F0AD4E !important;
+    }
+    .logic-tab-SUPERT:hover,
+    .nav-link[data-bs-target="#logic-tab-SUPERT"]:hover {
+        background-color: #EC971F !important;
+        color: white !important;
+    }
+    .logic-tab-SUPERT.active,
+    .nav-link[data-bs-target="#logic-tab-SUPERT"].active {
+        background-color: #C87F1A !important;
+        color: white !important;
+        font-weight: bold;
+    }
+    
+    /* SUPER S 탭 - 보라색 */
+    .logic-tab-SUPERS,
+    .nav-link[data-bs-target="#logic-tab-SUPERS"] {
+        background-color: #9B59B6 !important;
+        color: white !important;
+        border-color: #9B59B6 !important;
+    }
+    .logic-tab-SUPERS:hover,
+    .nav-link[data-bs-target="#logic-tab-SUPERS"]:hover {
+        background-color: #8E44AD !important;
+        color: white !important;
+    }
+    .logic-tab-SUPERS.active,
+    .nav-link[data-bs-target="#logic-tab-SUPERS"].active {
+        background-color: #6C3483 !important;
+        color: white !important;
+        font-weight: bold;
+    }
+    
+    /* 기타 탭 - 회색 */
+    .logic-tab-기타,
+    .nav-link[data-bs-target="#logic-tab-기타"] {
+        background-color: #95A5A6 !important;
+        color: white !important;
+        border-color: #95A5A6 !important;
+    }
+    .logic-tab-기타:hover,
+    .nav-link[data-bs-target="#logic-tab-기타"]:hover {
+        background-color: #7F8C8D !important;
+        color: white !important;
+    }
+    .logic-tab-기타.active,
+    .nav-link[data-bs-target="#logic-tab-기타"].active {
+        background-color: #5D6D7E !important;
+        color: white !important;
+        font-weight: bold;
+    }
+</style>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-sliders-h me-2"></i>
+            로직 제한조건
+        </h2>
+        <p class="text-muted mb-0">
+            파워소스 / 타입 조합에 따라 적용되는 상세 옵션 제한 규칙을 확인할 수 있습니다.
+        </p>
+    </div>
+    <div class="text-end">
+        <span class="badge bg-primary fs-6">
+            총 {{ logic_rules|length }}건의 제한 조건
+        </span>
+    </div>
+</div>
+
+<div class="card border-success shadow-sm mb-4">
+    <div class="card-header bg-success">
+        <i class="fas fa-clipboard-list me-2"></i>설명
+    </div>
+    <div class="card-body">
+        <ul class="mb-0">
+            <li>각 조합은 파워소스 + 타입 기준으로 정렬되어 있으며, 허용 옵션과 비활성화 상태를 표시합니다.</li>
+            <li><span class="badge bg-success">허용</span> 항목은 선택 가능한 옵션 목록과 함께 표시되며, <span class="badge bg-danger">비활성화</span> 항목은 선택이 불가능합니다.</li>
+            <li>‘선택없음 허용 여부’는 해당 카테고리에서 ‘선택없음’을 유지할 수 있는 지 여부를 의미합니다.</li>
+        </ul>
+    </div>
+</div>
+
+{% set default_family = logic_rule_default_family %}
+{% set groups = logic_rule_groups %}
+{% if groups %}
+<ul class="nav nav-pills mb-3" role="tablist">
+    {% for family in power_family_order %}
+        {% set family_rules = groups.get(family) %}
+        {% if family_rules and family_rules|length > 0 %}
+        {% set slug = family|replace(' ', '') %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link logic-tab-{{ slug }} {% if family == default_family %}active{% endif %}" id="logic-tab-{{ slug }}-btn" data-bs-toggle="tab" data-bs-target="#logic-tab-{{ slug }}" type="button" role="tab" aria-controls="logic-tab-{{ slug }}" aria-selected="{{ 'true' if family == default_family else 'false' }}">
+                {{ family }}
+                <span class="badge bg-light text-dark ms-1">{{ family_rules|length }}</span>
+            </button>
+        </li>
+        {% endif %}
+    {% endfor %}
+</ul>
+<div class="tab-content" id="logicRulesTabContent">
+    {% for family in power_family_order %}
+        {% set family_rules = groups.get(family) %}
+        {% if family_rules and family_rules|length > 0 %}
+        {% set slug = family|replace(' ', '') %}
+        <div class="tab-pane fade {% if family == default_family %}show active{% endif %}" id="logic-tab-{{ slug }}" role="tabpanel" aria-labelledby="logic-tab-{{ slug }}-btn">
+            <div class="accordion" id="logicRulesAccordion{{ slug }}">
+                {% for rule in family_rules %}
+                {% set display_index = rule.display_index or loop.index %}
+                {% set heading_id = 'heading' ~ slug ~ display_index %}
+                {% set collapse_id = 'collapse' ~ slug ~ display_index %}
+                <div class="accordion-item mb-3 shadow-sm">
+                    <h2 class="accordion-header" id="{{ heading_id }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#{{ collapse_id }}" aria-expanded="false" aria-controls="{{ collapse_id }}">
+                            <div class="w-100 d-flex flex-wrap justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge bg-secondary me-2">#{{ display_index }}</span>
+                                    <strong>{{ rule.power_source_label }}</strong>
+                                    <span class="text-muted ms-2">타입: {{ rule.type_label }}</span>
+                                </div>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="{{ collapse_id }}" class="accordion-collapse collapse" aria-labelledby="{{ heading_id }}" data-bs-parent="#logicRulesAccordion{{ slug }}">
+                        <div class="accordion-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col" style="width: 18%;">카테고리</th>
+                                            <th scope="col">제한 방식</th>
+                                            <th scope="col" style="width: 25%;">선택없음 허용</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for action in rule.actions %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-light text-primary border border-primary">
+                                                    [{{ action.category_number }}] {{ action.category_name }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if action.mode == 'disable' %}
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-ban me-1"></i>전체 비활성화
+                                                    </span>
+                                                {% elif action.mode == 'allow' %}
+                                                    <span class="badge bg-success mb-2">
+                                                        <i class="fas fa-check me-1"></i>선택 허용
+                                                    </span>
+                                                    <div class="small text-muted">
+                                                        {% for option in action.options %}
+                                                            <div><i class="fas fa-caret-right me-1"></i>{{ option }}</div>
+                                                        {% else %}
+                                                            <div class="text-muted fst-italic">등록된 코드명이 없습니다.</div>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if action.mode == 'allow' %}
+                                                    {% if action.allow_none %}
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary">
+                                                            허용
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning text-dark">
+                                                            불가
+                                                        </span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-muted">해당 없음</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>
+    등록된 제한 조건이 없습니다.
+</div>
+{% endif %}
+{% endblock %}
+

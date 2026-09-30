@@ -1,0 +1,810 @@
+{% extends "base.html" %}
+
+{% block title %}코드관리 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-code me-2"></i>
+                코드관리
+            </h2>
+            <div>
+                <button type="button" class="btn btn-outline-secondary me-2" onclick="location.href='/'">
+                    <i class="fas fa-home me-1"></i>홈으로
+                </button>
+                <button type="button" class="btn btn-primary me-2" onclick="showAddOptionModal()">
+                    <i class="fas fa-plus me-1"></i>옵션 추가
+                </button>
+                <button type="button" class="btn btn-warning me-2" onclick="showUpdateOptionModal()">
+                    <i class="fas fa-edit me-1"></i>옵션 수정
+                </button>
+                <button type="button" class="btn btn-danger" onclick="showDeleteOptionModal()">
+                    <i class="fas fa-trash me-1"></i>옵션 삭제
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 옵션 현황 표시 -->
+<div class="row mb-4">
+    <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-burgundy">
+                <h5 class="mb-0" style="color: #ffffff !important;">
+                    <i class="fas fa-list me-2" style="color: #ffffff !important;"></i>
+                    전체 옵션 현황 (12개 카테고리)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="optionsContainer">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">로드 중...</span>
+                        </div>
+                        <p class="text-muted">옵션 정보를 불러오는 중입니다...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 옵션 추가 모달 -->
+<div class="modal fade" id="addOptionModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>
+                    옵션 추가
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addOptionForm">
+                    <div class="mb-3">
+                        <label for="addCategory" class="form-label">카테고리 선택</label>
+                        <select class="form-select" id="addCategory" required>
+                            <option value="">카테고리를 선택하세요</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addItemName" class="form-label">SAP 코드명</label>
+                        <input type="text" class="form-control" id="addItemName" placeholder="SAP 코드명을 입력하세요" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addItemCode" class="form-label">SAP 코드</label>
+                        <input type="text" class="form-control" id="addItemCode" placeholder="SAP 코드를 입력하세요">
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDescription" class="form-label">설명</label>
+                        <textarea class="form-control" id="addDescription" rows="3" placeholder="설명을 입력하세요"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-success" onclick="addOptionItem()">
+                    <i class="fas fa-plus me-1"></i>추가
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 옵션 수정 모달 -->
+<div class="modal fade" id="updateOptionModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    옵션 수정
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="updateOptionForm">
+                    <div class="mb-3">
+                        <label for="updateCategory" class="form-label">카테고리 선택</label>
+                        <select class="form-select" id="updateCategory" required onchange="loadUpdateItems()">
+                            <option value="">카테고리를 선택하세요</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="updateItem" class="form-label">수정할 항목</label>
+                        <select class="form-select" id="updateItem" required onchange="loadUpdateItemDetails()">
+                            <option value="">먼저 카테고리를 선택하세요</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="updateItemName" class="form-label">SAP 코드명</label>
+                        <input type="text" class="form-control" id="updateItemName" placeholder="SAP 코드명을 입력하세요">
+                    </div>
+                    <div class="mb-3">
+                        <label for="updateItemCode" class="form-label">SAP 코드</label>
+                        <input type="text" class="form-control" id="updateItemCode" placeholder="SAP 코드를 입력하세요">
+                    </div>
+                    <div class="mb-3">
+                        <label for="updateDescription" class="form-label">설명</label>
+                        <textarea class="form-control" id="updateDescription" rows="3" placeholder="설명을 입력하세요"></textarea>
+                    </div>
+                    <input type="hidden" id="updateItemId" value="">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-warning" onclick="updateOptionItem()">
+                    <i class="fas fa-save me-1"></i>수정 저장
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 옵션 삭제 모달 -->
+<div class="modal fade" id="deleteOptionModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title">
+                    <i class="fas fa-trash me-2"></i>
+                    옵션 삭제
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="deleteOptionForm">
+                    <div class="mb-3">
+                        <label for="deleteCategory" class="form-label">카테고리 선택</label>
+                        <select class="form-select" id="deleteCategory" required onchange="loadDeleteItems()">
+                            <option value="">카테고리를 선택하세요</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="deleteItem" class="form-label">삭제할 항목</label>
+                        <select class="form-select" id="deleteItem" required>
+                            <option value="">먼저 카테고리를 선택하세요</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-danger" onclick="deleteOptionItem()">
+                    <i class="fas fa-trash me-1"></i>삭제
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* 모달 z-index 설정 */
+#addOptionModal {
+    z-index: 1070 !important;
+}
+
+#updateOptionModal {
+    z-index: 1070 !important;
+}
+
+#deleteOptionModal {
+    z-index: 1070 !important;
+}
+
+#updateOptionModal .modal-backdrop {
+    z-index: 1069 !important;
+}
+
+#addOptionModal .modal-backdrop {
+    z-index: 1069 !important;
+}
+
+#deleteOptionModal .modal-backdrop {
+    z-index: 1069 !important;
+}
+</style>
+<script>
+// 카테고리 ID와 번호 매핑 저장 (전역 변수)
+let categoryIdToNumberMap = {};
+
+// 페이지 로드 시 모든 옵션 현황 로드
+document.addEventListener('DOMContentLoaded', function() {
+    loadOptionsData();
+    
+    // 모달이 닫힐 때 aria-hidden 속성 복원
+    const addModal = document.getElementById('addOptionModal');
+    const updateModal = document.getElementById('updateOptionModal');
+    const deleteModal = document.getElementById('deleteOptionModal');
+    
+    if (addModal) {
+        addModal.addEventListener('hidden.bs.modal', function() {
+            this.setAttribute('aria-hidden', 'true');
+        });
+    }
+    
+    if (updateModal) {
+        updateModal.addEventListener('hidden.bs.modal', function() {
+            this.setAttribute('aria-hidden', 'true');
+        });
+    }
+    
+    if (deleteModal) {
+        deleteModal.addEventListener('hidden.bs.modal', function() {
+            this.setAttribute('aria-hidden', 'true');
+        });
+    }
+});
+
+
+// 옵션 현황 데이터 로드
+function loadOptionsData() {
+    const container = document.getElementById('optionsContainer');
+    
+    fetch('/api/all-options')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.options) {
+                displayOptionsData(data.options);
+            } else {
+                showError('옵션 데이터를 불러올 수 없습니다.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showError('네트워크 오류가 발생했습니다.');
+        });
+}
+
+// 옵션 데이터 표시
+function displayOptionsData(optionsData) {
+    const container = document.getElementById('optionsContainer');
+    let html = '<div class="row">';
+    
+    for (let catNum = 1; catNum <= 12; catNum++) {
+        if (optionsData && optionsData[catNum]) {
+            const category = optionsData[catNum];
+            const items = category.items || [];
+            
+            html += `
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-header bg-burgundy">
+                            <h6 class="mb-0" style="color: #ffffff !important;">[${catNum}] ${category.name}</h6>
+                        </div>
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-striped">
+                                <tbody>
+            `;
+            
+            if (items && items.length > 0) {
+                items.forEach((item, idx) => {
+                    html += `
+                        <tr>
+                            <td style="font-size: 0.85rem;">
+                                <strong>${item.name || '-'}</strong><br>
+                                <code>${item.code || '-'}</code><br>
+                                <small class="text-muted">${(item.description !== undefined && item.description !== null) ? item.description : ''}</small>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                html += '<tr><td class="text-muted text-center">항목 없음</td></tr>';
+            }
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// 오류 표시
+function showError(message) {
+    const container = document.getElementById('optionsContainer');
+    container.innerHTML = `
+        <div class="alert alert-danger" role="alert">
+            <h5>오류 발생</h5>
+            <p>${message}</p>
+        </div>
+    `;
+}
+
+// 옵션 추가 모달 표시
+function showAddOptionModal() {
+    // 기존 모달들 닫기
+    const existingModals = document.querySelectorAll('.modal.show');
+    existingModals.forEach(modal => {
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) {
+            bsModal.hide();
+        }
+    });
+    
+    // 잠시 대기 후 새 모달 표시
+    setTimeout(() => {
+        loadCategories('addCategory');
+        
+        // 폼 초기화
+        document.getElementById('addItemName').value = '';
+        document.getElementById('addItemCode').value = '';
+        document.getElementById('addDescription').value = '';
+        
+        const modalElement = document.getElementById('addOptionModal');
+        modalElement.style.zIndex = '1070';
+        
+        // aria-hidden 속성 제거
+        modalElement.removeAttribute('aria-hidden');
+        
+        const modal = new bootstrap.Modal(modalElement, {
+            backdrop: 'static',
+            keyboard: false,
+            focus: true
+        });
+        modal.show();
+    }, 100);
+}
+
+// 옵션 수정 모달 표시
+function showUpdateOptionModal() {
+    // 기존 모달들 닫기
+    const existingModals = document.querySelectorAll('.modal.show');
+    existingModals.forEach(modal => {
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) {
+            bsModal.hide();
+        }
+    });
+    
+    // 잠시 대기 후 새 모달 표시
+    setTimeout(() => {
+        loadCategories('updateCategory');
+        
+        // 항목 목록 초기화
+        document.getElementById('updateItem').innerHTML = '<option value="">먼저 카테고리를 선택하세요</option>';
+        
+        // 폼 초기화
+        document.getElementById('updateItemName').value = '';
+        document.getElementById('updateItemCode').value = '';
+        document.getElementById('updateDescription').value = '';
+        document.getElementById('updateItemId').value = '';
+        
+        const modalElement = document.getElementById('updateOptionModal');
+        modalElement.style.zIndex = '1070';
+        
+        // aria-hidden 속성 제거
+        modalElement.removeAttribute('aria-hidden');
+        
+        const modal = new bootstrap.Modal(modalElement, {
+            backdrop: 'static',
+            keyboard: false,
+            focus: true
+        });
+        modal.show();
+    }, 100);
+}
+
+// 카테고리 선택 시 수정할 항목 목록 로드
+function loadUpdateItems() {
+    const categoryId = document.getElementById('updateCategory').value;
+    const itemSelect = document.getElementById('updateItem');
+    
+    if (!categoryId) {
+        itemSelect.innerHTML = '<option value="">먼저 카테고리를 선택하세요</option>';
+        return;
+    }
+    
+    // 카테고리 ID를 카테고리 번호로 변환
+    const categoryNumber = categoryIdToNumberMap[categoryId];
+    if (!categoryNumber) {
+        itemSelect.innerHTML = '<option value="">카테고리 정보를 찾을 수 없습니다</option>';
+        return;
+    }
+    
+    fetch('/api/all-options')
+        .then(response => response.json())
+        .then(data => {
+            if (data.options) {
+                itemSelect.innerHTML = '<option value="">수정할 항목을 선택하세요</option>';
+                
+                // 카테고리 번호로 옵션들 찾기 (옵션선택 페이지와 동일한 키 사용)
+                const categoryOptions = data.options[categoryNumber];
+                
+                if (categoryOptions && categoryOptions.items && categoryOptions.items.length > 0) {
+                    // 항목을 id 순서로 정렬 (옵션선택 페이지와 동일한 순서)
+                    const sortedItems = [...categoryOptions.items].sort((a, b) => a.id - b.id);
+                    
+                    sortedItems.forEach(item => {
+                        const optionElement = document.createElement('option');
+                        optionElement.value = item.id;
+                        optionElement.textContent = `${item.name} (${item.code || '코드없음'})`;
+                        itemSelect.appendChild(optionElement);
+                    });
+                } else {
+                    itemSelect.innerHTML = '<option value="">해당 카테고리에 항목이 없습니다</option>';
+                }
+            } else {
+                itemSelect.innerHTML = '<option value="">해당 카테고리에 항목이 없습니다</option>';
+            }
+        })
+        .catch(error => {
+            console.error('항목 로드 오류:', error);
+            itemSelect.innerHTML = '<option value="">로드 오류</option>';
+        });
+}
+
+// 수정할 항목 선택 시 상세 정보 로드
+function loadUpdateItemDetails() {
+    const itemId = document.getElementById('updateItem').value;
+    
+    if (!itemId) {
+        document.getElementById('updateItemName').value = '';
+        document.getElementById('updateItemCode').value = '';
+        document.getElementById('updateDescription').value = '';
+        document.getElementById('updateItemId').value = '';
+        return;
+    }
+    
+    // 전체 옵션에서 해당 항목 찾기
+    fetch('/api/all-options')
+        .then(response => response.json())
+        .then(data => {
+            if (data.options) {
+                let foundItem = null;
+                
+                // 모든 카테고리에서 해당 아이템 찾기
+                for (let catNum = 1; catNum <= 12; catNum++) {
+                    if (data.options[catNum] && data.options[catNum].items) {
+                        const item = data.options[catNum].items.find(i => i.id == itemId);
+                        if (item) {
+                            foundItem = item;
+                            break;
+                        }
+                    }
+                }
+                
+                if (foundItem) {
+                    document.getElementById('updateItemId').value = foundItem.id;
+                    document.getElementById('updateItemName').value = foundItem.name || '';
+                    document.getElementById('updateItemCode').value = foundItem.code || '';
+                    document.getElementById('updateDescription').value = foundItem.description || '';
+                } else {
+                    alert('항목 정보를 찾을 수 없습니다.');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('항목 상세 정보 로드 오류:', error);
+            alert('항목 정보를 불러올 수 없습니다.');
+        });
+}
+
+// 옵션 수정
+function updateOptionItem() {
+    const itemId = document.getElementById('updateItemId').value;
+    const itemName = document.getElementById('updateItemName').value.trim();
+    const itemCode = document.getElementById('updateItemCode').value.trim();
+    const description = document.getElementById('updateDescription').value.trim();
+    
+    if (!itemId) {
+        alert('수정할 항목을 선택해주세요.');
+        return;
+    }
+    
+    const submitBtn = document.querySelector('#updateOptionModal .btn-warning');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>수정 중...';
+    submitBtn.disabled = true;
+    
+    fetch('/api/option/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            item_id: parseInt(itemId, 10),
+            item_name: itemName,
+            item_code: itemCode === '' ? null : itemCode,
+            description: description === '' ? null : description
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('옵션이 성공적으로 수정되었습니다.');
+            
+            // 모달 닫기
+            const modal = bootstrap.Modal.getInstance(document.getElementById('updateOptionModal'));
+            modal.hide();
+            
+            // 옵션 현황 새로고침
+            loadOptionsData();
+        } else {
+            alert('옵션 수정 실패: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('네트워크 오류가 발생했습니다.');
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// 옵션 삭제 모달 표시
+function showDeleteOptionModal() {
+    // 기존 모달들 닫기
+    const existingModals = document.querySelectorAll('.modal.show');
+    existingModals.forEach(modal => {
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) {
+            bsModal.hide();
+        }
+    });
+    
+    // 잠시 대기 후 새 모달 표시
+    setTimeout(() => {
+        // 카테고리 목록 로드
+        loadCategories('deleteCategory');
+        
+        // 삭제할 항목 초기화
+        document.getElementById('deleteItem').innerHTML = '<option value="">먼저 카테고리를 선택하세요</option>';
+        
+        const modalElement = document.getElementById('deleteOptionModal');
+        modalElement.style.zIndex = '1070';
+        
+        // aria-hidden 속성 제거
+        modalElement.removeAttribute('aria-hidden');
+        
+        const modal = new bootstrap.Modal(modalElement, {
+            backdrop: 'static',
+            keyboard: false,
+            focus: true
+        });
+        modal.show();
+    }, 300);
+}
+
+// 카테고리 선택 시 삭제할 항목 목록 로드
+function loadDeleteItems() {
+    const categoryId = document.getElementById('deleteCategory').value;
+    const itemSelect = document.getElementById('deleteItem');
+    
+    console.log('=== 카테고리 선택 변경 ===');
+    console.log('Selected category ID:', categoryId);
+    
+    if (!categoryId) {
+        itemSelect.innerHTML = '<option value="">먼저 카테고리를 선택하세요</option>';
+        return;
+    }
+    
+    // 카테고리 ID를 카테고리 번호로 변환
+    const categoryNumber = categoryIdToNumberMap[categoryId];
+    if (!categoryNumber) {
+        itemSelect.innerHTML = '<option value="">카테고리 정보를 찾을 수 없습니다</option>';
+        return;
+    }
+    
+    console.log('Loading all options and filtering by category number:', categoryNumber);
+    
+    fetch('/api/all-options')
+        .then(response => {
+            console.log('API Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('API Response data:', data);
+            
+            if (data.options) {
+                itemSelect.innerHTML = '<option value="">삭제할 항목을 선택하세요</option>';
+                
+                // 카테고리 번호로 옵션들 찾기 (옵션선택 페이지와 동일한 키 사용)
+                const categoryOptions = data.options[categoryNumber];
+                
+                console.log('Category options for', categoryNumber, ':', categoryOptions);
+                
+                if (categoryOptions && categoryOptions.items && categoryOptions.items.length > 0) {
+                    // 12번(기타)은 id가 없으므로 code 기준 정렬, 나머지는 id 순
+                    const sortedItems = [...categoryOptions.items].sort((a, b) => {
+                        if (categoryNumber === 12) return (a.code || '').localeCompare(b.code || '');
+                        return (a.id != null ? a.id : 0) - (b.id != null ? b.id : 0);
+                    });
+                    
+                    sortedItems.forEach(item => {
+                        const optionElement = document.createElement('option');
+                        // 12번(기타)은 option_base_prices 삭제용으로 cat12:코드 형식 사용
+                        optionElement.value = (categoryNumber === 12 && (item.id == null || item.id === '')) ? ('cat12:' + (item.code || item.name || '')) : (item.id != null ? String(item.id) : '');
+                        optionElement.textContent = `${item.name} (${item.code || '코드없음'})`;
+                        itemSelect.appendChild(optionElement);
+                    });
+                    console.log('Items loaded successfully:', sortedItems.length);
+                } else {
+                    itemSelect.innerHTML = '<option value="">해당 카테고리에 항목이 없습니다</option>';
+                    console.log('No items found for this category');
+                }
+            } else {
+                console.log('No options found in API response');
+                itemSelect.innerHTML = '<option value="">해당 카테고리에 항목이 없습니다</option>';
+            }
+        })
+        .catch(error => {
+            console.error('항목 로드 오류:', error);
+            itemSelect.innerHTML = '<option value="">로드 오류</option>';
+        });
+}
+
+// 카테고리 목록 로드
+function loadCategories(selectId) {
+    fetch('/api/categories')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.categories) {
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value="">카테고리를 선택하세요</option>';
+                
+                // 카테고리 ID와 번호 매핑 초기화
+                categoryIdToNumberMap = {};
+                
+                // 카테고리를 category_number 순서로 정렬 (옵션선택 페이지와 동일한 순서)
+                const sortedCategories = [...data.categories].sort((a, b) => {
+                    // number 필드가 있으면 number로 정렬, 없으면 id로 정렬
+                    const numA = a.number !== undefined ? a.number : a.id;
+                    const numB = b.number !== undefined ? b.number : b.id;
+                    return numA - numB;
+                });
+                
+                sortedCategories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    // number 필드가 있으면 number를 표시, 없으면 id를 표시
+                    const categoryNumber = category.number !== undefined ? category.number : category.id;
+                    option.textContent = `[${categoryNumber}] ${category.name}`;
+                    
+                    // 카테고리 ID와 번호 매핑 저장
+                    categoryIdToNumberMap[category.id] = categoryNumber;
+                    
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading categories:', error);
+        });
+}
+
+
+// 옵션 추가
+function addOptionItem() {
+    const categoryId = document.getElementById('addCategory').value;
+    const itemName = document.getElementById('addItemName').value.trim();
+    const itemCode = document.getElementById('addItemCode').value.trim();
+    const description = document.getElementById('addDescription').value.trim();
+    
+    if (!categoryId || !itemName) {
+        alert('카테고리와 SAP 코드명을 입력해주세요.');
+        return;
+    }
+    
+    const submitBtn = document.querySelector('#addOptionModal .btn-success');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>추가 중...';
+    submitBtn.disabled = true;
+    
+    fetch('/api/option/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            category_id: categoryId,
+            item_name: itemName,
+            item_code: itemCode || null,
+            description: description || null
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('옵션이 성공적으로 추가되었습니다.');
+            
+            // 모달 닫기
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addOptionModal'));
+            modal.hide();
+            
+            // 옵션 현황 새로고침
+            loadOptionsData();
+        } else {
+            alert('옵션 추가 실패: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('네트워크 오류가 발생했습니다.');
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// 옵션 삭제
+function deleteOptionItem() {
+    const itemId = document.getElementById('deleteItem').value;
+    const categoryId = document.getElementById('deleteCategory').value;
+    
+    if (!itemId) {
+        alert('삭제할 항목을 선택해주세요.');
+        return;
+    }
+    
+    if (!confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    const submitBtn = document.querySelector('#deleteOptionModal .btn-danger');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>삭제 중...';
+    submitBtn.disabled = true;
+    
+    // 12번(기타): option_base_prices 삭제용으로 category_id + option_code 전송
+    var body = {};
+    if (String(categoryId) === '12') {
+        var code = (itemId && itemId.startsWith('cat12:')) ? itemId.replace(/^cat12:/, '') : (itemId || '');
+        body = { category_id: 12, option_code: code };
+    } else {
+        body = { item_id: itemId };
+    }
+    
+    fetch('/api/option/delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('옵션이 성공적으로 삭제되었습니다.');
+            
+            // 모달 닫기
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteOptionModal'));
+            modal.hide();
+            
+            // 옵션 현황 새로고침
+            loadOptionsData();
+        } else {
+            alert('옵션 삭제 실패: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('네트워크 오류가 발생했습니다.');
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,1345 @@
+{% extends "base.html" %}
+
+{% block title %}수출견적서 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 style="color: #000000 !important;">
+            <i class="fas fa-file-export me-2"></i>
+            수출견적서
+        </h2>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- 요약 섹션 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                <h5 class="mb-0" style="color: #1a1a1a !important;">
+                    <i class="fas fa-chart-line me-2" style="color: #1a1a1a !important;"></i>
+                    요약
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label class="form-label"><strong>통화</strong></label>
+                        <div class="d-flex gap-3">
+                            <div>
+                                <span class="badge bg-primary">EURO</span>
+                                <div class="mt-2">
+                                    <strong id="totalSalesEUR">€ 0.00</strong>
+                                </div>
+                                <div class="mt-1">
+                                    <small class="text-muted">총 판매 금액</small>
+                                </div>
+                                <div class="mt-2">
+                                    <strong id="salesProfitEUR">€ 0.00</strong>
+                                </div>
+                                <div class="mt-1">
+                                    <small class="text-muted">판매 이익금</small>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge bg-danger">KRW</span>
+                                <div class="mt-2">
+                                    <strong id="totalSalesKRW">₩ 0</strong>
+                                </div>
+                                <div class="mt-1">
+                                    <small class="text-muted">총 판매 금액</small>
+                                </div>
+                                <div class="mt-2">
+                                    <strong id="salesProfitKRW">₩ 0</strong>
+                                </div>
+                                <div class="mt-1">
+                                    <small class="text-muted">판매 이익금</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <label class="form-label"><small>KRW 환율 (1 EUR = ? KRW)</small></label>
+                            <input type="number" class="form-control form-control-sm" id="krwExchangeRate" value="1690" step="1" min="1" onchange="updateExchangeRate()">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <label class="form-label"><strong>총 마진율</strong></label>
+                        <div>
+                            <h3 class="text-primary" id="totalMarginRate">0%</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 추가설정 섹션 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                <h5 class="mb-0" style="color: #1a1a1a !important;">
+                    <i class="fas fa-cog me-2" style="color: #1a1a1a !important;"></i>
+                    추가설정
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label"><strong>DAP 비용</strong></label>
+                    <div class="row">
+                        <div class="col-6">
+                            <input type="number" class="form-control" id="claimDAP" placeholder="청구 DAP" step="0.01" min="0" value="0" onchange="updateDAPSettings()" style="background-color: #ffcccc; border: 1px solid #ff0000;">
+                            <small class="text-muted">청구 DAP</small>
+                        </div>
+                        <div class="col-6">
+                            <input type="number" class="form-control" id="occurredDAP" placeholder="발생 DAP" step="0.01" min="0" value="0" onchange="updateDAPSettings()" style="background-color: #ffcccc; border: 1px solid #ff0000;">
+                            <small class="text-muted">발생 DAP</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><strong>할인율</strong></label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="discountRate" placeholder="할인율" step="1" min="0" max="50" value="0" onchange="updateDiscountSettings()" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, ''); if(this.value > 50) this.value = 50;" style="background-color: #ffcccc; border: 1px solid #ff0000;">
+                        <span class="input-group-text">%</span>
+                    </div>
+                    <div class="form-check form-check-inline mt-2">
+                        <input class="form-check-input" type="radio" name="discountType" id="discountIndividual" value="individual" checked onchange="updateDiscountSettings()">
+                        <label class="form-check-label" for="discountIndividual">개별</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="discountType" id="discountTotal" value="total" onchange="updateDiscountSettings()">
+                        <label class="form-check-label" for="discountTotal">합계</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><strong>부대비용</strong></label>
+                    <div class="row">
+                        <div class="col-6">
+                            <input type="number" class="form-control" id="incidentalExpenseIndividual" placeholder="개별" step="1" min="0" value="0" onchange="updateIncidentalExpense()" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, '');" style="background-color: #ffcccc; border: 1px solid #ff0000;">
+                            <small class="text-muted">개별</small>
+                        </div>
+                        <div class="col-6">
+                            <input type="number" class="form-control" id="incidentalExpenseTotal" placeholder="합계" step="0.01" min="0" value="0" readonly>
+                            <small class="text-muted">합계</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 제품 정보 테이블 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0" style="color: #1a1a1a !important;">
+                        <i class="fas fa-table me-2" style="color: #1a1a1a !important;"></i>
+                        제품코드, 제품명, 판매가, 원가
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary btn-sm" id="searchProductsBtn">
+                            <i class="fas fa-search me-1"></i>조회
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" id="downloadExcelBtn">
+                            <i class="fas fa-file-excel me-1"></i>엑셀 다운로드
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="overflow-x: visible !important;">
+                    <table class="table table-bordered table-hover" id="productTable" style="border-collapse: separate; border-spacing: 0; table-layout: auto; width: auto !important; margin: 0 auto !important;">
+                        <thead class="table-dark">
+                            <tr>
+                                <th colspan="3" style="background-color: #800020 !important; text-align: center !important; border-right: 2px solid #d0d0d0 !important; border-bottom: 3px solid #b0b0b0 !important; width: auto !important;">제품정보</th>
+                                <th colspan="5" style="background-color: #800020 !important; text-align: center !important; border-right: 2px solid #d0d0d0 !important; border-bottom: 3px solid #b0b0b0 !important; width: auto !important;">판매가</th>
+                                <th colspan="5" style="background-color: #800020 !important; text-align: center !important; border-bottom: 3px solid #b0b0b0 !important; width: auto !important;">원가</th>
+                            </tr>
+                            <tr>
+                                <th style="background-color: #800020 !important; border-right: 2px solid #d0d0d0 !important; width: auto !important; white-space: nowrap !important;">제품코드</th>
+                                <th style="background-color: #800020 !important; border-right: 2px solid #d0d0d0 !important; width: auto !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">제품명</th>
+                                <th style="background-color: #800020 !important; border-right: 2px solid #d0d0d0 !important; width: 80px !important; white-space: nowrap !important;">판매수량</th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;">프라이스북 가격</th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;">DAP 포함가 판매단가</th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;">할인가</th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;">프라이스북 합계</th>
+                                <th style="border-right: 2px solid #d0d0d0 !important; width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;">DAP포함 판매합산</th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;">제품원가</th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;">발생 DAP</th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;">부대비용</th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;">총원가합산</th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;">마진율</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productTableBody">
+                            <!-- 제품 행이 여기에 동적으로 추가됩니다 -->
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr style="color: red !important; font-weight: bold;">
+                                <th colspan="2" style="color: red !important; border-right: 2px solid #d0d0d0 !important;">합계수량</th>
+                                <th id="totalQuantity" style="color: red !important; border-right: 2px solid #d0d0d0 !important;">0</th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;"></th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;"></th>
+                                <th style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important;"></th>
+                                <th id="totalPriceBook" style="color: red !important; width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important;"></th>
+                                <th id="totalDAPSales" style="color: red !important; border-right: 2px solid #d0d0d0 !important; width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important;">0</th>
+                                <th id="totalProductCost" style="color: red !important; width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important;">0</th>
+                                <th id="totalOccurredDAP" style="color: red !important; width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important;">0</th>
+                                <th id="totalIncidentalExpense" style="color: red !important; width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important;">0</th>
+                                <th id="totalCost" style="color: red !important; width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important;"></th>
+                                <th id="totalMarginRateFooter" style="color: red !important; width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important;">0%</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DAP 포함가 판매단가 추가 모달 -->
+<div class="modal fade" id="addDAPPriceModal" tabindex="-1" aria-labelledby="addDAPPriceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-burgundy">
+                <h5 class="modal-title" id="addDAPPriceModalLabel" style="color: #1a1a1a !important;">DAP 포함가 판매단가 추가</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="modalDAPPrice" class="form-label">DAP 포함가 판매단가</label>
+                    <input type="number" class="form-control" id="modalDAPPrice" step="0.01" min="0" placeholder="DAP 포함가 판매단가 입력">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="confirmAddDAPPriceBtn">추가</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 제품 조회 모달 -->
+<div class="modal fade" id="searchProductsModal" tabindex="-1" aria-labelledby="searchProductsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-burgundy">
+                <h5 class="modal-title" id="searchProductsModalLabel" style="color: #1a1a1a !important;">제품 조회</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="productSearchInput" class="form-label">제품 검색</label>
+                    <input type="text" class="form-control" id="productSearchInput" placeholder="제품코드 또는 제품명으로 검색">
+                </div>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th width="50">
+                                    <input type="checkbox" id="selectAllProducts">
+                                </th>
+                                <th>제품코드</th>
+                                <th>제품명</th>
+                                <th>프라이스북 가격</th>
+                                <th class="hide-purchase-cost">제품원가</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productSearchResults">
+                            <!-- 검색 결과가 여기에 표시됩니다 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="productSearchStatus" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="addSelectedProductsBtn">선택한 제품 추가</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 인증 모달 -->
+<div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" data-bs-backdrop="static" data-bs-keyboard="false" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title" id="authModalLabel" style="color: #ffffff !important;">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    수출견적서 접근 인증
+                </h5>
+                <button type="button" class="btn-close btn-close-white" onclick="closeAuthModal()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <i class="fas fa-lock text-danger" style="font-size: 3rem;"></i>
+                    <h6 class="mt-3 text-muted">수출견적서 페이지 접근을 위해 인증이 필요합니다</h6>
+                </div>
+                <form id="authForm">
+                    <div class="mb-3">
+                        <label for="authUsername" class="form-label">
+                            <i class="fas fa-user me-2"></i>
+                            사용자 ID
+                        </label>
+                        <input type="text" class="form-control" id="authUsername" placeholder="사용자 ID를 입력하세요" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="authPassword" class="form-label">
+                            <i class="fas fa-key me-2"></i>
+                            비밀번호
+                        </label>
+                        <input type="password" class="form-control" id="authPassword" placeholder="비밀번호를 입력하세요" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAuthModal()">
+                    <i class="fas fa-times me-2"></i>
+                    닫기
+                </button>
+                <button type="button" class="btn btn-danger" onclick="processAuth()">
+                    <i class="fas fa-check me-2"></i>
+                    인증하기
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    /* 수출견적서(고객) 팝업에서 구매가 원가 숨김 처리 */
+    #searchProductsModal .hide-purchase-cost {
+        display: none !important;
+    }
+    /* 수량 입력 필드 테두리 완전 제거 및 가운데 정렬 */
+    input.quantity-input,
+    input.quantity-input:focus,
+    input.quantity-input:hover,
+    input.quantity-input:active,
+    input.quantity-input:focus-visible,
+    input.quantity-input:focus-within,
+    input[type="number"].quantity-input,
+    input[type="number"].quantity-input:focus,
+    input[type="number"].quantity-input:hover,
+    input[type="number"].quantity-input:active {
+        border: none !important;
+        border-width: 0 !important;
+        border-style: none !important;
+        border-color: transparent !important;
+        border-top: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        border-left: none !important;
+        outline: none !important;
+        outline-width: 0 !important;
+        outline-style: none !important;
+        outline-color: transparent !important;
+        outline-offset: 0 !important;
+        box-shadow: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        line-height: inherit !important;
+        display: inline-block !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: textfield !important;
+        font-size: 1rem !important;
+        font-family: inherit !important;
+        font-weight: inherit !important;
+        height: auto !important;
+    }
+    /* Bootstrap form-control 클래스 오버라이드 */
+    .form-control.quantity-input,
+    .form-control-sm.quantity-input,
+    input.form-control.quantity-input,
+    input.form-control-sm.quantity-input {
+        border: none !important;
+        border-width: 0 !important;
+        border-style: none !important;
+        border-color: transparent !important;
+        border-top: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        border-left: none !important;
+        outline: none !important;
+        outline-width: 0 !important;
+        box-shadow: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: textfield !important;
+    }
+    /* 수량 입력 필드가 있는 td 스타일 */
+    td input.quantity-input {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+</style>
+
+<script>
+let products = [];
+let krwExchangeRate = 1690;
+let currentEditingProductId = null;
+let isAuthenticated = false;
+
+// 환율 설정
+function updateExchangeRate() {
+    krwExchangeRate = parseFloat(document.getElementById('krwExchangeRate').value) || 1690;
+    updateSummary();
+}
+
+// DAP 설정 변경
+function updateDAPSettings() {
+    recalculateAllProducts();
+    renderTable();
+    updateSummary();
+}
+
+// 할인율 설정 변경
+function updateDiscountSettings() {
+    recalculateAllProducts();
+    renderTable();
+    updateSummary();
+}
+
+// 부대비용 설정 변경
+function updateIncidentalExpense() {
+    recalculateAllProducts();
+    renderTable();
+    updateSummary();
+    
+    // 합계 업데이트
+    const incidentalExpense = parseFloat(document.getElementById('incidentalExpenseIndividual').value) || 0;
+    const totalIncidentalExpense = incidentalExpense * products.reduce((sum, p) => sum + p.salesQuantity, 0);
+    document.getElementById('incidentalExpenseTotal').value = totalIncidentalExpense.toFixed(2);
+}
+
+// 모든 제품 값 재계산 함수 (엑셀 공식 기반)
+function recalculateAllProducts() {
+    const claimDAP = parseFloat(document.getElementById('claimDAP').value) || 0;
+    const occurredDAP = parseFloat(document.getElementById('occurredDAP').value) || 0;
+    const incidentalExpense = parseFloat(document.getElementById('incidentalExpenseIndividual').value) || 0;
+    const discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
+    const discountType = document.querySelector('input[name="discountType"]:checked').value;
+    
+    // 부대비용 설정
+    products.forEach(product => {
+        product.incidentalExpenseIndividual = incidentalExpense;
+    });
+    
+    // 엑셀 공식 기반 계산 로직
+    // 2단계: 할인가, 프라이스북 합계 계산
+    products.forEach(product => {
+        // 프라이스북 합계 = 프라이스북 가격 * 판매수량
+        product.priceBookTotal = product.priceBookPrice * product.salesQuantity;
+        
+        // 할인가 계산 (엑셀 공식: F12*(100-$H$5)%)
+        // F12 = 프라이스북 가격, $H$5 = 할인율
+        // 이미지 값: 990 = 1,100 * (100-10)% = 1,100 * 0.9
+        if (discountType === 'individual') {
+            product.discountedPrice = product.priceBookPrice * (100 - discountRate) / 100;
+        } else {
+            product.discountedPrice = product.priceBookPrice;
+        }
+    });
+    
+    // 프라이스북 합계 총합 계산 (DAP 포함가 판매단가 및 발생DAP 계산에 필요)
+    // 프라이스북 합계의 총합계수량 = 모든 제품의 프라이스북 합계의 총합
+    const totalPriceBookSum = products.reduce((sum, p) => sum + p.priceBookTotal, 0);
+    
+    // 1단계: 발생 DAP 계산
+    // 공식: 발생DAP = (프라이스북 합계 / 프라이스북 합계의 총합계수량 * 100%) * 발생DAP 금액
+    // 예시 P58200003 (프라이스북 단가 1396 기준):
+    //   - 판매수량 1일 경우:
+    //     * 프라이스북 합계 = 1396 * 1 = 1396
+    //     * 프라이스북 합계의 총합계수량 = 13,714
+    //     * 발생DAP 합계 = (1396/13,714*100%)*1500 = 153
+    //   - 판매수량 2일 경우 (프라이스북 합계 변경됨, 프라이스북 합계의 총합계값이 변경됨):
+    //     * 프라이스북 합계 = 1396 * 2 = 2792
+    //     * 프라이스북 합계의 총합계수량 = 15,110
+    //     * 발생DAP 합계 = (2792/15,110*100%)*1500 = 277
+    // 주의: 프라이스북 합계 = 프라이스북 가격(단가) * 판매수량
+    //       판매수량이 변경되면 프라이스북 합계와 프라이스북 합계의 총합계값이 변경되어 발생DAP도 자동 재계산됨
+    products.forEach(product => {
+        if (totalPriceBookSum > 0 && occurredDAP > 0) {
+            // 발생DAP 계산: (프라이스북 합계 / 프라이스북 합계의 총합계수량) * 발생DAP 금액
+            // 프라이스북 합계 = 프라이스북 가격(단가) * 판매수량
+            // 프라이스북 합계의 총합계수량 = 모든 제품의 프라이스북 합계 총합
+            const ratio = product.priceBookTotal / totalPriceBookSum;
+            // 발생DAP 합계 = 비율 * 발생DAP 금액 (테이블에 합계값으로 표시)
+            product.occurredDAP = ratio * occurredDAP;
+        } else {
+            product.occurredDAP = 0;
+        }
+    });
+    
+    // 총원가합산 계산 (발생DAP 계산 후)
+    // 공식: 총원가합산 = (제품원가 + 발생DAP + 부대비용) * 판매수량
+    // 예시 P58200003:
+    //   - 수량 1: (489 + 153 + 7) * 1 = 649
+    //   - 수량 2: (489 + 277 + 7) * 2 = 1546
+    // 주의: 발생DAP는 합계값을 사용 (153, 277)
+    products.forEach(product => {
+        // 총원가합산 = (제품원가 + 발생DAP 합계 + 부대비용) * 판매수량
+        product.totalCost = (product.productCost + product.occurredDAP + product.incidentalExpenseIndividual) * product.salesQuantity;
+    });
+    
+    // 3단계: DAP 포함가 판매단가, DAP포함 판매합산 계산
+    // 새로운 공식: ((프라이스북 합계 / 프라이스북 합계의 합계수량) * 100% * 청구DAP 금액) + 해당할인가
+    // 판매수량 1일 경우 예시: ((1396/13,714)*100%*1000)+1256 = 1,358
+    // 판매수량 2일 경우 예시: ((2792/15,110)*100%*1000)+1256 = 1,441
+    // 주의: 판매수량이 변경되면 프라이스북 합계와 전체 합계수량이 변경되어 DAP 포함가 판매단가도 자동 재계산됨
+    products.forEach(product => {
+        if (!product.manualDAPPrice) {
+            // DAP 포함가 판매단가 계산
+            // 공식: ((프라이스북 합계 / 프라이스북 합계의 합계수량) * 100% * 청구DAP 금액) + 해당할인가
+            // = ((프라이스북 합계 / 프라이스북 합계의 합계수량) * 청구DAP) + 할인가
+            // 프라이스북 합계 = 프라이스북 가격 * 판매수량
+            // 프라이스북 합계의 합계수량 = 모든 제품의 프라이스북 합계 총합
+            if (totalPriceBookSum > 0 && claimDAP > 0) {
+                // 비율 = 프라이스북 합계 / 프라이스북 합계의 합계수량
+                const ratio = product.priceBookTotal / totalPriceBookSum;
+                // DAP 추가액 = 비율 * 청구DAP
+                const dapAmount = ratio * claimDAP;
+                product.dapIncludedUnitPrice = product.discountedPrice + dapAmount;
+            } else {
+                // 초기값: 할인가와 동일
+                product.dapIncludedUnitPrice = product.discountedPrice;
+            }
+        }
+        
+        // DAP포함 판매합산 계산 (엑셀 공식: G12*E12)
+        // G12 = DAP 포함가 판매단가, E12 = 판매수량
+        product.dapIncludedSalesTotal = product.dapIncludedUnitPrice * product.salesQuantity;
+    });
+    
+    // 4단계: 마진율 계산
+    // 공식: 마진율 = (DAP포함가 판매단가 - (제품원가 + 발생DAP + 부대비용)) / DAP포함가 판매단가 * 100
+    // 예시 P58200003:
+    //   - 수량 1: (1358 - (489 + 153 + 7)) / 1358 * 100 = 52%
+    //   - 수량 2: (1441 - (489 + 277 + 7)) / 1441 * 100 = 46%
+    // 주의: 발생DAP는 합계값을 사용 (153, 277)
+    products.forEach(product => {
+        // 마진율 계산: (DAP포함가 판매단가 - (제품원가 + 발생DAP 합계 + 부대비용)) / DAP포함가 판매단가 * 100
+        // DAP포함가 판매단가는 단가, 발생DAP는 합계값 사용
+        const unitCost = product.productCost + product.occurredDAP + product.incidentalExpenseIndividual;
+        if (product.dapIncludedUnitPrice > 0) {
+            product.marginRate = ((product.dapIncludedUnitPrice - unitCost) / product.dapIncludedUnitPrice * 100).toFixed(0);
+        } else {
+            product.marginRate = 0;
+        }
+    });
+}
+
+// 제품 추가 (엑셀에서 로드된 데이터)
+function addProduct(productData) {
+    // 인증 확인
+    if (!isAuthenticated) {
+        alert('인증이 필요합니다.');
+        return;
+    }
+    
+    const productCode = productData.code || '';
+    const addQuantity = parseInt(productData.quantity) || 1;
+    
+    // 같은 제품코드가 이미 있는지 확인
+    const existingProduct = products.find(p => p.code === productCode);
+    
+    if (existingProduct) {
+        // 같은 제품코드가 있으면 수량만 증가
+        existingProduct.salesQuantity += addQuantity;
+    } else {
+        // 같은 제품코드가 없으면 새로 추가
+        const productId = Date.now() + Math.random();
+        const incidentalExpense = parseFloat(document.getElementById('incidentalExpenseIndividual').value) || 0;
+        
+        const priceBookPrice = parseFloat(productData.priceBookPrice) || 0;
+        const productCost = parseFloat(productData.productCost) || 0;
+        
+        const product = {
+            id: productId,
+            code: productCode,
+            name: productData.name || '',
+            salesQuantity: addQuantity,
+            priceBookPrice: priceBookPrice,
+            productCost: productCost,
+            manualDAPPrice: false, // 수동 입력 여부
+            dapIncludedUnitPrice: priceBookPrice, // 초기값, 재계산 시 업데이트됨
+            occurredDAP: 0, // 초기값, 재계산 시 업데이트됨
+            incidentalExpenseIndividual: incidentalExpense,
+            discountedPrice: priceBookPrice, // 초기값, 재계산 시 업데이트됨
+            priceBookTotal: priceBookPrice * addQuantity,
+            dapIncludedSalesTotal: priceBookPrice * addQuantity,
+            totalCost: (productCost + incidentalExpense) * addQuantity,
+            marginRate: 0 // 초기값, 재계산 시 업데이트됨
+        };
+        
+        products.push(product);
+    }
+    
+    // 제품 추가/수량 변경 후 전체 재계산 (엑셀 공식에 따라)
+    recalculateAllProducts();
+    renderTable();
+    updateSummary();
+}
+
+// 테이블 렌더링
+function renderTable() {
+    const tbody = document.getElementById('productTableBody');
+    tbody.innerHTML = '';
+    
+    products.forEach((product, index) => {
+        const row = document.createElement('tr');
+        row.className = index % 2 === 0 ? 'table-warning' : '';
+        row.setAttribute('data-product-id', product.id);
+        // 행 전체에 제품명 title 추가 (모든 셀에 마우스를 올리면 제품명이 보임)
+        const productNameForTitle = (product.name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        row.setAttribute('title', productNameForTitle);
+        row.innerHTML = `
+            <td style="border-right: 2px solid #d0d0d0 !important; width: auto !important; white-space: nowrap !important; vertical-align: middle !important; padding: 0.25rem !important;">
+                <div style="background-color: #ffcccc; padding: 3px; border-radius: 3px; display: flex; align-items: center; gap: 5px;">
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeProduct(${product.id})" style="flex-shrink: 0; padding: 0.125rem 0.25rem; font-size: 0.75rem;">
+                        <i class="fas fa-trash"></i> 삭제
+                    </button>
+                    <input type="text" class="form-control form-control-sm" value="${product.code}" 
+                           onchange="updateProductCode(${product.id}, this.value)" style="background-color: #ffcccc; border: 1px solid #ff0000; flex: 1; min-width: 0;">
+                </div>
+            </td>
+            <td style="border-right: 2px solid #d0d0d0 !important; width: auto !important; white-space: nowrap !important; overflow: visible !important; vertical-align: middle !important; padding: 0.25rem !important; position: relative;" 
+                title="${String(product.name || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}">
+                <div style="background-color: #ffffcc; padding: 3px; border-radius: 3px; position: relative; cursor: help;" 
+                     title="${String(product.name || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}"
+                     data-product-name="${String(product.name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}"
+                     onmouseenter="showProductNameTooltip(this)"
+                     onmouseleave="hideProductNameTooltip(this)">
+                    <input type="text" class="form-control form-control-sm" value="${product.name}" 
+                           onchange="updateProductName(${product.id}, this.value)" 
+                           style="background-color: #ffffcc; border: 1px solid #ffcc00; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; z-index: 1;">
+                    <div class="product-name-tooltip" style="position: absolute; background-color: #333; color: #fff; padding: 5px 8px; border-radius: 4px; white-space: nowrap; z-index: 1000; pointer-events: none; display: none; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); max-width: 400px; word-wrap: break-word; white-space: normal;"></div>
+                </div>
+            </td>
+            <td style="border-right: 2px solid #d0d0d0 !important; width: auto !important; white-space: nowrap !important; vertical-align: middle !important; padding: 0.25rem !important; text-align: center !important; display: table-cell !important;">
+                <input type="number" class="form-control form-control-sm quantity-input" value="${product.salesQuantity}" 
+                       onchange="updateProductQuantity(${product.id}, this.value)" step="1" min="1" max="1000" 
+                       style="width: 100% !important; border: none !important; border-width: 0 !important; border-style: none !important; border-color: transparent !important; border-top: none !important; border-right: none !important; border-bottom: none !important; border-left: none !important; outline: none !important; outline-width: 0 !important; outline-style: none !important; outline-color: transparent !important; outline-offset: 0 !important; background: transparent !important; background-color: transparent !important; text-align: center !important; padding: 0 !important; font-size: 1rem !important; font-family: inherit !important; font-weight: inherit !important; box-shadow: none !important; -webkit-box-shadow: none !important; -moz-box-shadow: none !important; vertical-align: middle !important; line-height: inherit !important; margin: 0 !important; appearance: none !important; -webkit-appearance: none !important; -moz-appearance: textfield !important; height: auto !important;">
+            </td>
+            <td style="width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important; vertical-align: middle !important;">${Math.round(product.priceBookPrice).toLocaleString()}</td>
+            <td style="width: auto !important; white-space: nowrap !important; padding: 0.25rem !important; vertical-align: middle !important; text-align: right !important;">
+                ${Math.round(product.dapIncludedUnitPrice).toLocaleString()}
+            </td>
+            <td style="width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important; vertical-align: middle !important;">${Math.round(product.discountedPrice).toLocaleString()}</td>
+            <td style="width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important; vertical-align: middle !important;">${Math.round(product.priceBookTotal).toLocaleString()}</td>
+            <td style="border-right: 2px solid #d0d0d0 !important; width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important; vertical-align: middle !important;">${Math.round(product.dapIncludedSalesTotal).toLocaleString()}</td>
+            <td style="width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important; vertical-align: middle !important;">${Math.round(product.productCost).toLocaleString()}</td>
+            <td style="width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important; vertical-align: middle !important;">${Math.round(product.occurredDAP).toLocaleString()}</td>
+            <td style="width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important; vertical-align: middle !important;">${Math.round(product.incidentalExpenseIndividual).toLocaleString()}</td>
+            <td style="width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important; vertical-align: middle !important;">${Math.round(product.totalCost).toLocaleString()}</td>
+            <td style="width: auto !important; white-space: nowrap !important; text-align: right !important; padding: 0.25rem !important; vertical-align: middle !important;">${product.marginRate}%</td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    // 합계 계산
+    const totalQuantity = products.reduce((sum, p) => sum + p.salesQuantity, 0);
+    const totalPriceBook = products.reduce((sum, p) => sum + p.priceBookTotal, 0);
+    const totalDAPSales = products.reduce((sum, p) => sum + p.dapIncludedSalesTotal, 0);
+    // 제품원가 합계 = 제품원가 단가들의 합계 (수량과 무관하게 고정)
+    const totalProductCost = products.reduce((sum, p) => sum + p.productCost, 0);
+    // 발생 DAP 합계 = 발생 DAP 합계들의 총합 (이미 합계값으로 저장되어 있음)
+    const totalOccurredDAP = products.reduce((sum, p) => sum + p.occurredDAP, 0);
+    // 부대비용 합계 = 부대비용 * 판매수량
+    const totalIncidentalExpense = products.reduce((sum, p) => sum + (p.incidentalExpenseIndividual * p.salesQuantity), 0);
+    const totalCost = products.reduce((sum, p) => sum + p.totalCost, 0);
+    // 마진율 합계 = (DAP포함 판매합산 총합 - 총원가합산 총합) / DAP포함 판매합산 총합 * 100
+    // 예시: 수량 1일 경우 (13,343 - 6,449) / 13,343 * 100 = 51.6%
+    //       수량 2일 경우 (14,784 - 7,223) / 14,784 * 100 = 51.1%
+    const totalMarginRate = totalDAPSales > 0 ? ((totalDAPSales - totalCost) / totalDAPSales * 100).toFixed(1) : 0;
+    
+    document.getElementById('totalQuantity').textContent = totalQuantity;
+    document.getElementById('totalPriceBook').textContent = Math.round(totalPriceBook).toLocaleString();
+    document.getElementById('totalDAPSales').textContent = Math.round(totalDAPSales).toLocaleString();
+    document.getElementById('totalProductCost').textContent = Math.round(totalProductCost).toLocaleString();
+    document.getElementById('totalOccurredDAP').textContent = Math.round(totalOccurredDAP).toLocaleString();
+    document.getElementById('totalIncidentalExpense').textContent = Math.round(totalIncidentalExpense).toLocaleString();
+    document.getElementById('totalCost').textContent = Math.round(totalCost).toLocaleString();
+    document.getElementById('totalMarginRateFooter').textContent = totalMarginRate + '%';
+}
+
+// 요약 업데이트
+function updateSummary() {
+    const totalDAPSales = products.reduce((sum, p) => sum + p.dapIncludedSalesTotal, 0);
+    const totalCost = products.reduce((sum, p) => sum + p.totalCost, 0);
+    // 판매이익금 = DAP포함 판매합산 총합계 - 총원가합산 총합계
+    // 예시: 수량 1일 경우 13,343 - 6,449 = 6,894
+    //       수량 2일 경우 14,949 - 7,371 = 7,578
+    const salesProfit = totalDAPSales - totalCost;
+    // 마진율 합계 = (DAP포함 판매합산 총합 - 총원가합산 총합) / DAP포함 판매합산 총합 * 100
+    // 예시: 수량 1일 경우 (13,343 - 6,449) / 13,343 * 100 = 51.6%
+    //       수량 2일 경우 (14,784 - 7,223) / 14,784 * 100 = 51.1%
+    const totalMarginRate = totalDAPSales > 0 ? ((salesProfit / totalDAPSales) * 100).toFixed(1) : 0;
+    
+    // EUR 표시
+    document.getElementById('totalSalesEUR').textContent = `€ ${totalDAPSales.toFixed(2)}`;
+    document.getElementById('salesProfitEUR').textContent = `€ ${salesProfit.toFixed(2)}`;
+    
+    // KRW 표시 (소수점 없이 정수로 표시)
+    const totalSalesKRW = Math.round(totalDAPSales * krwExchangeRate);
+    const salesProfitKRW = Math.round(salesProfit * krwExchangeRate);
+    document.getElementById('totalSalesKRW').textContent = `₩ ${totalSalesKRW.toLocaleString()}`;
+    document.getElementById('salesProfitKRW').textContent = `₩ ${salesProfitKRW.toLocaleString()}`;
+    
+    // 총 마진율
+    document.getElementById('totalMarginRate').textContent = totalMarginRate + '%';
+}
+
+// 제품 업데이트 함수들
+function updateProductCode(productId, code) {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        product.code = code;
+        // 제품코드 변경 시 재계산 (필요시)
+        renderTable();
+    }
+}
+
+function showProductNameTooltip(element) {
+    const productName = element.getAttribute('data-product-name') || element.getAttribute('title') || '';
+    if (!productName) return;
+    const tooltip = element.querySelector('.product-name-tooltip');
+    if (tooltip) {
+        // HTML 엔티티 디코딩
+        const decodedName = productName.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        tooltip.textContent = decodedName;
+        tooltip.style.display = 'block';
+        
+        // 툴팁 위치 조정 (다음 프레임에서 실행하여 크기 계산)
+        setTimeout(() => {
+            const rect = element.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // 기본 위치: 요소 아래
+            let top = rect.bottom + 5;
+            let left = rect.left;
+            
+            // 화면 오른쪽을 벗어나면 왼쪽으로 조정
+            if (left + tooltipRect.width > viewportWidth) {
+                left = viewportWidth - tooltipRect.width - 10;
+            }
+            
+            // 화면 아래를 벗어나면 위로 조정
+            if (top + tooltipRect.height > viewportHeight) {
+                top = rect.top - tooltipRect.height - 5;
+            }
+            
+            tooltip.style.top = (top - rect.top) + 'px';
+            tooltip.style.left = (left - rect.left) + 'px';
+        }, 0);
+    }
+}
+
+function hideProductNameTooltip(element) {
+    const tooltip = element.querySelector('.product-name-tooltip');
+    if (tooltip) {
+        tooltip.style.display = 'none';
+    }
+}
+
+function updateProductName(productId, name) {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        product.name = name;
+        // 제품명 변경 시 해당 행의 title과 모든 관련 요소의 title도 업데이트
+        const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+        if (row) {
+            // 제품명을 안전하게 이스케이프
+            const productNameForTitle = String(name || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            // 행 전체의 title 업데이트
+            row.setAttribute('title', productNameForTitle);
+            // 제품명 셀(td)의 title 업데이트
+            const nameCell = row.querySelector('td:nth-child(2)');
+            if (nameCell) {
+                nameCell.setAttribute('title', name || '');
+            }
+            // 제품명 div의 title 업데이트
+            const nameDiv = row.querySelector('td:nth-child(2) > div');
+            if (nameDiv) {
+                const escapedName = String(name || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                nameDiv.setAttribute('title', escapedName);
+                nameDiv.setAttribute('data-product-name', String(name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;'));
+                // 툴팁 div의 내용도 업데이트
+                const tooltip = nameDiv.querySelector('.product-name-tooltip');
+                if (tooltip) {
+                    tooltip.textContent = name || '';
+                }
+            }
+            // 제품명 input의 title 업데이트
+            const nameInput = row.querySelector('td:nth-child(2) input');
+            if (nameInput) {
+                nameInput.setAttribute('title', name || '');
+                nameInput.value = name;
+            }
+        }
+    }
+}
+
+function updateProductQuantity(productId, quantity) {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        product.salesQuantity = parseInt(quantity) || 1;
+        // 수량 변경 시 전체 재계산 (엑셀 공식에 따라)
+        recalculateAllProducts();
+        renderTable();
+        updateSummary();
+        
+        // 부대비용 합계 업데이트
+        const incidentalExpense = parseFloat(document.getElementById('incidentalExpenseIndividual').value) || 0;
+        const totalIncidentalExpense = incidentalExpense * products.reduce((sum, p) => sum + p.salesQuantity, 0);
+        document.getElementById('incidentalExpenseTotal').value = totalIncidentalExpense.toFixed(2);
+    }
+}
+
+function removeProduct(productId) {
+    products = products.filter(p => p.id !== productId);
+    renderTable();
+    updateSummary();
+}
+
+// DAP 포함가 판매단가 모달 열기
+function openDAPPriceModal(productId) {
+    currentEditingProductId = productId;
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        document.getElementById('modalDAPPrice').value = product.dapIncludedUnitPrice.toFixed(2);
+    }
+    const modal = new bootstrap.Modal(document.getElementById('addDAPPriceModal'));
+    modal.show();
+}
+
+// DAP 포함가 판매단가 확인
+document.getElementById('confirmAddDAPPriceBtn').addEventListener('click', function() {
+    if (currentEditingProductId === null) return;
+    
+    const dapPrice = parseFloat(document.getElementById('modalDAPPrice').value) || 0;
+    const product = products.find(p => p.id === currentEditingProductId);
+    
+    if (product) {
+        product.dapIncludedUnitPrice = dapPrice;
+        product.manualDAPPrice = true; // 수동 입력으로 표시
+        
+        // DAP 포함가 판매단가 변경 시에도 발생 DAP는 재계산 필요
+        // 발생 DAP와 총원가합산이 변경되므로 전체 재계산 필요
+        recalculateAllProducts();
+        renderTable();
+        updateSummary();
+    }
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('addDAPPriceModal'));
+    modal.hide();
+    currentEditingProductId = null;
+});
+
+// 엑셀 업로드 후 데이터 로드
+function loadProductsFromExcel(data) {
+    products = [];
+    if (data && data.products) {
+        data.products.forEach(productData => {
+            addProduct(productData);
+        });
+    }
+    renderTable();
+    updateSummary();
+}
+
+// 인증 모달 닫기 함수 (메인 화면으로 이동)
+function closeAuthModal() {
+    // 모달 닫기
+    const authModal = bootstrap.Modal.getInstance(document.getElementById('authModal'));
+    if (authModal) {
+        authModal.hide();
+    }
+    
+    // 메인 화면으로 이동
+    window.location.href = '/';
+}
+
+// 인증 처리 함수
+function processAuth() {
+    const username = document.getElementById('authUsername').value.trim();
+    const password = document.getElementById('authPassword').value.trim();
+    
+    console.log('=== 수출견적서 인증 처리 ===');
+    console.log('Username:', username);
+    console.log('Password:', password);
+    
+    // 입력 검증
+    if (!username || !password) {
+        alert('ID와 비밀번호를 모두 입력해주세요.');
+        return;
+    }
+    
+    // 인증 확인 (id = trade, pw = trade@123)
+    if (username !== 'trade' || password !== 'trade@123') {
+        // 오류 애니메이션
+        document.getElementById('authUsername').classList.add('is-invalid');
+        document.getElementById('authPassword').classList.add('is-invalid');
+        
+        setTimeout(() => {
+            document.getElementById('authUsername').classList.remove('is-invalid');
+            document.getElementById('authPassword').classList.remove('is-invalid');
+        }, 2000);
+        
+        alert('인증에 실패했습니다. ID와 비밀번호를 확인해주세요.');
+        document.getElementById('authPassword').value = '';
+        document.getElementById('authPassword').focus();
+        return;
+    }
+    
+    // 인증 성공
+    isAuthenticated = true;
+    console.log('인증 성공');
+    
+    // 인증 모달 닫기
+    const authModal = bootstrap.Modal.getInstance(document.getElementById('authModal'));
+    if (authModal) {
+        authModal.hide();
+    }
+    
+    // 페이지 활성화 및 데이터 로드
+    setTimeout(() => {
+        document.body.style.pointerEvents = 'auto';
+        document.body.classList.remove('modal-open');
+        
+        // 모든 모달 배경 제거
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // 저장된 데이터 로드
+        const savedData = sessionStorage.getItem('exportQuotationData');
+        if (savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                if (data.products && data.products.length > 0) {
+                    loadProductsFromExcel(data);
+                    sessionStorage.removeItem('exportQuotationData'); // 사용 후 삭제
+                }
+            } catch (e) {
+                console.error('데이터 로드 오류:', e);
+            }
+        }
+    }, 300);
+}
+
+// 페이지 로드 시 sessionStorage에서 데이터 확인
+document.addEventListener('DOMContentLoaded', function() {
+    // 페이지 로드 시 인증 모달 표시
+    const authModalElement = document.getElementById('authModal');
+    if (authModalElement) {
+        // 페이지 비활성화
+        document.body.style.pointerEvents = 'none';
+        
+        // 모달이 열릴 때 aria-hidden 제거
+        authModalElement.addEventListener('show.bs.modal', function() {
+            authModalElement.removeAttribute('aria-hidden');
+        });
+        
+        // 모달이 닫힐 때 포커스 제거 및 aria-hidden 설정
+        authModalElement.addEventListener('hidden.bs.modal', function() {
+            // 모달 내부의 모든 포커스 가능한 요소에서 포커스 제거
+            const focusableElements = authModalElement.querySelectorAll('button, input, select, textarea, a');
+            focusableElements.forEach(element => {
+                if (element === document.activeElement) {
+                    element.blur();
+                }
+            });
+            
+            // aria-hidden 속성 설정
+            authModalElement.setAttribute('aria-hidden', 'true');
+        });
+        
+        // 인증 모달 표시
+        const authModal = new bootstrap.Modal(authModalElement, {
+            backdrop: 'static',
+            keyboard: false
+        });
+        authModal.show();
+        
+        // 모달이 완전히 표시된 후 포커스 설정
+        authModalElement.addEventListener('shown.bs.modal', function() {
+            setTimeout(() => {
+                const usernameInput = document.getElementById('authUsername');
+                if (usernameInput) {
+                    usernameInput.focus();
+                }
+            }, 100);
+        });
+    }
+    
+    // Enter 키로 인증 처리
+    const authUsername = document.getElementById('authUsername');
+    const authPassword = document.getElementById('authPassword');
+    
+    if (authUsername && authPassword) {
+        authUsername.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                authPassword.focus();
+            }
+        });
+        
+        authPassword.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                processAuth();
+            }
+        });
+    }
+    
+    // 인증 모달이 닫힐 때 처리
+    if (authModalElement) {
+        authModalElement.addEventListener('hidden.bs.modal', function() {
+            if (!isAuthenticated) {
+                // 인증되지 않은 경우 메인 페이지로 돌아가기
+                window.location.href = '/';
+            }
+        });
+    }
+    
+    // 모달 이벤트 처리
+    const searchProductsModal = document.getElementById('searchProductsModal');
+    if (searchProductsModal) {
+        // 모달이 닫힐 때 포커스 제거 및 aria-hidden 처리
+        searchProductsModal.addEventListener('hidden.bs.modal', function() {
+            // 모달 내부의 모든 포커스 가능한 요소에서 포커스 제거
+            const focusableElements = searchProductsModal.querySelectorAll('button, input, select, textarea, a');
+            focusableElements.forEach(element => {
+                if (element === document.activeElement) {
+                    element.blur();
+                }
+            });
+            
+            // aria-hidden 속성 확인 및 설정
+            searchProductsModal.setAttribute('aria-hidden', 'true');
+        });
+        
+        // 모달이 열릴 때 aria-hidden 제거
+        searchProductsModal.addEventListener('show.bs.modal', function() {
+            searchProductsModal.removeAttribute('aria-hidden');
+        });
+    }
+    
+    // 조회 버튼 클릭 이벤트 (인증 후에만 작동)
+    document.getElementById('searchProductsBtn').addEventListener('click', function() {
+        if (!isAuthenticated) {
+            alert('인증이 필요합니다.');
+            return;
+        }
+        const modal = new bootstrap.Modal(document.getElementById('searchProductsModal'));
+        modal.show();
+        loadProductList();
+    });
+    
+    // 엑셀 다운로드 버튼 클릭 이벤트 (인증 후에만 작동)
+    document.getElementById('downloadExcelBtn').addEventListener('click', function() {
+        if (!isAuthenticated) {
+            alert('인증이 필요합니다.');
+            return;
+        }
+        downloadExportQuotationExcel();
+    });
+    
+    // 제품 검색 입력 이벤트
+    document.getElementById('productSearchInput').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.trim();
+        loadProductList(searchTerm);
+    });
+    
+    // 전체 선택 체크박스
+    document.getElementById('selectAllProducts').addEventListener('change', function(e) {
+        const checkboxes = document.querySelectorAll('#productSearchResults input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+        });
+    });
+    
+    // 선택한 제품 추가 버튼
+    document.getElementById('addSelectedProductsBtn').addEventListener('click', function() {
+        const checkboxes = document.querySelectorAll('#productSearchResults input[type="checkbox"]:checked');
+        const selectedProducts = [];
+        
+        checkboxes.forEach(checkbox => {
+            const productId = checkbox.value;
+            const row = checkbox.closest('tr');
+            const code = row.querySelector('td:nth-child(2)').textContent.trim();
+            const name = row.querySelector('td:nth-child(3)').textContent.trim();
+            const priceBookPrice = parseFloat(row.querySelector('td:nth-child(4)').textContent.trim()) || 0;
+            const productCost = parseFloat(row.querySelector('td:nth-child(5)').textContent.trim()) || 0;
+            
+            selectedProducts.push({
+                code: code,
+                name: name,
+                priceBookPrice: priceBookPrice,
+                quantity: 1,
+                productCost: productCost
+            });
+        });
+        
+        if (selectedProducts.length === 0) {
+            alert('추가할 제품을 선택해주세요.');
+            return;
+        }
+        
+        // 선택한 제품들을 테이블에 추가
+        selectedProducts.forEach(productData => {
+            addProduct(productData);
+        });
+        
+        // 모달 닫기 전에 포커스 제거
+        const addBtn = document.getElementById('addSelectedProductsBtn');
+        if (addBtn && addBtn === document.activeElement) {
+            addBtn.blur();
+        }
+        
+        // 모달 닫기
+        const modal = bootstrap.Modal.getInstance(document.getElementById('searchProductsModal'));
+        if (modal) {
+            modal.hide();
+        }
+    });
+});
+
+// 엑셀 다운로드 함수
+function downloadExportQuotationExcel() {
+    if (!products || products.length === 0) {
+        alert('다운로드할 제품이 없습니다. 제품을 먼저 추가해주세요.');
+        return;
+    }
+    
+    // 현재 설정값 가져오기
+    const claimDAP = parseFloat(document.getElementById('claimDAP').value) || 0;
+    const occurredDAP = parseFloat(document.getElementById('occurredDAP').value) || 0;
+    const discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
+    const incidentalExpense = parseFloat(document.getElementById('incidentalExpenseIndividual').value) || 0;
+    const krwExchangeRate = parseFloat(document.getElementById('krwExchangeRate').value) || 1690;
+    
+    // 제품 데이터 준비
+    const exportData = {
+        products: products.map(product => ({
+            code: product.code,
+            name: product.name,
+            salesQuantity: product.salesQuantity,
+            priceBookPrice: product.priceBookPrice,
+            discountedPrice: product.discountedPrice,
+            priceBookTotal: product.priceBookTotal,
+            dapIncludedUnitPrice: product.dapIncludedUnitPrice,
+            dapIncludedSalesTotal: product.dapIncludedSalesTotal,
+            productCost: product.productCost,
+            occurredDAP: product.occurredDAP,
+            incidentalExpenseIndividual: product.incidentalExpenseIndividual,
+            totalCost: product.totalCost,
+            marginRate: product.marginRate
+        })),
+        settings: {
+            claimDAP: claimDAP,
+            occurredDAP: occurredDAP,
+            discountRate: discountRate,
+            incidentalExpense: incidentalExpense,
+            krwExchangeRate: krwExchangeRate
+        },
+        totals: {
+            totalQuantity: products.reduce((sum, p) => sum + p.salesQuantity, 0),
+            totalPriceBook: products.reduce((sum, p) => sum + p.priceBookTotal, 0),
+            totalDAPSales: products.reduce((sum, p) => sum + p.dapIncludedSalesTotal, 0),
+            totalProductCost: products.reduce((sum, p) => sum + p.productCost, 0),
+            totalOccurredDAP: products.reduce((sum, p) => sum + p.occurredDAP, 0),
+            totalIncidentalExpense: products.reduce((sum, p) => sum + (p.incidentalExpenseIndividual * p.salesQuantity), 0),
+            totalCost: products.reduce((sum, p) => sum + p.totalCost, 0),
+            salesProfit: products.reduce((sum, p) => sum + p.dapIncludedSalesTotal, 0) - products.reduce((sum, p) => sum + p.totalCost, 0),
+            totalMarginRate: (() => {
+                const totalDAPSales = products.reduce((sum, p) => sum + p.dapIncludedSalesTotal, 0);
+                const totalCost = products.reduce((sum, p) => sum + p.totalCost, 0);
+                return totalDAPSales > 0 ? ((totalDAPSales - totalCost) / totalDAPSales * 100).toFixed(1) : 0;
+            })()
+        }
+    };
+    
+    // 버튼 비활성화 및 로딩 표시
+    const downloadBtn = document.getElementById('downloadExcelBtn');
+    const originalText = downloadBtn ? downloadBtn.innerHTML : '';
+    if (downloadBtn) {
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>다운로드 중...';
+    }
+    
+    console.log('=== 엑셀 다운로드 시작 ===');
+    console.log('전송할 제품 수:', exportData.products.length);
+    
+    // 엑셀 생성 API 호출
+    fetch('/api/export_quotation/download_excel', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(exportData)
+    })
+    .then(response => {
+        console.log('=== 서버 응답 확인 ===');
+        console.log('응답 상태:', response.status);
+        console.log('응답 OK:', response.ok);
+        
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('서버 오류 응답:', text);
+                let errorMsg = `서버 오류 (${response.status})`;
+                try {
+                    const errorData = JSON.parse(text);
+                    if (errorData.error) {
+                        errorMsg += ': ' + errorData.error;
+                    }
+                } catch (e) {
+                    errorMsg += ': ' + text.substring(0, 200);
+                }
+                throw new Error(errorMsg);
+            });
+        }
+        
+        // 응답을 blob으로 변환
+        console.log('응답을 blob으로 변환 중...');
+        return response.blob();
+    })
+    .then(blob => {
+        console.log('=== Blob 생성 완료 ===');
+        console.log('Blob 타입:', blob.type);
+        console.log('Blob 크기:', blob.size, 'bytes');
+        
+        if (!blob || blob.size === 0) {
+            throw new Error('다운로드할 파일이 비어있습니다.');
+        }
+        
+        // Blob을 파일로 다운로드
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        a.download = `수출견적서_${dateStr}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        
+        // 약간의 지연 후 정리
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            console.log('파일 다운로드 완료');
+        }, 100);
+        
+        // 버튼 복원
+        if (downloadBtn) {
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('=== 엑셀 다운로드 오류 ===');
+        console.error('오류:', error);
+        console.error('오류 메시지:', error.message);
+        console.error('오류 스택:', error.stack);
+        
+        // 상세한 오류 메시지 표시
+        let errorMessage = '엑셀 다운로드 중 오류가 발생했습니다.\n\n';
+        if (error.message) {
+            if (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_RESET') || error.message.includes('NetworkError')) {
+                errorMessage += '서버 연결이 끊어졌습니다.\n';
+                errorMessage += '서버가 응답하지 않거나 파일 생성 중 오류가 발생했을 수 있습니다.\n\n';
+                errorMessage += '다음을 확인해주세요:\n';
+                errorMessage += '1. 서버가 정상적으로 실행 중인지 확인\n';
+                errorMessage += '2. 제품 데이터가 너무 많은지 확인\n';
+                errorMessage += '3. 잠시 후 다시 시도';
+            } else {
+                errorMessage += '오류 내용: ' + error.message;
+            }
+        } else {
+            errorMessage += '알 수 없는 오류가 발생했습니다.';
+        }
+        errorMessage += '\n\n브라우저 콘솔(F12)에서 자세한 오류를 확인할 수 있습니다.';
+        alert(errorMessage);
+        
+        // 버튼 복원
+        if (downloadBtn) {
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = originalText;
+        }
+    });
+}
+
+// 제품 목록 로드
+function loadProductList(searchTerm = '') {
+    const statusDiv = document.getElementById('productSearchStatus');
+    const resultsTbody = document.getElementById('productSearchResults');
+    
+    statusDiv.innerHTML = '<div class="alert alert-info">제품 목록을 불러오는 중...</div>';
+    resultsTbody.innerHTML = '';
+    
+    const url = searchTerm ? `/api/export_quotation/products?search=${encodeURIComponent(searchTerm)}` : '/api/export_quotation/products';
+    
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            statusDiv.innerHTML = '';
+            
+            if (data.success) {
+                if (data.products && data.products.length > 0) {
+                    let html = '';
+                    data.products.forEach(product => {
+                        html += `
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input" value="${product.id}">
+                                </td>
+                                <td>${product.code || ''}</td>
+                                <td>${product.name || ''}</td>
+                                <td>${(product.priceBookPrice || 0).toFixed(2)}</td>
+                                <td class="hide-purchase-cost">${(product.productCost || 0).toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
+                    resultsTbody.innerHTML = html;
+                } else {
+                    resultsTbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">등록된 제품이 없습니다.</td>
+                        </tr>
+                    `;
+                }
+            } else {
+                statusDiv.innerHTML = `<div class="alert alert-danger">오류: ${data.error || '알 수 없는 오류가 발생했습니다.'}</div>`;
+                resultsTbody.innerHTML = '';
+            }
+        })
+        .catch(error => {
+            console.error('제품 목록 로드 오류:', error);
+            statusDiv.innerHTML = `<div class="alert alert-danger">제품 목록을 불러오는 중 오류가 발생했습니다: ${error.message}</div>`;
+            resultsTbody.innerHTML = '';
+        });
+}
+</script>
+{% endblock %}
+

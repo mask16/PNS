@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "hour": 2,
+  "minute": 0,
+  "retention_days": 30,
+  "last_success_at": "2026-09-30 02:00:08",
+  "last_file": "daily/pns_daily_20260930.db",
+  "last_error": null,
+  "last_run_date": "2026-09-30"
+}

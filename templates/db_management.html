@@ -1,0 +1,580 @@
+{% extends "base.html" %}
+
+{% block title %}데이터베이스 관리 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h2>
+                    <i class="fas fa-database me-2"></i>
+                    데이터베이스 관리
+                </h2>
+                <p class="text-muted">웰딩 옵션 데이터베이스의 테이블과 필드를 관리합니다. (관리자 권한 필요)</p>
+            </div>
+            <button class="btn btn-outline-danger btn-sm" onclick="handleLogout()">
+                <i class="fas fa-sign-out-alt me-1"></i>로그아웃
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 데이터베이스 현황 대시보드 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-burgundy">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    데이터베이스 현황
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row" id="dbDashboard">
+                    <div class="col-12 text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">로딩 중...</span>
+                        </div>
+                        <p class="mt-2">현황을 불러오는 중...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- 테이블 선택 -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-burgundy">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>
+                    테이블 선택
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="tableSelect" class="form-label">테이블 목록</label>
+                    <select class="form-select" id="tableSelect" onchange="loadTableInfo()">
+                        <option value="">테이블을 선택하세요</option>
+                    </select>
+                </div>
+                <button class="btn btn-outline-primary w-100" onclick="refreshDashboard()">
+                    <i class="fas fa-sync-alt me-1"></i>현황 새로고침
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 테이블 정보 -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-info">
+                <h5 class="mb-0">
+                    <i class="fas fa-columns me-2"></i>
+                    테이블 필드 정보
+                </h5>
+            </div>
+            <div class="card-body" id="tableInfoContent">
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <p>테이블을 선택하여 필드 정보를 확인하세요</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 필드 추가 섹션 -->
+<div class="row mt-4" id="addColumnSection" style="display: none;">
+    <div class="col-lg-6">
+        <div class="card border-success">
+            <div class="card-header bg-success">
+                <h5 class="mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    새로운 필드 추가
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="addColumnForm" onsubmit="addColumn(event)">
+                    <div class="mb-3">
+                        <label for="columnName" class="form-label">필드 이름</label>
+                        <input type="text" class="form-control" id="columnName" placeholder="필드 이름을 입력하세요" required>
+                        <small class="text-muted">영문, 숫자, 언더스코어만 사용 가능</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="columnType" class="form-label">필드 타입</label>
+                        <select class="form-select" id="columnType">
+                            <option value="TEXT" selected>TEXT (텍스트)</option>
+                            <option value="INTEGER">INTEGER (정수)</option>
+                            <option value="REAL">REAL (실수)</option>
+                            <option value="BLOB">BLOB (바이너리)</option>
+                            <option value="NULL">NULL</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="addUsername" class="form-label">관리자 사용자명</label>
+                        <input type="text" class="form-control" id="addUsername" placeholder="admin" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="addPassword" class="form-label">관리자 비밀번호</label>
+                        <input type="password" class="form-control" id="addPassword" placeholder="••••••" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-plus me-1"></i>필드 추가
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 인증 모달 -->
+<div class="modal fade" id="authModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">
+                    <i class="fas fa-lock me-2"></i>
+                    관리자 인증
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    데이터베이스 변경 작업입니다. 관리자 권한이 필요합니다.
+                </div>
+
+                <div class="mb-3">
+                    <label for="authUsername" class="form-label">사용자명</label>
+                    <input type="text" class="form-control" id="authUsername" placeholder="admin">
+                </div>
+
+                <div class="mb-3">
+                    <label for="authPassword" class="form-label">비밀번호</label>
+                    <input type="password" class="form-control" id="authPassword" placeholder="••••••">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-warning" onclick="confirmAction()">확인</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentTable = '';
+let pendingAction = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    refreshTables();
+    refreshDashboard(); // Initial dashboard load
+});
+
+function refreshTables() {
+    fetch('/api/db/tables')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const select = document.getElementById('tableSelect');
+                select.innerHTML = '<option value="">테이블을 선택하세요</option>';
+                
+                data.tables.forEach(table => {
+                    const option = document.createElement('option');
+                    option.value = table;
+                    option.textContent = table;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            alert('테이블 목록 로드 실패: ' + error.message);
+        });
+}
+
+function refreshDashboard() {
+    fetch('/api/db/dashboard_info')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const dbDashboard = document.getElementById('dbDashboard');
+                
+                // 저장된 코드 목록 HTML
+                let savedCodesHtml = '';
+                if (data.saved_codes_count > 0) {
+                    savedCodesHtml = `
+                        <div class="col-12 mt-4">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-list-alt me-2"></i>
+                                        저장된 코드 목록 (${data.saved_codes_count}개)
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>코드</th>
+                                                    <th>생성일시</th>
+                                                    <th>선택된 옵션</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${data.saved_codes.map(code => `
+                                                    <tr>
+                                                        <td>
+                                                            <strong><code>${code.code}</code></strong>
+                                                        </td>
+                                                        <td>${code.created_at}</td>
+                                                        <td>
+                                                            <small class="text-muted">
+                                                                ${Object.keys(code.options).length}개 항목 선택됨
+                                                            </small>
+                                                        </td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    savedCodesHtml = `
+                        <div class="col-12 mt-4">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                저장된 코드가 없습니다. 옵션 선택 페이지에서 코드를 생성해보세요.
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // 모든 테이블 정보 표시
+                let tablesHtml = '';
+                if (data.table_details && data.table_details.length > 0) {
+                    tablesHtml = `
+                        <div class="col-12 mt-4">
+                            <div class="card border-info">
+                                <div class="card-header bg-info">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-table me-2"></i>
+                                        데이터베이스 테이블 상세정보 (${data.table_count}개)
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="accordion" id="tablesAccordion">
+                                        ${data.table_details.map((table, index) => `
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button ${index !== 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#table${index}">
+                                                        <strong><i class="fas fa-table me-2"></i>${table.name}</strong>
+                                                        <span class="ms-auto me-2">
+                                                            <span class="badge bg-burgundy">${table.row_count} 행</span>
+                                                            <span class="badge bg-secondary">${table.field_count} 필드</span>
+                                                        </span>
+                                                    </button>
+                                                </h2>
+                                                <div id="table${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" data-bs-parent="#tablesAccordion">
+                                                    <div class="accordion-body">
+                                                        <div class="table-responsive">
+                                                            <table class="table table-sm table-striped">
+                                                                <thead class="table-light">
+                                                                    <tr>
+                                                                        <th>필드명</th>
+                                                                        <th>타입</th>
+                                                                        <th>필수</th>
+                                                                        <th>기본값</th>
+                                                                        <th>PK</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    ${table.fields.map(field => `
+                                                                        <tr>
+                                                                            <td><code>${field.name}</code></td>
+                                                                            <td><span class="badge bg-light text-dark">${field.type}</span></td>
+                                                                            <td>${field.notnull ? '✓' : '-'}</td>
+                                                                            <td>${field.default || '-'}</td>
+                                                                            <td>${field.pk ? '<span class="badge bg-warning text-dark">✓</span>' : '-'}</td>
+                                                                        </tr>
+                                                                    `).join('')}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                dbDashboard.innerHTML = `
+                    <div class="col-md-3">
+                        <div class="card bg-light border-primary mb-3">
+                            <div class="card-header bg-burgundy">
+                                <h6 class="mb-0">데이터베이스 크기</h6>
+                            </div>
+                            <div class="card-body">
+                                <h3>${data.database_size}</h3>
+                                <p class="text-muted">${data.database_size_formatted}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light border-success mb-3">
+                            <div class="card-header bg-success">
+                                <h6 class="mb-0">테이블 개수</h6>
+                            </div>
+                            <div class="card-body">
+                                <h3>${data.table_count}</h3>
+                                <p class="text-muted">총 ${data.table_count}개의 테이블</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light border-info mb-3">
+                            <div class="card-header bg-info">
+                                <h6 class="mb-0">필드 개수</h6>
+                            </div>
+                            <div class="card-body">
+                                <h3>${data.field_count}</h3>
+                                <p class="text-muted">총 ${data.field_count}개의 필드</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light border-warning mb-3">
+                            <div class="card-header bg-warning">
+                                <h6 class="mb-0">저장된 코드</h6>
+                            </div>
+                            <div class="card-body">
+                                <h3>${data.saved_codes_count}</h3>
+                                <p class="text-muted">총 ${data.saved_codes_count}개의 코드</p>
+                            </div>
+                        </div>
+                    </div>
+                    ${tablesHtml}
+                    ${savedCodesHtml}
+                `;
+            } else {
+                alert('대시보드 정보 로드 실패: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('대시보드 정보 로드 실패: ' + error.message);
+        });
+}
+
+function loadTableInfo() {
+    const tableName = document.getElementById('tableSelect').value;
+    
+    if (!tableName) {
+        document.getElementById('tableInfoContent').innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-inbox fa-3x mb-3"></i>
+                <p>테이블을 선택하여 필드 정보를 확인하세요</p>
+            </div>
+        `;
+        document.getElementById('addColumnSection').style.display = 'none';
+        return;
+    }
+
+    currentTable = tableName;
+    
+    fetch(`/api/db/table_info/${tableName}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayTableInfo(data.columns);
+                document.getElementById('addColumnSection').style.display = 'block';
+            } else {
+                alert('테이블 정보 로드 실패: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('오류 발생: ' + error.message);
+        });
+}
+
+function displayTableInfo(columns) {
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>필드명</th>
+                        <th>타입</th>
+                        <th>필수</th>
+                        <th>기본값</th>
+                        <th>액션</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    columns.forEach(col => {
+        html += `
+            <tr>
+                <td><strong>${col.name}</strong></td>
+                <td><span class="badge bg-info">${col.type}</span></td>
+                <td>${col.notnull ? '예' : '아니오'}</td>
+                <td>${col.default || '-'}</td>
+                <td>
+                    ${col.pk ? '<span class="badge bg-warning">PK</span>' : `<button class="btn btn-sm btn-outline-danger" onclick="deleteColumn('${col.name}')"><i class="fas fa-trash me-1"></i>삭제</button>`}
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+        <div class="text-muted small mt-3">
+            <i class="fas fa-info-circle me-1"></i>
+            총 ${columns.length}개의 필드
+        </div>
+    `;
+
+    document.getElementById('tableInfoContent').innerHTML = html;
+}
+
+function addColumn(event) {
+    event.preventDefault();
+    
+    const columnName = document.getElementById('columnName').value;
+    const columnType = document.getElementById('columnType').value;
+    const username = document.getElementById('addUsername').value;
+    const password = document.getElementById('addPassword').value;
+
+    if (!columnName) {
+        alert('필드 이름을 입력하세요');
+        return;
+    }
+
+    fetch('/api/db/add_column', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            table_name: currentTable,
+            column_name: columnName,
+            column_type: columnType,
+            username: username,
+            password: password
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            document.getElementById('addColumnForm').reset();
+            loadTableInfo();
+        } else {
+            alert('오류: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('네트워크 오류: ' + error.message);
+    });
+}
+
+function deleteColumn(columnName) {
+    if (!confirm(`정말로 "${columnName}" 필드를 삭제하시겠습니까?`)) {
+        return;
+    }
+
+    pendingAction = {
+        type: 'delete_column',
+        columnName: columnName
+    };
+
+    const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+    authModal.show();
+}
+
+function confirmAction() {
+    if (!pendingAction) return;
+
+    const username = document.getElementById('authUsername').value;
+    const password = document.getElementById('authPassword').value;
+
+    if (pendingAction.type === 'delete_column') {
+        fetch('/api/db/delete_column', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                table_name: currentTable,
+                column_name: pendingAction.columnName,
+                username: username,
+                password: password
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const authModal = bootstrap.Modal.getInstance(document.getElementById('authModal'));
+            authModal.hide();
+            
+            document.getElementById('authUsername').value = '';
+            document.getElementById('authPassword').value = '';
+            
+            if (data.success) {
+                alert(data.message);
+                loadTableInfo();
+            } else {
+                alert('오류: ' + data.error);
+            }
+            
+            pendingAction = null;
+        })
+        .catch(error => {
+            alert('네트워크 오류: ' + error.message);
+        });
+    }
+}
+
+function handleLogout() {
+    if (!confirm('정말로 로그아웃하시겠습니까?')) {
+        return;
+    }
+    
+    fetch('/api/db/logout', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '/db_management';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        window.location.href = '/db_management';
+    });
+}
+</script>
+{% endblock %}

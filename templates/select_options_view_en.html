@@ -1,0 +1,1154 @@
+{% extends "base.html" %}
+
+{% block title %}Option Lookup - Welding Equipment Option System{% endblock %}
+
+{% block content %}
+<style>
+    .power-source-image-panel {
+        border: 1.5px solid #c9b3bb;
+        border-radius: 0.625rem;
+        background: #f3f4f6;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(128, 0, 32, 0.08);
+        position: sticky;
+        top: 1rem;
+        padding: 0.5rem;
+    }
+    .option-view-options-col,
+    .option-view-image-col {
+        transition: flex 0.25s ease, max-width 0.25s ease;
+    }
+    .power-source-image-viewer {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        min-height: 480px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem;
+        cursor: zoom-in;
+        position: relative;
+    }
+    .option-view-diagram-wrap {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+        line-height: 0;
+    }
+    .option-view-diagram-wrap img {
+        display: block;
+        width: 100%;
+        max-height: min(82vh, 780px);
+        object-fit: contain;
+    }
+    svg.option-view-region-overlay {
+        position: absolute;
+        left: 0;
+        top: 0;
+        pointer-events: none;
+    }
+    svg.option-view-region-overlay .option-view-region {
+        stroke-width: 2.5;
+        fill-opacity: 1;
+    }
+    .option-view-spec-panel {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        background: #fff;
+        margin-bottom: 0.65rem;
+        overflow: hidden;
+    }
+    .option-view-spec-panel__header {
+        padding: 0.55rem 0.75rem;
+        background-color: #800020;
+        color: #fff;
+        font-size: 0.8125rem;
+        font-weight: 600;
+    }
+    .option-view-spec-panel__body {
+        padding: 0.55rem 0.75rem;
+        max-height: 160px;
+        overflow-y: auto;
+    }
+    .option-view-spec-table {
+        width: 100%;
+        font-size: 0.75rem;
+        margin: 0;
+    }
+    .option-view-spec-table td {
+        padding: 0.2rem 0.35rem;
+        vertical-align: top;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .option-view-spec-table td:first-child {
+        color: #6b7280;
+        white-space: nowrap;
+        width: 38%;
+    }
+    .option-view-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        margin-top: 0.55rem;
+        font-size: 0.75rem;
+        color: #4b5563;
+    }
+    .option-view-legend__item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .option-view-legend__swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 2px;
+        border: 2px solid transparent;
+    }
+    .option-view-legend__swatch.is-current { border-color: #800020; background: rgba(128,0,32,0.18); }
+    .option-view-legend__swatch.is-completed { border-color: #111; background: rgba(17,17,17,0.12); }
+    .option-view-legend__swatch.is-unselected { border-color: #9ca3af; background: rgba(156,163,175,0.08); }
+    .power-source-image-thumbs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.65rem;
+    }
+    .power-source-image-thumb {
+        width: 64px;
+        height: 64px;
+        border: 2px solid transparent;
+        border-radius: 0.375rem;
+        background: #fff;
+        padding: 0.2rem;
+        cursor: pointer;
+        overflow: hidden;
+    }
+    .power-source-image-thumb.is-active {
+        border-color: #800020;
+        box-shadow: 0 0 0 1px #800020;
+    }
+    .power-source-image-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+    #powerSourceImageModal .modal-body {
+        background: #f9fafb;
+        text-align: center;
+    }
+    #powerSourceImageModal img {
+        max-width: 100%;
+        max-height: 78vh;
+        object-fit: contain;
+    }
+</style>
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 mb-md-4">
+            <h2 class="mb-3 mb-md-0" style="white-space: nowrap;">
+                Option Lookup
+            </h2>
+            <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
+                <button type="button" class="btn btn-outline-secondary" onclick="clearAllSelections()">
+                    <i class="fas fa-eraser me-1"></i><span class="d-none d-sm-inline">Reset Option </span>Lookup
+                </button>
+                <button type="button" class="btn btn-primary" id="lookupCodeBtn" onclick="lookupBySelectedOptions()" disabled>
+                    <i class="fas fa-search me-1"></i>Lookup Code
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row g-4" id="optionsLayoutRow">
+    <div class="col-12 col-xl-5 option-view-image-col d-none" id="powerSourceImageCol">
+        <div class="power-source-image-panel" id="powerSourceImagePanel">
+            <div class="option-view-spec-panel" id="optionViewSpecPanel">
+                <div class="option-view-spec-panel__header">Welding Set Specification Summary</div>
+                <div class="option-view-spec-panel__body">
+                    <table class="option-view-spec-table" id="optionViewSpecTable">
+                        <tbody><tr><td colspan="2" class="text-muted">Select a power source to view specifications.</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="powerSourceImageViewer" class="power-source-image-viewer d-none">
+                <div class="option-view-diagram-wrap" id="optionViewDiagramWrap">
+                    <img id="powerSourceMainImage" src="" alt="Power source image">
+                    <svg id="optionViewRegionOverlay" class="option-view-region-overlay" aria-hidden="true"></svg>
+                </div>
+            </div>
+            <div class="option-view-legend d-none" id="optionViewLegend">
+                <span class="option-view-legend__item"><span class="option-view-legend__swatch is-current"></span>Current</span>
+                <span class="option-view-legend__item"><span class="option-view-legend__swatch is-completed"></span>Completed</span>
+                <span class="option-view-legend__item"><span class="option-view-legend__swatch is-unselected"></span>Unselected</span>
+            </div>
+            <div id="powerSourceImageThumbs" class="power-source-image-thumbs d-none"></div>
+        </div>
+    </div>
+    <div class="col-12 option-view-options-col" id="optionsCardsCol">
+        <form id="optionsForm">
+            <div class="row">
+                {% for category in categories %}
+                <div class="col-12 col-sm-6 col-lg-4 mb-3 mb-md-4 option-category-col">
+                    <div class="card h-100" data-category-id="{{ category.id }}" data-category-number="{{ category.category_number }}">
+                        <div class="card-header bg-gray-gradient">
+                            <h6 class="mb-0">
+                                [{{ category.category_number }}] {{ category.category_name }}
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="select_{{ category.category_number }}" class="form-label">
+                                    Select {{ category.category_name }}
+                                </label>
+                                <select class="form-select" 
+                                        id="select_{{ category.category_number }}" 
+                                        name="category_{{ category.category_number }}"
+                                        onchange="updateSelection(this)">
+                                    <option value="None" selected>None</option>
+                                    {% for option in category_options[category.id] %}
+                                    <option value="{{ option.item_name }}" 
+                                            data-code="{{ option.item_code }}"
+                                            data-description="{{ option.description }}"
+                                            data-item-id="{{ option.id }}">
+                                        {{ option.item_name }}
+                                        {% if option.item_code %} ({{ option.item_code }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="text-muted small mb-3">
+                                Total {{ category_options[category.id]|length }} options
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Power source image zoom -->
+<div class="modal fade" id="powerSourceImageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-burgundy" style="background-color:#800020!important;">
+                <h5 class="modal-title" style="color:#fff!important;" id="powerSourceImageModalTitle">Power Source Image</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <img id="powerSourceImageModalImg" src="" alt="">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Result Modal -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Code Lookup Result
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="resultContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.PNS_DETAILED_RULES = {{ detailed_rules|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/option_view_diagram_highlight.js') }}"></script>
+<script>
+const categoryMeta = {{ categories|tojson }};
+const categoryNumbers = categoryMeta.map(c => c.category_number).sort((a, b) => a - b);
+const categoryNumberByName = {};
+categoryMeta.forEach(c => {
+    categoryNumberByName[c.category_name] = c.category_number;
+});
+
+const categoryNameAliases = {
+    // Korean aliases
+    '파워소스옵션': '파워소스',
+    '타입옵션': '타입',
+    '와이어피더옵션': '피더',
+    '와이어피더': '피더',
+    '피더': '피더',
+    '토치옵션': '토치',
+    '호스패키지옵션': '호스패키지',
+    '그라운드옵션': '어스',
+    '트롤리옵션': '트롤리',
+    '쿨링옵션': '쿨러',
+    '쿨러': '쿨러',
+    '쿨링': '쿨러',
+    '쿨란트옵션': '쿨란트',
+    '쿨란드옵션': '쿨란트',
+    '쿨런트': '쿨란트',
+    '가스호스옵션': '가스',
+    '가스호스': '가스',
+    '가스': '가스',
+    '일렉트로홀더옵션': 'ELECTRODE HOLDER',
+    // English aliases (for English version)
+    'Power Source': 'Power Source',
+    'Type': 'Type',
+    'Wire Feeder': 'Wire Feeder',
+    'Torch': 'Torch',
+    'Hose Package': 'Hose Package',
+    'Ground': 'Ground',
+    'Trolley': 'Trolley',
+    'Cooler': 'Cooler',
+    'Coolant': 'Coolant',
+    'Gas Hose': 'Gas Hose',
+    'Electrode Holder': 'Electrode Holder'
+};
+
+Object.entries(categoryNameAliases).forEach(([oldName, newName]) => {
+    if (categoryNumberByName[newName] === undefined && categoryNumberByName[oldName] !== undefined) {
+        categoryNumberByName[newName] = categoryNumberByName[oldName];
+    }
+    if (categoryNumberByName[oldName] === undefined && categoryNumberByName[newName] !== undefined) {
+        categoryNumberByName[oldName] = categoryNumberByName[newName];
+    }
+});
+
+const CATEGORY = {
+    // Try English names first (for English version), then fall back to Korean names
+    POWER_SOURCE: categoryNumberByName['Power Source'] || categoryNumberByName['파워소스'],
+    TYPE: categoryNumberByName['Type'] || categoryNumberByName['타입'],
+    WIRE_FEEDER: categoryNumberByName['Wire Feeder'] || categoryNumberByName['와이어피더'],
+    TORCH: categoryNumberByName['Torch'] || categoryNumberByName['토치'],
+    HOSE_PACKAGE: categoryNumberByName['Hose Package'] || categoryNumberByName['호스패키지'],
+    GROUND: categoryNumberByName['Ground'] || categoryNumberByName['어스'],
+    TROLLEY: categoryNumberByName['Trolley'] || categoryNumberByName['트롤리'],
+    COOLER: categoryNumberByName['Cooler'] || categoryNumberByName['쿨러'],
+    COOLANT: categoryNumberByName['Coolant'] || categoryNumberByName['쿨란트'],
+    GAS_HOSE: categoryNumberByName['Gas Hose'] || categoryNumberByName['가스호스'],
+    ELECTRODE: categoryNumberByName['Electrode Holder'] || categoryNumberByName['ELECTRODE HOLDER']
+};
+
+const categoryLabels = {};
+categoryMeta.forEach(function (c) {
+    categoryLabels[c.category_number] = '[' + c.category_number + '] ' + c.category_name;
+});
+
+let lastChangedCategory = null;
+const NONE_VALUE = 'None';
+
+function getSelect(categoryNumber) {
+    return document.getElementById(`select_${categoryNumber}`);
+}
+
+// Change activated option text to burgundy color
+function applyOptionStyles(selectElement) {
+    if (!selectElement) return;
+    
+    Array.from(selectElement.options).forEach(option => {
+        if (option.disabled) {
+            option.style.color = '#b0b0b0';
+        } else {
+            option.style.color = '#800020';
+            option.style.fontWeight = '500';
+        }
+    });
+}
+
+// Apply option styles to all select elements
+function applyAllOptionStyles() {
+    categoryNumbers.forEach(num => {
+        const select = getSelect(num);
+        if (select) {
+            applyOptionStyles(select);
+        }
+    });
+}
+
+function setCategoryState(categoryNumber, { disabled, resetValue = false } = {}) {
+    const select = getSelect(categoryNumber);
+    if (!select) {
+        return;
+    }
+    if (resetValue) {
+        select.value = 'None';
+        select.classList.remove('option-selected');
+    }
+    if (typeof disabled === 'boolean') {
+        select.disabled = disabled;
+        const card = select.closest('.card');
+        if (card) {
+            card.style.opacity = disabled ? '0.5' : '1';
+            card.style.pointerEvents = disabled ? 'none' : 'auto';
+        }
+    }
+    // Apply option styles
+    applyOptionStyles(select);
+}
+
+function clearAllSelections() {
+    {% for category in categories %}
+    const select_{{ category.category_number }} = document.getElementById('select_{{ category.category_number }}');
+    if (select_{{ category.category_number }}) {
+        select_{{ category.category_number }}.value = "None";
+        updateSelection(select_{{ category.category_number }});
+    }
+    {% endfor %}
+    updateProgress();
+}
+
+function updateSelection(selectElement) {
+    const categoryNumber = parseInt(selectElement.id.replace('select_', ''), 10);
+    lastChangedCategory = categoryNumber;
+    if (categoryNumber === CATEGORY.POWER_SOURCE) {
+        applyPowerSourceCategoryRules(selectElement.value);
+    }
+    if (categoryNumber === CATEGORY.POWER_SOURCE || categoryNumber === CATEGORY.TYPE) {
+        applyDetailedOptionRules();
+        loadOptionViewImages();
+    }
+    
+    if (selectElement.value && selectElement.value !== NONE_VALUE) {
+        selectElement.classList.add('option-selected');
+    } else {
+        selectElement.classList.remove('option-selected');
+    }
+    
+    applyOptionStyles(selectElement);
+    updateOptionViewSpecSummary();
+    updateDiagramHighlights();
+    updateProgress();
+}
+
+let powerSourceImages = [];
+let powerSourceImageIndex = 0;
+let currentDiagramRegions = [];
+
+function collectSelectedCategoryNumbers() {
+    const selected = new Set();
+    categoryNumbers.forEach(function (num) {
+        const select = getSelect(num);
+        if (!select || select.disabled) return;
+        if (select.value && select.value !== NONE_VALUE) {
+            selected.add(num);
+        }
+    });
+    return selected;
+}
+
+function updateOptionViewSpecSummary() {
+    const tbody = document.querySelector('#optionViewSpecTable tbody');
+    if (!tbody) return;
+    const rows = [];
+    categoryNumbers.forEach(function (num) {
+        const select = getSelect(num);
+        if (!select || select.disabled) return;
+        if (!select.value || select.value === NONE_VALUE) return;
+        const label = categoryLabels[num] || ('[' + num + ']');
+        rows.push('<tr><td>' + label + '</td><td>' + select.value + '</td></tr>');
+    });
+    tbody.innerHTML = rows.length
+        ? rows.join('')
+        : '<tr><td colspan="2" class="text-muted">No options selected.</td></tr>';
+}
+
+function updateDiagramHighlights() {
+    const svg = document.getElementById('optionViewRegionOverlay');
+    const wrap = document.getElementById('optionViewDiagramWrap');
+    if (!svg || !currentDiagramRegions.length) return;
+    if (window.OptionViewDiagramHighlight) {
+        OptionViewDiagramHighlight.syncOverlaySize(wrap);
+        OptionViewDiagramHighlight.updateHighlights(
+            svg,
+            lastChangedCategory,
+            collectSelectedCategoryNumbers(),
+            categoryLabels
+        );
+    }
+}
+
+function applyDiagramRegions(regions) {
+    currentDiagramRegions = regions || [];
+    const svg = document.getElementById('optionViewRegionOverlay');
+    const legend = document.getElementById('optionViewLegend');
+    if (!svg) return;
+    if (!currentDiagramRegions.length) {
+        svg.innerHTML = '';
+        if (legend) legend.classList.add('d-none');
+        return;
+    }
+    if (window.OptionViewDiagramHighlight) {
+        OptionViewDiagramHighlight.renderOverlay(svg, currentDiagramRegions, categoryLabels);
+        updateDiagramHighlights();
+    }
+    if (legend) legend.classList.remove('d-none');
+}
+
+function renderPowerSourceImage(index) {
+    if (!powerSourceImages.length) return;
+    powerSourceImageIndex = Math.max(0, Math.min(index, powerSourceImages.length - 1));
+    const image = powerSourceImages[powerSourceImageIndex];
+    const mainImg = document.getElementById('powerSourceMainImage');
+    const viewer = document.getElementById('powerSourceImageViewer');
+    const thumbs = document.getElementById('powerSourceImageThumbs');
+    if (!mainImg || !viewer || !image) return;
+
+    mainImg.src = image.url;
+    mainImg.alt = image.filename || 'Power source image';
+    viewer.classList.remove('d-none');
+    applyDiagramRegions(image.regions || []);
+    mainImg.onload = function () {
+        updateDiagramHighlights();
+    };
+
+    if (powerSourceImages.length > 1 && thumbs) {
+        thumbs.classList.remove('d-none');
+        thumbs.innerHTML = powerSourceImages.map(function (item, idx) {
+            return '<button type="button" class="power-source-image-thumb' + (idx === powerSourceImageIndex ? ' is-active' : '') +
+                '" data-index="' + idx + '" aria-label="Image ' + (idx + 1) + '">' +
+                '<img src="' + item.url + '" alt="">' +
+                '</button>';
+        }).join('');
+    } else if (thumbs) {
+        thumbs.classList.add('d-none');
+        thumbs.innerHTML = '';
+    }
+}
+
+function openPowerSourceImageModal() {
+    const image = powerSourceImages[powerSourceImageIndex];
+    if (!image) return;
+    const modalImg = document.getElementById('powerSourceImageModalImg');
+    const modalTitle = document.getElementById('powerSourceImageModalTitle');
+    const powerSourceSelect = getSelect(CATEGORY.POWER_SOURCE);
+    const selectedLabel = powerSourceSelect && powerSourceSelect.value && powerSourceSelect.value !== 'None'
+        ? powerSourceSelect.options[powerSourceSelect.selectedIndex].textContent.trim()
+        : '';
+    if (modalImg) modalImg.src = image.url;
+    if (modalTitle) modalTitle.textContent = selectedLabel || 'Power Source Image';
+    const modalEl = document.getElementById('powerSourceImageModal');
+    if (modalEl && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+}
+
+function showPowerSourceImageLayout() {
+    const imageCol = document.getElementById('powerSourceImageCol');
+    const optionsCol = document.getElementById('optionsCardsCol');
+    if (imageCol) imageCol.classList.remove('d-none');
+    if (optionsCol) {
+        optionsCol.classList.remove('col-12');
+        optionsCol.classList.add('col-xl-7');
+    }
+    document.querySelectorAll('.option-category-col').forEach(function (el) {
+        el.classList.remove('col-lg-4');
+        el.classList.add('col-lg-6');
+    });
+}
+
+function hidePowerSourceImageLayout() {
+    const imageCol = document.getElementById('powerSourceImageCol');
+    const optionsCol = document.getElementById('optionsCardsCol');
+    if (imageCol) imageCol.classList.add('d-none');
+    if (optionsCol) {
+        optionsCol.classList.remove('col-xl-7');
+        optionsCol.classList.add('col-12');
+    }
+    document.querySelectorAll('.option-category-col').forEach(function (el) {
+        el.classList.remove('col-lg-6');
+        el.classList.add('col-lg-4');
+    });
+}
+
+function resetPowerSourceImageViewer() {
+    powerSourceImages = [];
+    powerSourceImageIndex = 0;
+    currentDiagramRegions = [];
+    const mainImg = document.getElementById('powerSourceMainImage');
+    const viewer = document.getElementById('powerSourceImageViewer');
+    const thumbs = document.getElementById('powerSourceImageThumbs');
+    const svg = document.getElementById('optionViewRegionOverlay');
+    const legend = document.getElementById('optionViewLegend');
+    if (mainImg) mainImg.removeAttribute('src');
+    if (viewer) viewer.classList.add('d-none');
+    if (svg) svg.innerHTML = '';
+    if (legend) legend.classList.add('d-none');
+    if (thumbs) {
+        thumbs.classList.add('d-none');
+        thumbs.innerHTML = '';
+    }
+}
+
+function clearPowerSourceImages() {
+    resetPowerSourceImageViewer();
+    hidePowerSourceImageLayout();
+}
+
+function normalizeTypeCode(value, code) {
+    const raw = String(value || code || '').trim().toUpperCase();
+    if (raw === 'AIR' || raw === 'T001') return 'AIR';
+    if (raw === 'WATER' || raw === 'T002') return 'WATER';
+    return '';
+}
+
+function loadOptionViewImages() {
+    const powerSelect = getSelect(CATEGORY.POWER_SOURCE);
+    const typeSelect = getSelect(CATEGORY.TYPE);
+    if (!powerSelect || !powerSelect.value || powerSelect.value === NONE_VALUE) {
+        clearPowerSourceImages();
+        return;
+    }
+    if (!typeSelect || !typeSelect.value || typeSelect.value === NONE_VALUE) {
+        clearPowerSourceImages();
+        return;
+    }
+
+    const powerOption = powerSelect.options[powerSelect.selectedIndex];
+    const typeOption = typeSelect.options[typeSelect.selectedIndex];
+    const itemId = powerOption ? powerOption.getAttribute('data-item-id') : '';
+    const typeCode = normalizeTypeCode(
+        typeSelect.value,
+        typeOption ? typeOption.getAttribute('data-code') : ''
+    );
+    if (!itemId || !typeCode) {
+        clearPowerSourceImages();
+        return;
+    }
+
+    hidePowerSourceImageLayout();
+    resetPowerSourceImageViewer();
+
+    const url = '/api/option_view_images/by_option/' + encodeURIComponent(itemId) +
+        '?type_code=' + encodeURIComponent(typeCode);
+    fetch(url, { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            const images = (data.success && data.images) ? data.images.filter(function (img) { return img && img.url; }) : [];
+            if (!images.length) {
+                clearPowerSourceImages();
+                return;
+            }
+            powerSourceImages = images;
+            renderPowerSourceImage(0);
+            const mainImg = document.getElementById('powerSourceMainImage');
+            if (!mainImg) return;
+            mainImg.onload = function () {
+                showPowerSourceImageLayout();
+            };
+            mainImg.onerror = function () {
+                clearPowerSourceImages();
+            };
+            if (mainImg.complete && mainImg.naturalWidth > 0) {
+                showPowerSourceImageLayout();
+            }
+        })
+        .catch(function () {
+            clearPowerSourceImages();
+        });
+}
+
+function loadPowerSourceImages() {
+    loadOptionViewImages();
+}
+
+document.getElementById('powerSourceImageViewer').addEventListener('click', openPowerSourceImageModal);
+document.getElementById('powerSourceImageThumbs').addEventListener('click', function (e) {
+    const btn = e.target.closest('.power-source-image-thumb');
+    if (!btn) return;
+    renderPowerSourceImage(parseInt(btn.getAttribute('data-index'), 10) || 0);
+    updateDiagramHighlights();
+});
+
+window.addEventListener('resize', function () {
+    if (window.OptionViewDiagramHighlight) {
+        OptionViewDiagramHighlight.syncOverlaySize(document.getElementById('optionViewDiagramWrap'));
+    }
+});
+
+function updateProgress() {
+    // 진행 현황 섹션이 제거되었으므로 버튼 활성화만 처리
+    checkAndEnableLookupButton();
+}
+
+function checkAndEnableLookupButton() {
+    const lookupBtn = document.getElementById('lookupCodeBtn');
+    if (!lookupBtn) return;
+    
+    const { selected, missing } = collectSelectedOptions();
+    
+    if (Object.keys(selected).length > 0 && missing.length === 0) {
+        lookupBtn.disabled = false;
+        lookupBtn.classList.remove('btn-secondary');
+        lookupBtn.classList.add('btn-primary');
+    } else {
+        lookupBtn.disabled = true;
+        lookupBtn.classList.remove('btn-primary');
+        lookupBtn.classList.add('btn-secondary');
+    }
+}
+
+function updateSelectedItemsPreview(selectedOptions) {
+    const previewDiv = document.getElementById('selectedItemsPreview');
+    const listDiv = document.getElementById('selectedItemsList');
+    
+    if (Object.keys(selectedOptions).length === 0) {
+        previewDiv.style.display = 'none';
+        return;
+    }
+    
+    previewDiv.style.display = 'block';
+    let html = '';
+    for (const [categoryNumber, optionName] of Object.entries(selectedOptions)) {
+        html += `
+            <div class="col-md-6 col-lg-4 mb-2">
+                <div class="badge bg-success me-2">
+                    [${categoryNumber}] ${optionName}
+                </div>
+            </div>
+        `;
+    }
+    listDiv.innerHTML = html;
+}
+
+const POWER_SOURCE_ALLOWED_BY_SERIES = {
+    M: new Set([
+        CATEGORY.TYPE,
+        CATEGORY.WIRE_FEEDER,
+        CATEGORY.TORCH,
+        CATEGORY.HOSE_PACKAGE,
+        CATEGORY.GROUND,
+        CATEGORY.TROLLEY,
+        CATEGORY.COOLER,
+        CATEGORY.COOLANT
+    ]),
+    C: new Set([
+        CATEGORY.TYPE,
+        CATEGORY.TORCH,
+        CATEGORY.GROUND,
+        CATEGORY.GAS_HOSE,
+        CATEGORY.TROLLEY,
+        CATEGORY.COOLER,
+        CATEGORY.COOLANT
+    ]),
+    T: new Set([
+        CATEGORY.TYPE,
+        CATEGORY.TORCH,
+        CATEGORY.GROUND,
+        CATEGORY.GAS_HOSE,
+        CATEGORY.TROLLEY,
+        CATEGORY.COOLER,
+        CATEGORY.COOLANT
+    ]),
+    S: new Set([
+        CATEGORY.TYPE,
+        CATEGORY.ELECTRODE,
+        CATEGORY.GROUND
+    ])
+};
+
+function extractSuperSeries(value) {
+    if (typeof value !== 'string') {
+        return '';
+    }
+    if (value.includes('SUPER M')) {
+        return 'M';
+    }
+    if (value.includes('SUPER C')) {
+        return 'C';
+    }
+    if (value.includes('SUPER T')) {
+        return 'T';
+    }
+    if (value.includes('SUPER S')) {
+        return 'S';
+    }
+    return '';
+}
+
+function applyPowerSourceCategoryRules(powerSourceValue) {
+    const series = extractSuperSeries(powerSourceValue);
+    const allowedSet = POWER_SOURCE_ALLOWED_BY_SERIES[series] || null;
+
+    categoryNumbers.forEach(num => {
+        if (num === CATEGORY.POWER_SOURCE) {
+            return;
+        }
+        if (allowedSet) {
+            const allow = allowedSet.has(num);
+            setCategoryState(num, { disabled: !allow, resetValue: !allow });
+        } else {
+            setCategoryState(num, { disabled: false });
+        }
+    });
+}
+
+const DETAILED_RULES = window.PNS_DETAILED_RULES || [];
+
+const DETAILED_RULE_CATEGORY_SET = new Set();
+DETAILED_RULES.forEach(rule => {
+    rule.actions.forEach(action => DETAILED_RULE_CATEGORY_SET.add(action.category));
+});
+
+function resetDetailedOptionState(powerSourceValue) {
+    const series = extractSuperSeries(powerSourceValue);
+    const allowedSet = POWER_SOURCE_ALLOWED_BY_SERIES[series] || null;
+
+    DETAILED_RULE_CATEGORY_SET.forEach(categoryNumber => {
+        const select = getSelect(categoryNumber);
+        if (!select) {
+            return;
+        }
+
+        Array.from(select.options).forEach(option => {
+            option.disabled = false;
+        });
+
+        if (select.dataset.detailDisabled === 'true') {
+            const shouldDisable = allowedSet ? !allowedSet.has(categoryNumber) : false;
+            if (shouldDisable) {
+                setCategoryState(categoryNumber, { disabled: true, resetValue: true });
+            } else {
+                setCategoryState(categoryNumber, { disabled: false });
+            }
+            delete select.dataset.detailDisabled;
+        }
+        
+        // Apply option styles
+        applyOptionStyles(select);
+    });
+}
+
+function ensureValidSelection(select) {
+    const currentOption = select.options[select.selectedIndex];
+    if (currentOption && !currentOption.disabled) {
+        return;
+    }
+    for (const option of select.options) {
+        if (!option.disabled) {
+            select.value = option.value;
+            // Change activated option text to burgundy color
+            if (select.value && select.value !== 'None') {
+                select.classList.add('option-selected');
+            } else {
+                select.classList.remove('option-selected');
+            }
+            applyOptionStyles(select);
+            return;
+        }
+    }
+    select.value = 'None';
+    select.classList.remove('option-selected');
+    applyOptionStyles(select);
+}
+
+function enforceDetailedAction(categoryNumber, action) {
+    const select = getSelect(categoryNumber);
+    if (!select) {
+        return;
+    }
+
+    if (action.disableCategory) {
+        setCategoryState(categoryNumber, { disabled: true, resetValue: true });
+        select.dataset.detailDisabled = 'true';
+        return;
+    }
+
+    if (Array.isArray(action.allowCodes)) {
+        const allowedCodes = new Set(action.allowCodes);
+        const allowNone = action.allowNone !== false;
+
+        Array.from(select.options).forEach(option => {
+            if (option.value === 'None') {
+                option.disabled = !allowNone;
+                return;
+            }
+            const code = option.getAttribute('data-code');
+            option.disabled = !allowedCodes.has(code);
+        });
+
+        ensureValidSelection(select);
+        applyOptionStyles(select);
+    }
+}
+
+function applyDetailedOptionRules() {
+    const powerSourceSelect = getSelect(CATEGORY.POWER_SOURCE);
+    const typeSelect = getSelect(CATEGORY.TYPE);
+    const powerSourceValue = powerSourceSelect ? powerSourceSelect.value : '';
+    const typeValue = typeSelect ? typeSelect.value : '';
+    const powerSourceOption = powerSourceSelect ? powerSourceSelect.options[powerSourceSelect.selectedIndex] : null;
+    const typeOption = typeSelect ? typeSelect.options[typeSelect.selectedIndex] : null;
+    const powerSourceCode = powerSourceOption ? powerSourceOption.getAttribute('data-code') || '' : '';
+    const typeCode = typeOption ? typeOption.getAttribute('data-code') || '' : '';
+
+    resetDetailedOptionState(powerSourceValue);
+
+    const matchingRule = DETAILED_RULES.find(rule => {
+        const powerMatchValue = !rule.powerSourceValue || rule.powerSourceValue === powerSourceValue;
+        const powerMatchCode = !rule.powerSourceCode || rule.powerSourceCode === powerSourceCode;
+        const typeMatchValue = !rule.typeValue || rule.typeValue === typeValue;
+        const typeMatchCode = !rule.typeCode || rule.typeCode === typeCode;
+        const powerMatch = powerMatchValue && powerMatchCode;
+        const typeMatch = typeMatchValue && typeMatchCode;
+        return powerMatch && typeMatch;
+    });
+
+    if (!matchingRule) {
+        return;
+    }
+
+    matchingRule.actions.forEach(action => {
+        enforceDetailedAction(action.category, action);
+    });
+}
+
+function collectSelectedOptions() {
+    const selected = {};
+    const missing = [];
+    document.querySelectorAll('[data-category-number]').forEach(card => {
+        const categoryNumber = card.getAttribute('data-category-number');
+        const header = card.querySelector('.card-header h6');
+        const label = header ? header.textContent.trim() : `Category ${categoryNumber}`;
+        const selectElement = card.querySelector('select');
+        if (!selectElement) {
+            missing.push(label);
+            return;
+        }
+        if (selectElement.disabled) {
+            return;
+        }
+        const value = selectElement.value;
+        if (!value || value === 'None') {
+            missing.push(label);
+            return;
+        }
+        selected[categoryNumber] = value;
+    });
+    return {
+        selected: selected,
+        missing: missing
+    };
+}
+
+function lookupBySelectedOptions() {
+    const selectionResult = collectSelectedOptions();
+    const selected = selectionResult.selected;
+    const missing = selectionResult.missing;
+    if (Object.keys(selected).length === 0) {
+        alert('Please select at least one option.');
+        return;
+    }
+    if (missing.length > 0) {
+        alert('Please select all required options.');
+        return;
+    }
+    
+    fetch('/api/select_options/by-options', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            selected_options: selected,
+            missing_categories: missing
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            alert('An error occurred during code lookup: ' + (data.error || 'Unknown error'));
+            return;
+        }
+        
+        if (!data.found) {
+            showNotFoundResult(data.message || 'Code not generated.', selected);
+            return;
+        }
+        
+        showResult({
+            success: true,
+            message: `Lookup result for code '${data.code}'.`,
+            is_new: false,
+            is_duplicate_options: false,
+            is_duplicate_set_code: false,
+            code: data.code,
+            set_code: data.set_code || '',
+            call_arc_code: data.call_arc_code || '',
+            selected_options: data.selected_options || selected,
+            lookupMode: true
+        });
+    })
+    .catch(error => {
+        console.error('lookupBySelectedOptions Error:', error);
+        alert('A network error occurred during code lookup.');
+    });
+}
+
+function showNotFoundResult(message, selectedOptions) {
+    const resultContent = document.getElementById('resultContent');
+    let html = `
+        <div class="alert alert-warning" role="alert">
+            <h6><i class="fas fa-info-circle me-2"></i>${message}</h6>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="fas fa-barcode me-2"></i>Set Code</h6>
+                <p class="fs-4 text-primary"><strong>None</strong></p>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="fas fa-barcode me-2"></i>Call Arc Code</h6>
+                <p class="fs-4 text-success"><strong>None</strong></p>
+            </div>
+        </div>
+    `;
+    
+    if (selectedOptions && Object.keys(selectedOptions).length > 0) {
+        html += `
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Selected Option</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        const labelMap = {};
+        document.querySelectorAll('[data-category-number]').forEach(card => {
+            const number = card.getAttribute('data-category-number');
+            const header = card.querySelector('.card-header h6');
+            labelMap[number] = header ? header.textContent.trim() : `Category ${number}`;
+        });
+        Object.keys(selectedOptions)
+            .sort((a, b) => parseInt(a) - parseInt(b))
+            .forEach(number => {
+                const label = labelMap[number] || `Category ${number}`;
+                const value = selectedOptions[number];
+                html += `
+                    <tr>
+                        <td>${label}</td>
+                        <td>${value}</td>
+                    </tr>
+                `;
+            });
+        html += `
+                </tbody>
+            </table>
+        </div>
+        `;
+    }
+    
+    resultContent.innerHTML = html;
+    const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+    resultModal.show();
+}
+
+function showResult(data) {
+    const resultContent = document.getElementById('resultContent');
+    const setCode = data.set_code || '';
+    const callArcCode = data.call_arc_code || '';
+    const selectedOptions = data.selected_options || {};
+    const isLookupMode = !!data.lookupMode;
+    const setCodeDisplay = setCode ? setCode : (isLookupMode ? 'None' : '-');
+    const callArcCodeDisplay = callArcCode ? callArcCode : (isLookupMode ? 'None' : '-');
+    
+    let html = `
+        <div class="alert alert-info">
+            <h6><i class="fas fa-info-circle me-2"></i>${data.message || 'Code lookup result.'}</h6>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="fas fa-barcode me-2"></i>Set Code</h6>
+                <p class="fs-4 text-primary"><strong>${setCodeDisplay}</strong></p>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="fas fa-barcode me-2"></i>Call Arc Code</h6>
+                <p class="fs-4 text-success"><strong>${callArcCodeDisplay}</strong></p>
+            </div>
+        </div>
+        <hr>
+        <h6><i class="fas fa-list me-2"></i>Selected Options</h6>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Selected Option</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    {% for category in categories %}
+    const optionVal{{ category.category_number }} = selectedOptions[{{ category.category_number }}] || 'None';
+    html += `
+        <tr>
+            <td><strong>[{{ category.category_number }}] {{ category.category_name }}</strong></td>
+            <td>${optionVal{{ category.category_number }}}</td>
+        </tr>
+    `;
+    {% endfor %}
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    resultContent.innerHTML = html;
+    const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+    resultModal.show();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Debug: Check if CATEGORY constants are properly set
+    if (!CATEGORY.POWER_SOURCE) {
+        console.error('CATEGORY.POWER_SOURCE is undefined. Category mapping may have failed.');
+        console.log('categoryNumberByName:', categoryNumberByName);
+        console.log('categoryMeta:', categoryMeta);
+    }
+    
+    const powerSourceSelect = getSelect(CATEGORY.POWER_SOURCE);
+    if (powerSourceSelect) {
+        applyPowerSourceCategoryRules(powerSourceSelect.value);
+        applyDetailedOptionRules();
+    } else if (CATEGORY.POWER_SOURCE) {
+        // If CATEGORY.POWER_SOURCE is set but select element not found, try to find by category number
+        console.warn('Power source select element not found, trying alternative method');
+        const select = document.getElementById(`select_${CATEGORY.POWER_SOURCE}`);
+        if (select) {
+            applyPowerSourceCategoryRules(select.value);
+            applyDetailedOptionRules();
+        }
+    }
+    
+    // Apply burgundy color to all selected options on page load
+    categoryNumbers.forEach(num => {
+        const select = getSelect(num);
+        if (select && select.value && select.value !== 'None') {
+            select.classList.add('option-selected');
+        }
+    });
+    
+    // Apply styles to all options (change activated option text in dropdown to burgundy color)
+    applyAllOptionStyles();
+    
+    updateProgress();
+});
+</script>
+{% endblock %}
+
+

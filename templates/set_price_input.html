@@ -1,0 +1,639 @@
+{% extends "base.html" %}
+
+{% block title %}세트가격입력 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>
+            <i class="fas fa-dollar-sign me-2"></i>
+            세트가격입력
+        </h2>
+        <p class="text-muted">생성된 세트코드에 대한 옵션별 가격을 입력하면 자동으로 합계가 계산되어 세트코드 가격에 반영됩니다.</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-burgundy" style="background-color: #800020 !important;">
+                <h5 class="mb-0" style="color: #1a1a1a !important;">
+                    <i class="fas fa-list me-2" style="color: #1a1a1a !important;"></i>
+                    세트코드 목록
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="loadingMessage" class="text-center py-5">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">로딩 중...</span>
+                    </div>
+                    <p class="text-muted">세트코드 목록을 불러오는 중입니다...</p>
+                </div>
+                
+                <div id="priceListContainer" style="display: none;">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-database me-2"></i>총 세트코드 수: <span class="badge bg-burgundy" id="totalCount">0</span></h6>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <small class="text-muted">세트코드 숫자 오름차순 정렬</small>
+                        </div>
+                    </div>
+                    
+                    <ul class="nav nav-tabs" id="priceListTab" role="tablist">
+                        <!-- 탭이 동적으로 생성됨 -->
+                    </ul>
+                    <div class="tab-content pt-3" id="priceListTabContent">
+                        <!-- 탭 내용이 동적으로 생성됨 -->
+                    </div>
+                </div>
+                
+                <div id="errorMessage" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="errorText"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 옵션별 가격 입력 모달 -->
+<div class="modal fade" id="optionPriceModal" tabindex="-1" aria-labelledby="optionPriceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-success">
+                <h5 class="modal-title text-white" id="optionPriceModalLabel">
+                    <i class="fas fa-list me-2"></i>
+                    옵션별 가격 입력
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">세트코드</label>
+                    <input type="text" class="form-control" id="optionPriceSetCode" readonly>
+                </div>
+                <div id="optionPriceLoading" class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">로딩 중...</span>
+                    </div>
+                    <p class="text-muted mt-2">옵션 목록을 불러오는 중...</p>
+                </div>
+                <div id="optionPriceList" style="display: none;">
+                    <table class="table table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 15%;">카테고리</th>
+                                <th style="width: 35%;">옵션명</th>
+                                <th style="width: 50%;">가격 (EUR)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="optionPriceTableBody">
+                            <!-- 옵션 목록이 여기에 동적으로 생성됨 -->
+                        </tbody>
+                        <tfoot class="table-info">
+                            <tr>
+                                <th colspan="2" class="text-end">합계:</th>
+                                <th id="optionPriceTotal" class="fw-bold">0 EUR</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div id="optionPriceErrorMessage" class="alert alert-danger" style="display: none;"></div>
+                <div id="optionPriceUpdateMessage" class="alert" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-success" id="saveOptionPricesBtn">
+                    <i class="fas fa-save me-2"></i>모든 가격 저장
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadPriceList();
+    
+    // 옵션별 가격 입력 필드 포맷팅 적용 (이벤트 위임)
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('option-price-input')) {
+            formatOptionPriceInput(e.target);
+            updateTotalPricePreview();
+        }
+    });
+    
+    // 포커스를 잃을 때 소수점 둘째 자리까지 표시
+    document.addEventListener('blur', function(e) {
+        if (e.target.classList.contains('option-price-input')) {
+            const value = e.target.value.trim();
+            if (value !== '' && !isNaN(parseFloat(value))) {
+                const numValue = parseFloat(value);
+                e.target.value = numValue.toFixed(2);
+                updateTotalPricePreview();
+            }
+        }
+    }, true);
+    
+    // 옵션별 가격 저장 버튼
+    document.getElementById('saveOptionPricesBtn').addEventListener('click', function() {
+        saveAllOptionPrices();
+    });
+    
+    // 모달이 열릴 때 저장 버튼 상태 초기화
+    const optionPriceModal = document.getElementById('optionPriceModal');
+    if (optionPriceModal) {
+        optionPriceModal.addEventListener('show.bs.modal', function() {
+            const saveBtn = document.getElementById('saveOptionPricesBtn');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>모든 가격 저장';
+            }
+        });
+        
+        // 모달이 닫힐 때도 저장 버튼 상태 초기화
+        optionPriceModal.addEventListener('hidden.bs.modal', function() {
+            const saveBtn = document.getElementById('saveOptionPricesBtn');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>모든 가격 저장';
+            }
+        });
+    }
+});
+
+function formatOptionPriceInput(input) {
+    // 숫자와 소수점만 허용 (소수점 둘째 자리까지)
+    let value = input.value.replace(/[^0-9.]/g, '');
+    
+    // 소수점이 여러 개인 경우 첫 번째만 유지
+    const parts = value.split('.');
+    if (parts.length > 2) {
+        value = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    // 소수점 둘째 자리까지만 허용
+    if (parts.length === 2 && parts[1].length > 2) {
+        value = parts[0] + '.' + parts[1].substring(0, 2);
+    }
+    
+    input.value = value;
+}
+
+function openOptionPriceModal(setCode) {
+    // 저장 버튼 상태를 먼저 초기화
+    const saveBtn = document.getElementById('saveOptionPricesBtn');
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>모든 가격 저장';
+    }
+    
+    document.getElementById('optionPriceSetCode').value = setCode;
+    document.getElementById('optionPriceLoading').style.display = 'block';
+    document.getElementById('optionPriceList').style.display = 'none';
+    document.getElementById('optionPriceErrorMessage').style.display = 'none';
+    document.getElementById('optionPriceUpdateMessage').style.display = 'none';
+    
+    const modalElement = document.getElementById('optionPriceModal');
+    // 기존 모달 인스턴스가 있으면 가져오고, 없으면 새로 생성
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
+    modal.show();
+    
+    // 옵션 목록 로드
+    loadOptionPrices(setCode);
+}
+
+function loadOptionPrices(setCode) {
+    console.log('Loading option prices for:', setCode);
+    fetch(`/api/set_price/options?set_code=${encodeURIComponent(setCode)}`)
+        .then(response => {
+            // 응답이 JSON인지 확인
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    console.error('Non-JSON response:', text);
+                    throw new Error('서버에서 JSON이 아닌 응답을 받았습니다. 서버 오류일 수 있습니다.');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('API response for', setCode, ':', data);
+            document.getElementById('optionPriceLoading').style.display = 'none';
+            
+            if (data.success) {
+                const tbody = document.getElementById('optionPriceTableBody');
+                tbody.innerHTML = '';
+                
+                if (!data.options || data.options.length === 0) {
+                    console.warn('No options found for', setCode);
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">등록된 옵션이 없습니다.</td></tr>';
+                } else {
+                    console.log('Found', data.options.length, 'options for', setCode);
+                    let totalSum = 0; // 합계를 미리 계산
+                    data.options.forEach(option => {
+                        // 카테고리별 옵션 가격 관리에서 설정한 기본 가격을 우선 사용
+                        let priceValue = '';
+                        let priceNum = 0;
+                        if (option.base_price !== null && option.base_price !== undefined) {
+                            // 기본 가격이 있으면 우선 사용 (카테고리별 옵션 가격 관리에서 변경한 값)
+                            priceNum = parseFloat(option.base_price) || 0;
+                            priceValue = priceNum.toFixed(2);
+                            console.log(`  - ${option.option_name}: using base_price=${priceValue}`);
+                        } else if (option.price !== null && option.price !== undefined) {
+                            // 기본 가격이 없으면 세트코드별 가격 사용
+                            priceNum = parseFloat(option.price) || 0;
+                            priceValue = priceNum.toFixed(2);
+                            console.log(`  - ${option.option_name}: using set_price=${priceValue}`);
+                        } else {
+                            console.log(`  - ${option.option_name}: no price (price=${option.price}, base_price=${option.base_price})`);
+                        }
+                        totalSum += priceNum; // 합계에 추가
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><strong>[${option.category_number}]</strong></td>
+                            <td>${option.option_name}</td>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" 
+                                           class="form-control option-price-input" 
+                                           data-category-number="${option.category_number}"
+                                           data-option-name="${option.option_name}"
+                                           value="${priceValue}"
+                                           placeholder="가격 입력">
+                                    <span class="input-group-text">EUR</span>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                    
+                    // 합계를 즉시 표시
+                    const totalElement = document.getElementById('optionPriceTotal');
+                    if (totalElement) {
+                        totalElement.textContent = totalSum.toFixed(2) + ' EUR';
+                        console.log(`DEBUG: Total sum calculated: ${totalSum.toFixed(2)} EUR`);
+                    }
+                }
+                
+                document.getElementById('optionPriceList').style.display = 'block';
+                
+                // 합계 계산 및 표시 (입력 필드 변경 시 업데이트를 위해)
+                // 약간의 지연을 두어 DOM이 완전히 렌더링된 후 호출
+                setTimeout(() => {
+                    updateTotalPricePreview();
+                }, 100);
+            } else {
+                console.error('API error for', setCode, ':', data.error);
+                document.getElementById('optionPriceErrorMessage').textContent = data.error || '옵션 목록을 불러오는 중 오류가 발생했습니다.';
+                document.getElementById('optionPriceErrorMessage').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading option prices for', setCode, ':', error);
+            document.getElementById('optionPriceLoading').style.display = 'none';
+            document.getElementById('optionPriceErrorMessage').textContent = '네트워크 오류가 발생했습니다: ' + error.message;
+            document.getElementById('optionPriceErrorMessage').style.display = 'block';
+        });
+}
+
+function updateTotalPricePreview() {
+    const inputs = document.querySelectorAll('.option-price-input');
+    let total = 0;
+    
+    inputs.forEach(input => {
+        const value = input.value.trim();
+        if (value !== '') {
+            const price = parseFloat(value);
+            if (!isNaN(price) && price >= 0) {
+                total += price;
+            }
+        }
+    });
+    
+    const totalElement = document.getElementById('optionPriceTotal');
+    if (totalElement) {
+        totalElement.textContent = total.toFixed(2) + ' EUR';
+    }
+}
+
+function saveAllOptionPrices() {
+    const setCode = document.getElementById('optionPriceSetCode').value;
+    const inputs = document.querySelectorAll('.option-price-input');
+    const messageDiv = document.getElementById('optionPriceUpdateMessage');
+    const saveBtn = document.getElementById('saveOptionPricesBtn');
+    
+    if (inputs.length === 0) {
+        messageDiv.className = 'alert alert-warning';
+        messageDiv.textContent = '저장할 옵션이 없습니다.';
+        messageDiv.style.display = 'block';
+        return;
+    }
+    
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>저장 중...';
+    
+    let savedCount = 0;
+    let errorCount = 0;
+    const totalCount = inputs.length;
+    let calculatedTotal = 0;
+    
+    const savePromises = Array.from(inputs).map(input => {
+        const categoryNumber = parseInt(input.getAttribute('data-category-number'));
+        const optionName = input.getAttribute('data-option-name');
+        let price = input.value.trim();
+        
+        // 빈 입력은 0으로 처리
+        if (price === '') {
+            price = 0;
+        } else {
+            price = parseFloat(price);
+            if (isNaN(price) || price < 0) {
+                errorCount++;
+                return Promise.resolve({ success: false, error: '올바른 가격을 입력해주세요.' });
+            }
+            // 소수점 둘째 자리까지 반올림
+            price = Math.round(price * 100) / 100;
+        }
+        calculatedTotal += price;
+        
+        return fetch('/api/set_price/option_price/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                set_code: setCode,
+                category_number: categoryNumber,
+                option_name: optionName,
+                price: price
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                savedCount++;
+                // API에서 반환된 total_price 사용
+                if (data.total_price !== undefined) {
+                    calculatedTotal = data.total_price;
+                }
+            } else {
+                errorCount++;
+            }
+            return data;
+        });
+    });
+    
+    Promise.all(savePromises)
+        .then(results => {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>모든 가격 저장';
+            
+            // 마지막 결과에서 total_price 가져오기
+            const lastResult = results[results.length - 1];
+            const finalTotal = lastResult && lastResult.total_price !== undefined ? lastResult.total_price : calculatedTotal;
+            
+            if (errorCount === 0) {
+                messageDiv.className = 'alert alert-success';
+                messageDiv.innerHTML = `<i class="fas fa-check-circle me-2"></i>${savedCount}개의 옵션 가격이 저장되었습니다. 세트코드 가격: ${parseFloat(finalTotal).toFixed(2)} EUR`;
+            } else {
+                messageDiv.className = 'alert alert-warning';
+                messageDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${savedCount}개 저장 성공, ${errorCount}개 저장 실패`;
+            }
+            messageDiv.style.display = 'block';
+            
+            // 합계 업데이트
+            updateTotalPricePreview();
+            
+            // 즉시 목록 새로고침하여 가격 반영 확인
+            loadPriceList();
+            
+            // 1.5초 후 모달 닫기
+            setTimeout(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('optionPriceModal'));
+                if (modal) {
+                    modal.hide();
+                }
+            }, 1500);
+        })
+        .catch(error => {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>모든 가격 저장';
+            messageDiv.className = 'alert alert-danger';
+            messageDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>저장 중 오류가 발생했습니다: ' + error.message;
+            messageDiv.style.display = 'block';
+        });
+}
+
+function loadPriceList() {
+    const loadingMessage = document.getElementById('loadingMessage');
+    const priceListContainer = document.getElementById('priceListContainer');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    loadingMessage.style.display = 'block';
+    priceListContainer.style.display = 'none';
+    errorMessage.style.display = 'none';
+    
+    fetch('/api/set_price/list')
+        .then(response => response.json())
+        .then(data => {
+            loadingMessage.style.display = 'none';
+            
+            if (data.success) {
+                if (data.price_list.length === 0) {
+                    document.getElementById('priceListContainer').innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">등록된 세트코드가 없습니다</h5>
+                            <p class="text-muted">옵션 선택 페이지에서 새로운 코드를 생성해보세요.</p>
+                        </div>
+                    `;
+                    priceListContainer.style.display = 'block';
+                } else {
+                    displayPriceListByGroup(data.price_list);
+                }
+            } else {
+                errorMessage.style.display = 'block';
+                document.getElementById('errorText').textContent = data.error || '세트코드 목록을 불러오는 중 오류가 발생했습니다.';
+            }
+        })
+        .catch(error => {
+            loadingMessage.style.display = 'none';
+            errorMessage.style.display = 'block';
+            document.getElementById('errorText').textContent = '네트워크 오류가 발생했습니다: ' + error.message;
+        });
+}
+
+function displayPriceListByGroup(priceList) {
+    const groups = {
+        P51: [],
+        P52: [],
+        P53: [],
+        P54: [],
+        other: []
+    };
+    
+    priceList.forEach(item => {
+        const prefix = item.set_code.substring(0, 3);
+        if (groups[prefix]) {
+            groups[prefix].push(item);
+        } else {
+            groups.other.push(item);
+        }
+    });
+    
+    // 각 그룹 내에서 세트코드 숫자 오름차순 정렬
+    Object.keys(groups).forEach(groupKey => {
+        groups[groupKey].sort((a, b) => {
+            const numA = parseInt(a.set_code.substring(2)) || 0;
+            const numB = parseInt(b.set_code.substring(2)) || 0;
+            return numA - numB;
+        });
+    });
+    
+    const totalCount = priceList.length;
+    document.getElementById('totalCount').textContent = totalCount;
+    
+    const tabList = document.getElementById('priceListTab');
+    const tabContent = document.getElementById('priceListTabContent');
+    
+    const groupOrder = ['P51', 'P52', 'P53', 'P54'];
+    const groupLabels = {
+        'P51': 'Super M',
+        'P52': 'Super C',
+        'P53': 'Super T',
+        'P54': 'Super S'
+    };
+    const hasOthers = groups.other.length > 0;
+    
+    // 탭 생성
+    let tabHTML = '';
+    groupOrder.forEach((groupKey, index) => {
+        const label = groupLabels[groupKey] || groupKey;
+        tabHTML += `
+            <li class="nav-item" role="presentation">
+                <button class="nav-link ${index === 0 ? 'active' : ''}" 
+                        id="tab-${groupKey}" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#tab-pane-${groupKey}" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="tab-pane-${groupKey}" 
+                        aria-selected="${index === 0 ? 'true' : 'false'}">
+                    <strong>${label}</strong> <span class="badge bg-burgundy text-white ms-1" style="color: #ffffff !important;">${groups[groupKey].length}</span>
+                </button>
+            </li>
+        `;
+    });
+    
+    if (hasOthers) {
+        tabHTML += `
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" 
+                        id="tab-other" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#tab-pane-other" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="tab-pane-other" 
+                        aria-selected="false">
+                    기타 <span class="badge bg-burgundy text-white ms-1" style="color: #ffffff !important;">${groups.other.length}</span>
+                </button>
+            </li>
+        `;
+    }
+    
+    tabList.innerHTML = tabHTML;
+    
+    // 탭 내용 생성
+    const renderGroupTable = (items) => {
+        if (!items || items.length === 0) {
+            return `
+                <div class="py-4 text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>해당 그룹에 저장된 세트코드가 없습니다.
+                </div>
+            `;
+        }
+        
+        let rows = '';
+        items.forEach(item => {
+            const priceDisplay = item.price !== null && item.price !== undefined 
+                ? `${parseFloat(item.price).toFixed(2)} EUR` 
+                : '<span class="text-muted">미입력</span>';
+            
+            rows += `
+                <tr>
+                    <td>
+                        <a href="/lookup?code=${encodeURIComponent(item.set_code)}" class="text-decoration-none">
+                            <code class="fs-6 text-primary" style="cursor: pointer;">${item.set_code}</code>
+                        </a>
+                    </td>
+                    <td>${priceDisplay}</td>
+                    <td>
+                        <span class="text-muted">옵션별 가격 합계</span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-success" onclick="openOptionPriceModal('${item.set_code}')">
+                            <i class="fas fa-list me-1"></i>옵션별 가격 입력
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        return `
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>세트코드</th>
+                            <th>현재 가격 (옵션별 가격 합계)</th>
+                            <th>가격 입력 방식</th>
+                            <th>액션</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    };
+    
+    let contentHTML = '';
+    groupOrder.forEach((groupKey, index) => {
+        contentHTML += `
+            <div class="tab-pane fade ${index === 0 ? 'show active' : ''}" 
+                 id="tab-pane-${groupKey}" 
+                 role="tabpanel" 
+                 aria-labelledby="tab-${groupKey}">
+                ${renderGroupTable(groups[groupKey])}
+            </div>
+        `;
+    });
+    
+    if (hasOthers) {
+        contentHTML += `
+            <div class="tab-pane fade" 
+                 id="tab-pane-other" 
+                 role="tabpanel" 
+                 aria-labelledby="tab-other">
+                ${renderGroupTable(groups.other)}
+            </div>
+        `;
+    }
+    
+    tabContent.innerHTML = contentHTML;
+    document.getElementById('priceListContainer').style.display = 'block';
+}
+
+</script>
+{% endblock %}
+

@@ -1,0 +1,1092 @@
+{% extends "base.html" %}
+
+{% block title %}파트가격조회 이미지,가격 매칭 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 style="color: #000000 !important;">
+                    파트가격조회 이미지,가격 매칭
+                </h2>
+                <div>
+                    <button type="button" class="btn btn-outline-secondary" onclick="location.href='/'">
+                        <i class="fas fa-home me-1"></i>홈으로
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 폴더 및 하위 폴더 선택 섹션 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-burgundy text-white">
+                    <h5 class="mb-0">이미지 폴더 선택</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="folderSelect" class="form-label">폴더</label>
+                            <select class="form-select" id="folderSelect">
+                                <option value="">폴더를 선택하세요</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="subfolderSelect" class="form-label">하위 폴더</label>
+                            <select class="form-select" id="subfolderSelect">
+                                <option value="">하위 폴더를 선택하세요</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="loadImagesBtn">
+                        <i class="fas fa-search me-2"></i>이미지 불러오기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메인 콘텐츠 영역 -->
+    <div class="row">
+        <!-- 왼쪽: 선택된 이미지 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body" id="selectedImageContainer">
+                </div>
+            </div>
+        </div>
+
+        <!-- 오른쪽: 가격 매칭(엑셀 업로드 성공 후에만 표시) — d-none은 JS에서 제거 -->
+        <div class="col-md-8 d-none" id="matchPriceDataPanel">
+            <div class="row">
+                <!-- 부품 선택 드롭다운 -->
+                <div class="col-md-12 mb-3">
+                    <div class="card">
+                        <div class="card-header bg-burgundy text-white">
+                            <h5 class="mb-0">매칭된 가격 데이터</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted mb-2"><strong>이미지 목록</strong>에서 <strong>가격 엑셀</strong>(컬럼: 자재코드, 설명, 가격)을 올리면, 여기 <strong>매칭된 가격 데이터</strong>에 그 부품만 표시됩니다. 같은 화면에서 엑셀을 다시 올리면 목록이 새 파일 기준으로 바뀝니다.</p>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label for="partSelect" class="form-label mb-0">부품 선택</label>
+                                    <button type="button" class="btn btn-sm btn-info" id="searchPartBtn" data-bs-toggle="modal" data-bs-target="#searchPartModal">
+                                        <i class="fas fa-search me-1"></i>찾기
+                                    </button>
+                                </div>
+                                <select class="form-select" id="partSelect" size="10">
+                                    <option value="">부품을 선택하세요</option>
+                                </select>
+                            </div>
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-primary" id="saveMatchBtn" disabled>
+                                    <i class="fas fa-save me-2"></i>저장
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 가격 데이터 표 -->
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-burgundy text-white">
+                            <h5 class="mb-0">선택된 부품 목록</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover mb-0" id="priceTable">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th style="width: 5%;">삭제</th>
+                                            <th style="width: 20%;">자재코드</th>
+                                            <th style="width: 50%;">설명</th>
+                                            <th style="width: 15%;">가격</th>
+                                            <th style="width: 10%;">생성일</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="priceTableBody">
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">부품을 선택하면 표에 추가됩니다</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 이미지 목록 (하단) -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-burgundy text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">이미지 목록</h5>
+                    <span class="badge bg-light text-dark" id="imageCount">0개</span>
+                </div>
+                <div class="card-body">
+                    <div id="excelUploadToolbar" class="mb-3 p-3 border rounded bg-light" style="display: none;">
+                        <div class="row align-items-end g-2">
+                            <div class="col-12 col-md-auto">
+                                <label class="form-label mb-1 fw-semibold">가격 엑셀 업로드</label>
+                                <div class="small text-muted mb-1"><strong>자재코드, 설명, 가격</strong> 3열(첫 행 헤더 권장). 형식은 관리 메뉴의 파트가격조회 가격업로드와 동일합니다. 업로드 성공 시 위쪽 <strong>매칭된 가격 데이터</strong>가 열리고 여기 올린 행만 목록에 나타납니다.</div>
+                                <input type="file" class="form-control form-control-sm" id="partPriceExcelInputMatch" accept=".xlsx,.xls">
+                            </div>
+                            <div class="col-12 col-md-auto">
+                                <button type="button" class="btn btn-success btn-sm" id="partPriceExcelUploadBtnMatch">
+                                    <i class="fas fa-file-excel me-1"></i>엑셀 업로드
+                                </button>
+                            </div>
+                            <div class="col-12 col-md">
+                                <span id="partPriceExcelUploadStatusMatch" class="small"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="imageGallery" class="row">
+                        <div class="col-12 text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">로딩 중...</span>
+                            </div>
+                            <p class="mt-2">이미지를 불러오는 중...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 부품 찾기 모달 -->
+<div class="modal fade" id="searchPartModal" tabindex="-1" aria-labelledby="searchPartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-burgundy text-white">
+                <h5 class="modal-title" id="searchPartModalLabel">부품 찾기</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="partSearchInput" class="form-label">검색어 입력</label>
+                    <input type="text" class="form-control" id="partSearchInput" placeholder="자재코드 또는 설명으로 검색">
+                </div>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover table-sm">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th style="width: 5%;">선택</th>
+                                <th style="width: 20%;">자재코드</th>
+                                <th style="width: 50%;">설명</th>
+                                <th style="width: 15%;">가격</th>
+                                <th style="width: 10%;">생성일</th>
+                            </tr>
+                        </thead>
+                        <tbody id="partSearchResults">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">검색어를 입력하세요</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const PART_PRICE_IMAGE_MATCH_UPLOAD_KEY = 'partPriceImageMatchUploadParts_v1';
+
+let selectedImageId = null;
+let selectedImageUrl = null;
+let partsData = [];
+/** 가격 엑셀을 이 페이지에서 한 번이라도 성공 업로드하면 true — 매칭 UI 표시 */
+let matchPriceDataPanelRevealed = false;
+
+function showMatchPriceDataPanel() {
+    const panel = document.getElementById('matchPriceDataPanel');
+    if (panel) {
+        panel.classList.remove('d-none');
+        panel.style.removeProperty('display');
+        matchPriceDataPanelRevealed = true;
+    }
+    const saveBtn = document.getElementById('saveMatchBtn');
+    if (saveBtn) {
+        // 버튼은 항상 클릭 가능하게 두고, 실제 저장 가능 여부는 클릭 핸들러에서 안내
+        saveBtn.disabled = false;
+    }
+}
+
+function setPartPriceExcelToolbarVisible(visible) {
+    const el = document.getElementById('excelUploadToolbar');
+    if (el) {
+        el.style.display = visible ? 'block' : 'none';
+    }
+}
+
+/** 업로드 응답으로 매칭 패널용 부품 목록 생성
+ *  - 화면 표시는 엑셀 업로드 행(자재코드/설명/가격)을 그대로 사용
+ *  - 저장에 필요한 id는 uploaded_parts 또는 대시보드 조회로 보강
+ */
+function resolveMatchingPartsAfterUpload(data) {
+    const parsedRaw = Array.isArray(data.parts) ? data.parts : [];
+    const parsed = [];
+    const seen = new Set();
+    parsedRaw.forEach((r) => {
+        const materialCode = String(r.material_code || '').trim();
+        const key = materialCode.toUpperCase();
+        if (!materialCode || seen.has(key)) {
+            return;
+        }
+        seen.add(key);
+        parsed.push({
+            key,
+            material_code: materialCode,
+            description: String(r.description || '').trim(),
+            price: Number(r.price || 0),
+            id: null
+        });
+    });
+
+    if (parsed.length === 0) {
+        return Promise.resolve([]);
+    }
+
+    const uploaded = Array.isArray(data.uploaded_parts) ? data.uploaded_parts : [];
+    const idByKey = {};
+    uploaded.forEach((u) => {
+        const key = String(u.material_code || '').trim().toUpperCase();
+        const id = Number(u.id);
+        if (key && Number.isFinite(id) && id > 0) {
+            idByKey[key] = id;
+        }
+    });
+
+    parsed.forEach((p) => {
+        if (idByKey[p.key]) {
+            p.id = idByKey[p.key];
+        }
+    });
+
+    const missing = parsed.filter((p) => !p.id);
+    if (missing.length === 0) {
+        return Promise.resolve(parsed.map(({ key, ...rest }) => rest));
+    }
+
+    return fetch('/api/part_price/dashboard')
+        .then((r) => r.json())
+        .then((j) => {
+            if (j.success && Array.isArray(j.parts)) {
+                const byUpper = {};
+                j.parts.forEach((row) => {
+                    const key = String(row.material_code || '').trim().toUpperCase();
+                    const id = Number(row.id);
+                    if (key && Number.isFinite(id) && id > 0) {
+                        byUpper[key] = id;
+                    }
+                });
+                parsed.forEach((p) => {
+                    if (!p.id && byUpper[p.key]) {
+                        p.id = byUpper[p.key];
+                    }
+                });
+            }
+            return parsed
+                .filter((p) => Number.isFinite(Number(p.id)) && Number(p.id) > 0)
+                .map(({ key, ...rest }) => rest);
+        })
+        .catch(() => {
+            return parsed
+                .filter((p) => Number.isFinite(Number(p.id)) && Number(p.id) > 0)
+                .map(({ key, ...rest }) => rest);
+        });
+}
+
+function uploadPartPriceExcelFromMatchPage() {
+    const fileInput = document.getElementById('partPriceExcelInputMatch');
+    const statusEl = document.getElementById('partPriceExcelUploadStatusMatch');
+    const uploadBtn = document.getElementById('partPriceExcelUploadBtnMatch');
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        alert('엑셀 파일(.xlsx, .xls)을 선택해주세요.');
+        return;
+    }
+    const file = fileInput.files[0];
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+        alert('엑셀 파일(.xlsx, .xls)만 업로드할 수 있습니다.');
+        return;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    if (statusEl) {
+        statusEl.textContent = '업로드 중...';
+        statusEl.className = 'small text-primary';
+    }
+    if (uploadBtn) {
+        uploadBtn.disabled = true;
+    }
+    fetch('/api/part_price/upload', {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => response.json().then(data => ({ ok: response.ok, data })))
+        .then(({ ok, data }) => {
+            if (uploadBtn) {
+                uploadBtn.disabled = false;
+            }
+            if (!ok || !data.success) {
+                if (statusEl) {
+                    statusEl.textContent = data.error || '업로드에 실패했습니다.';
+                    statusEl.className = 'small text-danger';
+                }
+                alert(data.error || '업로드에 실패했습니다.');
+                return;
+            }
+            if (statusEl) {
+                statusEl.textContent = data.message || '업로드가 완료되었습니다.';
+                statusEl.className = 'small text-success';
+            }
+            fileInput.value = '';
+            resolveMatchingPartsAfterUpload(data).then((resolvedList) => {
+                if (resolvedList.length > 0) {
+                    try {
+                        sessionStorage.setItem(PART_PRICE_IMAGE_MATCH_UPLOAD_KEY, JSON.stringify(resolvedList));
+                    } catch (e) {
+                        console.warn('sessionStorage 저장 실패:', e);
+                    }
+                    if (statusEl && (!Array.isArray(data.uploaded_parts) || data.uploaded_parts.length === 0)) {
+                        statusEl.textContent = (data.message || '업로드가 완료되었습니다.') + ' (목록은 저장된 부품 기준으로 불러왔습니다.)';
+                        statusEl.className = 'small text-success';
+                    }
+                } else {
+                    sessionStorage.removeItem(PART_PRICE_IMAGE_MATCH_UPLOAD_KEY);
+                    if (statusEl) {
+                        statusEl.textContent = (data.message || '업로드됨') + ' (매칭 목록을 채우려면 자재코드·설명·가격 열과 데이터 행을 확인하세요.)';
+                        statusEl.className = 'small text-warning';
+                    }
+                }
+                showMatchPriceDataPanel();
+                const saveBtnAfterExcel = document.getElementById('saveMatchBtn');
+                if (saveBtnAfterExcel) {
+                    saveBtnAfterExcel.disabled = false;
+                }
+                Promise.resolve(loadParts()).finally(() => {
+                    if (selectedImageId) {
+                        loadSavedMatches(selectedImageId);
+                    }
+                    loadImages();
+                });
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            if (uploadBtn) {
+                uploadBtn.disabled = false;
+            }
+            if (statusEl) {
+                statusEl.textContent = '업로드 중 오류가 발생했습니다.';
+                statusEl.className = 'small text-danger';
+            }
+            alert('업로드 중 오류가 발생했습니다.');
+        });
+}
+
+// 폴더 목록 로드
+function loadFolders() {
+    fetch('/api/part_price/folders')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.folders) {
+                const folderSelect = document.getElementById('folderSelect');
+                folderSelect.innerHTML = '<option value="">폴더를 선택하세요</option>';
+                data.folders.forEach(folder => {
+                    const option = document.createElement('option');
+                    option.value = folder.id;
+                    option.textContent = folder.folder_name;
+                    folderSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('폴더 목록 로드 오류:', error);
+        });
+}
+
+// 하위 폴더 목록 로드
+function loadSubfolders(folderId) {
+    if (!folderId) {
+        document.getElementById('subfolderSelect').innerHTML = '<option value="">하위 폴더를 선택하세요</option>';
+        return;
+    }
+    
+    fetch(`/api/part_price/subfolders?folder_id=${folderId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.subfolders) {
+                const subfolderSelect = document.getElementById('subfolderSelect');
+                subfolderSelect.innerHTML = '<option value="">하위 폴더를 선택하세요</option>';
+                data.subfolders.forEach(subfolder => {
+                    const option = document.createElement('option');
+                    option.value = subfolder.id;
+                    option.textContent = subfolder.subfolder_name;
+                    subfolderSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('하위 폴더 목록 로드 오류:', error);
+        });
+}
+
+// 이미지 목록 로드
+function loadImages() {
+    const folderId = document.getElementById('folderSelect').value;
+    const subfolderId = document.getElementById('subfolderSelect').value;
+    
+    if (!subfolderId) {
+        alert('하위 폴더를 선택해주세요.');
+        return;
+    }
+    
+    setPartPriceExcelToolbarVisible(false);
+    const gallery = document.getElementById('imageGallery');
+    gallery.innerHTML = `
+        <div class="col-12 text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">로딩 중...</span>
+            </div>
+            <p class="mt-2">이미지를 불러오는 중...</p>
+        </div>
+    `;
+    
+    let apiUrl = `/api/part_price/image/list?subfolder_id=${subfolderId}`;
+    if (folderId) {
+        apiUrl += `&folder_id=${folderId}`;
+    }
+    
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.images && data.images.length > 0) {
+                displayImages(data.images);
+                document.getElementById('imageCount').textContent = `${data.images.length}개`;
+                setPartPriceExcelToolbarVisible(true);
+            } else {
+                gallery.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">이미지가 없습니다.</p>
+                    </div>
+                `;
+                document.getElementById('imageCount').textContent = '0개';
+                setPartPriceExcelToolbarVisible(false);
+            }
+        })
+        .catch(error => {
+            console.error('이미지 로드 오류:', error);
+            setPartPriceExcelToolbarVisible(false);
+            gallery.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                    <p class="text-danger">이미지를 불러오는 중 오류가 발생했습니다.</p>
+                </div>
+            `;
+        });
+}
+
+// 이미지 표시
+function displayImages(images) {
+    const gallery = document.getElementById('imageGallery');
+    let html = '';
+    
+    // 각 이미지의 매칭 정보를 가져오기
+    const imagePromises = images.map(image => {
+        return fetch(`/api/part_price/image/matches?image_id=${image.id}`)
+            .then(response => response.json())
+            .then(data => {
+                return { image, matches: data.success ? (data.matches || []) : [] };
+            })
+            .catch(error => {
+                console.error(`이미지 ${image.id} 매칭 정보 로드 오류:`, error);
+                return { image, matches: [] };
+            });
+    });
+    
+    Promise.all(imagePromises).then(results => {
+        results.forEach(({ image, matches }) => {
+            const isSelected = selectedImageId === image.id;
+            let matchesHtml = '';
+            
+            if (matches.length > 0) {
+                matchesHtml = '<div class="col-md-6"><div class="card"><div class="card-header bg-success text-white d-flex justify-content-between align-items-center"><h6 class="mb-0">매칭된 부품</h6></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-bordered table-sm mb-0" id="matchesTable_' + image.id + '"><thead class="table-dark"><tr><th style="width: 5%;"><input type="checkbox" class="form-check-input" id="checkAll_' + image.id + '" onchange="toggleAllChecks(' + image.id + ')"></th><th style="width: 5%;">번호</th><th>자재코드</th><th>설명</th><th>가격</th><th style="width: 70px;">삭제</th></tr></thead><tbody>';
+                matches.forEach((match, index) => {
+                    const part = match.part;
+                    const matchRowId = match.id;
+                    matchesHtml += `
+                        <tr>
+                            <td class="text-center"><input type="checkbox" class="form-check-input part-checkbox" data-image-id="${image.id}" data-match-id="${matchRowId}" data-part-id="${part.id}" data-price="${part.price}" onchange="updatePriceSum(${image.id})"></td>
+                            <td class="text-center">${index + 1}</td>
+                            <td>${part.material_code || '-'}</td>
+                            <td>${part.description || '-'}</td>
+                            <td class="text-end">€${part.price.toFixed(2)}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="이 매칭 삭제" onclick="event.preventDefault(); event.stopPropagation(); deleteMatch(${matchRowId}, ${image.id});">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                matchesHtml += '</tbody></table></div><div class="card-footer bg-light"><div class="d-flex flex-wrap justify-content-between align-items-center gap-2"><div class="d-flex align-items-center gap-2"><strong>합계:</strong><strong id="priceSum_' + image.id + '" class="text-primary">€0.00</strong></div><button type="button" class="btn btn-sm btn-danger" onclick="event.preventDefault(); event.stopPropagation(); deleteSelectedMatchedPartsFromGallery(' + image.id + ');"><i class="fas fa-trash-alt me-1"></i>선택 매칭 삭제</button></div></div></div></div></div>';
+            }
+            
+            html += `
+                <div class="col-md-12 mb-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card image-card ${isSelected ? 'border-primary border-3' : ''}" 
+                                 style="cursor: pointer; transition: all 0.3s;"
+                                 onclick="selectImage(${image.id}, '/api/part_price/image/${image.id}', this)">
+                                <div class="card-img-wrapper" style="position: relative; min-height: 600px; overflow: hidden; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                                    <img src="/api/part_price/image/${image.id}" 
+                                         class="card-img-top" 
+                                         style="max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; padding: 30px;"
+                                         alt="${image.filename}">
+                                </div>
+                                <div class="card-body p-2">
+                                    <small class="text-muted d-block text-center">${image.filename.replace(/\.[^/.]+$/, "")}</small>
+                                </div>
+                            </div>
+                        </div>
+                        ${matchesHtml}
+                    </div>
+                </div>
+            `;
+        });
+        
+        gallery.innerHTML = html;
+    });
+}
+
+// 이미지 선택
+function selectImage(imageId, imageUrl, cardElement) {
+    selectedImageId = imageId;
+    selectedImageUrl = imageUrl;
+    
+    // 선택된 이미지 표시 업데이트
+    const container = document.getElementById('selectedImageContainer');
+    container.innerHTML = `
+        <img src="${imageUrl}" 
+             class="img-fluid" 
+             style="max-width: 100%; height: auto; border: 2px solid #800020; border-radius: 5px;"
+             alt="선택된 이미지">
+    `;
+    
+    // 이미지 카드 선택 상태 업데이트
+    document.querySelectorAll('.image-card').forEach(card => {
+        card.classList.remove('border-primary', 'border-3');
+    });
+    if (cardElement) {
+        cardElement.classList.add('border-primary', 'border-3');
+    }
+    
+    // 저장 버튼: 엑셀 업로드 후 매칭 패널이 열린 경우에만 사용
+    const saveBtn = document.getElementById('saveMatchBtn');
+    if (saveBtn) {
+        saveBtn.disabled = false;
+    }
+    
+    // 선택된 부품 목록 초기화
+    selectedPartIds.clear();
+    selectedPartsMap.clear();
+    selectedPartOrder = [];
+    const tbody = document.getElementById('priceTableBody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">부품을 선택하면 표에 추가됩니다</td></tr>';
+    }
+    
+    // 부품 선택 드롭다운의 disabled 옵션 초기화
+    const partSelect = document.getElementById('partSelect');
+    if (partSelect) {
+        Array.from(partSelect.options).forEach(option => {
+            if (option.value) {
+                option.disabled = false;
+                option.style.color = '';
+                option.style.backgroundColor = '';
+            }
+        });
+    }
+    
+    if (!matchPriceDataPanelRevealed) {
+        return;
+    }
+    
+    // 부품 목록 로드
+    loadParts();
+    
+    // 저장된 매칭 정보 로드
+    loadSavedMatches(imageId);
+    
+    if (saveBtn) {
+        saveBtn.disabled = false;
+    }
+}
+
+// 부품 목록: 이미지 목록에서 마지막으로 성공 업로드한 엑셀에 포함된 행만 (sessionStorage)
+function loadParts() {
+    const partSelect = document.getElementById('partSelect');
+    if (!partSelect) {
+        return Promise.resolve();
+    }
+    let list = [];
+    try {
+        const raw = sessionStorage.getItem(PART_PRICE_IMAGE_MATCH_UPLOAD_KEY);
+        if (raw) {
+            list = JSON.parse(raw);
+            if (!Array.isArray(list)) {
+                list = [];
+            }
+        }
+    } catch (e) {
+        console.warn('매칭용 부품 목록 파싱 오류:', e);
+        list = [];
+    }
+    partsData = list;
+    const emptyLabel = partsData.length === 0
+        ? '아래 이미지 목록에서 자재코드·설명·가격 엑셀을 업로드하면 여기 표시됩니다'
+        : '부품을 선택하세요';
+    partSelect.innerHTML = `<option value="">${emptyLabel}</option>`;
+    partsData.forEach(part => {
+        const option = document.createElement('option');
+        option.value = part.id;
+        option.textContent = `${part.material_code} - ${part.description} (€${Number(part.price || 0).toFixed(2)})`;
+        partSelect.appendChild(option);
+    });
+    return Promise.resolve();
+}
+
+// 선택된 부품 목록 (중복 방지 및 순서 유지)
+let selectedPartIds = new Set();
+let selectedPartsMap = new Map(); // partId -> part 객체
+let selectedPartOrder = []; // 선택한 순서를 유지하는 배열
+
+// 부품 선택 시 표에 행 추가
+document.getElementById('partSelect').addEventListener('change', function() {
+    const partId = this.value;
+    if (!partId) {
+        return;
+    }
+    
+    // 선택한 부품의 인덱스와 위치 저장
+    const selectedIndex = this.selectedIndex;
+    const selectedOption = this.options[selectedIndex];
+    const currentScrollTop = this.scrollTop;
+    
+    const part = partsData.find(p => p.id == partId);
+    if (part) {
+        // 선택 순서 추가 (같은 부품도 여러 번 추가 가능)
+        selectedPartOrder.push(partId);
+        
+        // 표에 행 추가
+        addPartToTable(part);
+        
+        // 스크롤 위치 유지 (value를 초기화하지 않으므로 스크롤이 유지됨)
+        setTimeout(() => {
+            this.scrollTop = currentScrollTop;
+        }, 10);
+    }
+});
+
+// 표에 부품 행 추가
+function addPartToTable(part) {
+    const tbody = document.getElementById('priceTableBody');
+    
+    // 빈 메시지 행 제거
+    const emptyRow = tbody.querySelector('tr td[colspan]');
+    if (emptyRow) {
+        emptyRow.closest('tr').remove();
+    }
+    
+    // 고유한 행 ID 생성 (timestamp 사용)
+    const rowId = `priceRow_${part.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // 새 행 추가
+    const row = document.createElement('tr');
+    row.id = rowId;
+    row.innerHTML = `
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-danger" onclick="removePartFromTable('${rowId}', ${part.id})" title="삭제">
+                <i class="fas fa-times"></i>
+            </button>
+        </td>
+        <td>${part.material_code || '-'}</td>
+        <td>${part.description || '-'}</td>
+        <td class="text-end">€${part.price.toFixed(2)}</td>
+        <td class="text-center">${part.created_at ? new Date(part.created_at).toLocaleDateString('ko-KR') : '-'}</td>
+    `;
+    tbody.appendChild(row);
+}
+
+// 표에서 부품 행 제거
+function removePartFromTable(rowId, partId) {
+    const row = document.getElementById(rowId);
+    if (row) {
+        row.remove();
+        // 선택 순서에서 해당 부품의 첫 번째 항목만 제거
+        const partIdNum = parseInt(partId);
+        const index = selectedPartOrder.findIndex(id => parseInt(id) === partIdNum);
+        if (index !== -1) {
+            selectedPartOrder.splice(index, 1);
+        }
+        
+        // 표가 비어있으면 메시지 표시
+        const tbody = document.getElementById('priceTableBody');
+        if (tbody && tbody.children.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">부품을 선택하면 표에 추가됩니다</td></tr>';
+        }
+    }
+}
+
+// 저장된 매칭 정보 로드
+function loadSavedMatches(imageId) {
+    fetch(`/api/part_price/image/matches?image_id=${imageId}`)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('priceTableBody');
+            tbody.innerHTML = '';
+            
+            // 선택 순서 초기화
+            selectedPartOrder = [];
+            
+            if (data.success && data.matches && data.matches.length > 0) {
+                data.matches.forEach(match => {
+                    const part = match.part;
+                    const partId = match.part_id;
+                    
+                    // 선택 순서에 추가 (저장된 매칭 정보는 중복 없이 추가)
+                    if (!selectedPartOrder.includes(partId)) {
+                        selectedPartOrder.push(partId);
+                    }
+                    
+                    const row = document.createElement('tr');
+                    row.id = `savedRow_${match.id}`;
+                    row.innerHTML = `
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteMatch(${match.id}, ${imageId})" title="삭제">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </td>
+                        <td>${part.material_code || '-'}</td>
+                        <td>${part.description || '-'}</td>
+                        <td class="text-end">€${part.price.toFixed(2)}</td>
+                        <td class="text-center">${part.created_at ? new Date(part.created_at).toLocaleDateString('ko-KR') : '-'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">부품을 선택하면 표에 추가됩니다</td></tr>';
+            }
+        })
+        .catch(error => {
+            console.error('저장된 매칭 정보 로드 오류:', error);
+        });
+}
+
+// 매칭 삭제
+function deleteMatch(matchId, imageId) {
+    if (!confirm('이 매칭을 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    fetch(`/api/part_price/image/match/${matchId}`, {
+        method: 'DELETE'
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // loadSavedMatches에서 순서를 다시 로드하므로 여기서는 호출만
+                loadSavedMatches(imageId);
+                loadImages(); // 이미지 목록 새로고침
+            } else {
+                alert('삭제 중 오류가 발생했습니다: ' + (data.error || '알 수 없는 오류'));
+            }
+        })
+        .catch(error => {
+            console.error('매칭 삭제 오류:', error);
+            alert('삭제 중 오류가 발생했습니다.');
+        });
+}
+
+// 저장 버튼 클릭 이벤트
+document.getElementById('saveMatchBtn').addEventListener('click', function() {
+    if (!selectedImageId) {
+        alert('이미지를 선택해주세요.');
+        return;
+    }
+    
+    if (selectedPartOrder.length === 0) {
+        alert('부품을 선택해주세요.');
+        return;
+    }
+    
+    // 선택한 순서대로 partIds 배열 생성
+    let partIds = selectedPartOrder.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0);
+    
+    if (partIds.length === 0) {
+        alert('유효한 부품이 선택되지 않았습니다.');
+        return;
+    }
+    
+    console.log('저장 요청:', { image_id: selectedImageId, part_ids: partIds });
+    console.log('selectedPartOrder:', selectedPartOrder);
+    
+    fetch('/api/part_price/image/match', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            image_id: parseInt(selectedImageId),
+            part_ids: partIds
+        })
+    })
+        .then(response => {
+            console.log('응답 상태:', response.status);
+            console.log('Content-Type:', response.headers.get('content-type'));
+            
+            // 응답이 JSON인지 확인
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    console.error('JSON이 아닌 응답:', text.substring(0, 200));
+                    throw new Error('서버에서 JSON이 아닌 응답을 받았습니다. 서버를 재시작해주세요.');
+                });
+            }
+            
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('저장 응답:', data);
+            if (data.success) {
+                alert('저장되었습니다.');
+                // 선택된 부품 목록 초기화
+                selectedPartIds.clear();
+                selectedPartsMap.clear();
+                selectedPartOrder = [];
+                const tbody = document.getElementById('priceTableBody');
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">부품을 선택하면 표에 추가됩니다</td></tr>';
+                // 저장된 매칭 정보 다시 로드
+                loadSavedMatches(selectedImageId);
+                // 이미지 목록 새로고침
+                loadImages();
+            } else {
+                alert('저장 중 오류가 발생했습니다: ' + (data.error || '알 수 없는 오류'));
+            }
+        })
+        .catch(error => {
+            console.error('저장 오류:', error);
+            alert('저장 중 오류가 발생했습니다: ' + error.message);
+        });
+});
+
+// 이벤트 리스너
+document.getElementById('folderSelect').addEventListener('change', function() {
+    loadSubfolders(this.value);
+});
+
+document.getElementById('loadImagesBtn').addEventListener('click', function() {
+    loadImages();
+});
+
+const partPriceExcelUploadBtnMatch = document.getElementById('partPriceExcelUploadBtnMatch');
+if (partPriceExcelUploadBtnMatch) {
+    partPriceExcelUploadBtnMatch.addEventListener('click', uploadPartPriceExcelFromMatchPage);
+}
+
+// 부품 찾기 기능
+function searchPartsInModal() {
+    const searchTerm = document.getElementById('partSearchInput').value.toLowerCase().trim();
+    const resultsBody = document.getElementById('partSearchResults');
+    
+    if (!partsData || partsData.length === 0) {
+        resultsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">이미지 목록에서 가격 엑셀을 업로드하면, 그 엑셀에 있는 부품만 여기서 찾을 수 있습니다.</td></tr>';
+        return;
+    }
+    
+    // 검색어가 없으면 모든 부품 표시, 있으면 필터링
+    let filteredParts = partsData;
+    if (searchTerm) {
+        filteredParts = partsData.filter(part => {
+            const materialCode = (part.material_code || '').toLowerCase();
+            const description = (part.description || '').toLowerCase();
+            return materialCode.includes(searchTerm) || description.includes(searchTerm);
+        });
+    }
+    
+    if (filteredParts.length === 0) {
+        resultsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">검색 결과가 없습니다</td></tr>';
+        return;
+    }
+    
+    // 결과 표시
+    let html = '';
+    filteredParts.forEach(part => {
+        html += `
+            <tr>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="selectPartFromSearch(${part.id})" title="부품 추가">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </td>
+                <td>${part.material_code || '-'}</td>
+                <td>${part.description || '-'}</td>
+                <td class="text-end">€${part.price.toFixed(2)}</td>
+                <td class="text-center">${part.created_at ? new Date(part.created_at).toLocaleDateString('ko-KR') : '-'}</td>
+            </tr>
+        `;
+    });
+    resultsBody.innerHTML = html;
+}
+
+// 검색 모달에서 부품 선택
+function selectPartFromSearch(partId) {
+    const part = partsData.find(p => p.id == partId);
+    if (part) {
+        // 선택 순서 추가 (같은 부품도 여러 번 추가 가능)
+        selectedPartOrder.push(partId);
+        
+        // 표에 행 추가
+        addPartToTable(part);
+        
+        // 검색 결과 새로고침
+        searchPartsInModal();
+        
+        // 모달 닫기
+        const modal = bootstrap.Modal.getInstance(document.getElementById('searchPartModal'));
+        if (modal) {
+            modal.hide();
+        }
+    }
+}
+
+// 검색 입력 이벤트
+document.getElementById('partSearchInput').addEventListener('input', function() {
+    searchPartsInModal();
+});
+
+// 모달이 열릴 때 모든 부품 목록 표시
+document.getElementById('searchPartModal').addEventListener('show.bs.modal', function() {
+    document.getElementById('partSearchInput').value = '';
+    // 모든 부품 목록 표시
+    searchPartsInModal();
+});
+
+// 페이지 로드 시 폴더 목록 로드
+document.addEventListener('DOMContentLoaded', function() {
+    loadFolders();
+});
+</script>
+
+<style>
+.image-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.image-card.border-primary {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+#partSelect {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* 버건디 배경일 때 텍스트는 무조건 흰색 */
+.bg-burgundy,
+.card-header.bg-burgundy,
+.modal-header.bg-burgundy {
+    color: #ffffff !important;
+}
+
+.bg-burgundy *,
+.card-header.bg-burgundy *,
+.modal-header.bg-burgundy * {
+    color: #ffffff !important;
+}
+
+.bg-burgundy h1,
+.bg-burgundy h2,
+.bg-burgundy h3,
+.bg-burgundy h4,
+.bg-burgundy h5,
+.bg-burgundy h6,
+.card-header.bg-burgundy h1,
+.card-header.bg-burgundy h2,
+.card-header.bg-burgundy h3,
+.card-header.bg-burgundy h4,
+.card-header.bg-burgundy h5,
+.card-header.bg-burgundy h6,
+.modal-header.bg-burgundy h1,
+.modal-header.bg-burgundy h2,
+.modal-header.bg-burgundy h3,
+.modal-header.bg-burgundy h4,
+.modal-header.bg-burgundy h5,
+.modal-header.bg-burgundy h6 {
+    color: #ffffff !important;
+}
+</style>
+
+<script>
+// 가격 합계 업데이트 함수
+function updatePriceSum(imageId) {
+    const checkboxes = document.querySelectorAll(`input.part-checkbox[data-image-id="${imageId}"]:checked`);
+    let sum = 0;
+    
+    checkboxes.forEach(checkbox => {
+        const price = parseFloat(checkbox.getAttribute('data-price')) || 0;
+        sum += price;
+    });
+    
+    const sumElement = document.getElementById('priceSum_' + imageId);
+    if (sumElement) {
+        sumElement.textContent = '€' + sum.toFixed(2);
+    }
+    
+    // 전체 선택 체크박스 상태 업데이트
+    const allCheckboxes = document.querySelectorAll(`input.part-checkbox[data-image-id="${imageId}"]`);
+    const checkAllBox = document.getElementById('checkAll_' + imageId);
+    if (checkAllBox && allCheckboxes.length > 0) {
+        const checkedCount = document.querySelectorAll(`input.part-checkbox[data-image-id="${imageId}"]:checked`).length;
+        checkAllBox.checked = checkedCount === allCheckboxes.length;
+        checkAllBox.indeterminate = checkedCount > 0 && checkedCount < allCheckboxes.length;
+    }
+}
+
+// 전체 선택/해제 함수
+function toggleAllChecks(imageId) {
+    const checkAllBox = document.getElementById('checkAll_' + imageId);
+    const checkboxes = document.querySelectorAll(`input.part-checkbox[data-image-id="${imageId}"]`);
+    
+    if (checkAllBox) {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = checkAllBox.checked;
+        });
+        updatePriceSum(imageId);
+    }
+}
+</script>
+{% endblock %}
+

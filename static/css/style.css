@@ -1,0 +1,1293 @@
+/* 웰딩 장비 옵션 시스템 (PNS) - 커스텀 스타일 */
+
+/* 기본 스타일 */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #ffffff;
+    color: #1a1a1a;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 모바일 터치 최적화 */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button, a, input, select {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 터치 디바이스에서 스크롤 부드럽게 */
+@media (hover: none) and (pointer: coarse) {
+    html {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    body {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* 활성화된 텍스트 - 더 뚜렷하게 */
+body, p, span, div, label, h1, h2, h3, h4, h5, h6 {
+    color: #1a1a1a;
+}
+
+.card:not([style*="opacity: 0"]) .card-body,
+.card:not([style*="opacity: 0"]) .card-header {
+    color: #1a1a1a;
+}
+
+/* 비활성화된 텍스트 - 더 연한 회색 */
+.text-muted {
+    color: #b0b0b0 !important;
+}
+
+/* 비활성화된 카드 내부 텍스트 */
+.card[style*="opacity: 0.5"] .card-body,
+.card[style*="opacity: 0.5"] .card-header,
+.card[style*="opacity: 0.5"] * {
+    color: #b0b0b0 !important;
+}
+
+/* 비활성화된 폼 요소 */
+.form-select:disabled,
+.form-control:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+    color: #b0b0b0 !important;
+    background-color: #f5f5f5 !important;
+}
+
+/* 활성화된 폼 요소 - 더 뚜렷하게 */
+.form-select:not(:disabled),
+.form-control:not(:disabled),
+input:not(:disabled),
+select:not(:disabled),
+textarea:not(:disabled) {
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+/* 활성화된 옵션 텍스트 - 버건디 색상 */
+.form-select.option-selected {
+    color: #800020 !important;
+    font-weight: 600;
+}
+
+/* 드롭다운 옵션에서 활성화된 옵션 텍스트 - 버건디 색상 */
+.form-select option:not(:disabled) {
+    color: #800020 !important;
+}
+
+.form-select option:disabled {
+    color: #b0b0b0 !important;
+}
+
+/* 선택된 옵션도 버건디 색상 유지 */
+.form-select option:checked:not(:disabled) {
+    color: #800020 !important;
+    font-weight: 600;
+}
+
+.theme-burgundy {
+    background-color: #ffffff;
+}
+
+.bg-burgundy {
+    background-color: #800020 !important;
+}
+
+.btn-burgundy {
+    background-color: #800020;
+    border-color: #800020;
+    color: #ffffff !important;
+}
+
+.btn-burgundy:hover {
+    background-color: #5c0015;
+    border-color: #5c0015;
+    color: #ffffff !important;
+}
+
+.btn-burgundy:focus {
+    background-color: #800020;
+    border-color: #800020;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 0.2rem rgba(128, 0, 32, 0.25);
+}
+
+.btn-outline-burgundy {
+    color: #800020;
+    border-color: #800020;
+    background-color: transparent;
+}
+
+.btn-outline-burgundy:hover {
+    background-color: #800020;
+    border-color: #800020;
+    color: #ffffff;
+}
+
+.text-burgundy {
+    color: #800020 !important;
+}
+
+.bg-primary {
+    background-color: #800020 !important;
+}
+
+.text-primary {
+    color: #800020 !important;
+}
+
+.btn-primary,
+.btn-primary:focus {
+    background-color: #800020;
+    border-color: #800020;
+}
+
+.btn-primary:hover,
+.btn-primary:active {
+    background-color: #5c0015;
+    border-color: #5c0015;
+}
+
+.btn-outline-primary,
+.btn-outline-primary:focus {
+    color: #800020;
+    border-color: #800020;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:active {
+    background-color: #800020;
+    border-color: #800020;
+    color: #ffffff;
+}
+
+.badge.bg-primary {
+    background-color: #800020 !important;
+}
+
+/* 네비게이션 바 */
+.navbar {
+    background-color: #ffffff !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+    .navbar-brand {
+        font-weight: bold;
+        font-size: 1.2rem;
+        color: #1a1a1a !important;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        text-decoration: none;
+        margin-left: 2rem;
+        padding-left: 0;
+    }
+
+.navbar-brand:hover {
+    color: #800020 !important; /* 버건디 포인트 */
+}
+
+.navbar-logo {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+}
+
+@media (max-width: 576px) {
+    .navbar-logo {
+        height: 30px;
+    }
+}
+
+/* 네비게이션 토글 버튼 터치 영역 확대 */
+.navbar-toggler {
+    padding: 0.5rem 0.75rem;
+    font-size: 1.125rem;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 0.375rem;
+    border-color: #6c757d; /* 쿨그레이 */
+}
+
+.navbar-toggler:focus {
+    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+}
+
+.navbar-toggler-icon {
+    width: 1.25em;
+    height: 1.25em;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%2833, 37, 41, 0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* 네비게이션 링크 - 텍스트 줄바꿈 방지 */
+.nav-link {
+    white-space: nowrap;
+    color: #1a1a1a !important;
+    transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+    color: #800020 !important; /* 버건디 포인트 */
+}
+
+.nav-link.active {
+    color: #800020 !important; /* 버건디 포인트 */
+}
+
+.nav-link i {
+    color: inherit;
+}
+
+/* 드롭다운 메뉴 스타일 */
+.navbar .dropdown-menu {
+    border: 1px solid #e9ecef;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 중첩 드롭다운 메뉴 (오른쪽으로 표시) */
+.dropdown-submenu {
+    position: relative;
+}
+
+.dropdown-submenu > .dropdown-menu {
+    top: 0;
+    left: 100%;
+    margin-top: -1px;
+    margin-left: 0.125rem;
+    min-width: 200px;
+}
+
+.dropdown-submenu:hover > .dropdown-menu {
+    display: block;
+}
+
+.navbar .dropdown-item {
+    color: #1a1a1a;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.navbar .dropdown-item:hover {
+    background-color: #f5f5f5;
+    color: #800020; /* 버건디 포인트 */
+}
+
+.navbar .dropdown-item i {
+    color: #6c757d; /* 쿨그레이 포인트 */
+}
+
+.navbar .dropdown-item:hover i {
+    color: #800020; /* 버건디 포인트 */
+}
+
+/* 탭 버튼 (nav-tabs)의 텍스트 색상 - 검정색 */
+.nav-tabs .nav-link,
+.nav-tabs .nav-link *:not(.badge),
+.nav-tabs .nav-link strong {
+    color: #1a1a1a !important;
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-link.active *:not(.badge),
+.nav-tabs .nav-link.active strong {
+    color: #1a1a1a !important;
+}
+
+/* 탭 버튼 내부 모든 텍스트 검정색 (세트가격입력/조회 페이지) */
+#priceListTab .nav-link,
+#priceListTab .nav-link *,
+#priceListTab .nav-link strong {
+    color: #1a1a1a !important;
+}
+
+#priceListTab .nav-link.active,
+#priceListTab .nav-link.active *,
+#priceListTab .nav-link.active strong {
+    color: #1a1a1a !important;
+}
+
+/* 탭 버튼 hover 상태에서도 검정색 유지 */
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:hover *:not(.badge),
+.nav-tabs .nav-link:hover strong {
+    color: #1a1a1a !important;
+}
+
+/* 네비게이션 바 버튼 크기 고정 */
+.navbar .btn,
+.navbar .btn-outline-light,
+.navbar .btn-outline-secondary,
+.navbar .btn-outline-burgundy,
+.navbar .btn-burgundy,
+.navbar .btn-outline-warning,
+.navbar .login-toggle-btn,
+.navbar .logout-btn,
+.navbar #languageDropdown {
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-width: auto;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+/* 쿨그레이 버튼 스타일 */
+.btn-outline-secondary {
+    color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #ffffff;
+}
+
+/* 모바일 네비게이션 바 버튼 최적화 */
+@media (max-width: 576px) {
+    .navbar .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        min-height: 38px;
+    }
+    
+    .navbar .btn i {
+        margin-right: 0.375rem !important;
+        font-size: 0.875rem;
+    }
+    
+    /* 모바일 테이블 최적화 */
+    .table-responsive {
+        font-size: 0.875rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .table th,
+    .table td {
+        padding: 0.75rem 0.5rem;
+        white-space: nowrap;
+    }
+    
+    /* 모바일 모달 최적화 */
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    .modal-content {
+        border-radius: 0.75rem;
+    }
+    
+    .modal-header {
+        padding: 1rem 1rem 0.75rem 1rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .modal-footer {
+        padding: 0.75rem 1rem 1rem 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .modal-footer .btn {
+        flex: 1 1 auto;
+        min-width: 120px;
+        margin: 0.25rem;
+    }
+}
+
+/* 카드 스타일 */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* 모바일에서는 hover 효과 제거 (터치 디바이스) */
+@media (hover: none) and (pointer: coarse) {
+    .card:hover {
+        transform: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* 옵션 선택 카드 */
+.option-card {
+    border-left: 4px solid #800020;
+}
+
+.option-card .card-header {
+    background: linear-gradient(135deg, #800020, #5c0015);
+    color: white;
+    border-radius: 10px 10px 0 0 !important;
+}
+
+/* 활성화된 옵션 카드 텍스트 */
+.option-card:not([style*="opacity: 0.5"]) .card-body,
+.option-card:not([style*="opacity: 0.5"]) .card-body *:not(.text-muted) {
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+/* 폼 체크박스 스타일 */
+.form-check-input:checked {
+    background-color: #800020;
+    border-color: #800020;
+}
+
+.category-disable-toggle.form-check-input:not(:checked) {
+    background-color: #28a745;
+    border-color: #1f7a32;
+    box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.35);
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.category-disable-toggle.form-check-input:checked {
+    background-color: #dc3545;
+    border-color: #b02a37;
+    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+.logic-category-block .form-check.form-switch .option-toggle {
+    background-position: right center;
+}
+
+.logic-category-block .form-check.form-switch .option-toggle:checked {
+    background-position: left center;
+}
+
+.logic-category-block .option-toggle.form-check-input {
+    background-color: #dc3545;
+    border-color: #b02a37;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.25);
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.logic-category-block .option-toggle.form-check-input:checked {
+    background-color: #28a745;
+    border-color: #1f7a32;
+    box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.4);
+}
+
+.form-check-label {
+    cursor: pointer;
+    transition: color 0.2s ease;
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+.form-check-label:hover {
+    color: #800020;
+}
+
+/* 활성화된 라벨 텍스트 */
+label:not([for*="disabled"]):not(.text-muted) {
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+/* 버튼 스타일 */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 모달 스타일 */
+.modal-content {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    border-bottom: 2px solid #e9ecef;
+    border-radius: 15px 15px 0 0;
+}
+
+/* 테이블 스타일 */
+.table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table thead th {
+    background-color: #800020;
+    color: white;
+    border: none;
+    font-weight: 600;
+}
+
+.table tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+/* 알림 스타일 */
+.alert {
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    color: #155724;
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    color: #856404;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+    color: #0c5460;
+}
+
+/* 스피너 스타일 */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* 푸터 스타일 */
+footer {
+    margin-top: auto;
+    border-top: 1px solid #e9ecef;
+}
+
+/* 푸터 모바일 최적화 */
+@media (max-width: 576px) {
+    footer {
+        padding: 1.5rem 0.75rem !important;
+    }
+    
+    footer p {
+        font-size: 0.875rem;
+    }
+}
+
+/* 반응형 디자인 */
+/* 모바일 (스마트폰) */
+@media (max-width: 576px) {
+    .container,
+    .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    
+    .navbar-brand {
+        font-size: 0.9rem;
+        margin-left: 0.75rem;
+    }
+    
+    .navbar-brand i {
+        font-size: 0.8rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    /* 모바일 버튼 터치 영역 확대 (최소 44x44px) */
+    .btn-lg {
+        padding: 0.75rem 1.25rem;
+        font-size: 1rem;
+        min-height: 44px;
+    }
+    
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9375rem;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .btn i {
+        font-size: 1rem;
+    }
+    
+    /* 카드 내부 아이콘 크기 조정 */
+    .card-body .fa-3x {
+        font-size: 2.5rem !important;
+    }
+    
+    .display-4 {
+        font-size: 1.75rem;
+        line-height: 1.3;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    h2 {
+        font-size: 1.35rem;
+    }
+    
+    h3, h4, h5, h6 {
+        font-size: 1.2rem;
+    }
+    
+    .card-title {
+        font-size: 1.25rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .card-text {
+        font-size: 0.9375rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+    
+    .jumbotron {
+        padding: 1.5rem !important;
+        margin-bottom: 2rem !important;
+    }
+    
+    .jumbotron .display-4 {
+        font-size: 1.5rem;
+        line-height: 1.3;
+        margin-bottom: 1rem;
+    }
+    
+    .jumbotron p {
+        font-size: 0.9375rem;
+        line-height: 1.6;
+        margin-bottom: 0;
+    }
+    
+    .jumbotron hr {
+        margin: 1rem 0;
+    }
+    
+    .table {
+        font-size: 0.875rem;
+    }
+    
+    .form-control, .form-select {
+        font-size: 1rem; /* iOS 줌 방지 */
+        padding: 0.625rem 0.75rem;
+        min-height: 44px;
+    }
+    
+    .nav-link {
+        padding: 0.75rem 1rem;
+        font-size: 0.9375rem;
+    }
+    
+    .navbar .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        min-height: 38px;
+    }
+    
+    /* 네비게이션 토글 버튼 모바일 최적화 */
+    .navbar-toggler {
+        padding: 0.5rem 0.75rem;
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    /* 네비게이션 드롭다운 모바일 최적화 */
+    .navbar-collapse {
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .navbar-nav .dropdown-menu {
+        font-size: 0.9375rem;
+    }
+    
+    .navbar-nav .dropdown-item {
+        padding: 0.75rem 1rem;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+    
+    /* 모바일에서 카드 간격 조정 */
+    .mb-3 {
+        margin-bottom: 1rem !important;
+    }
+    
+    .mb-4 {
+        margin-bottom: 1.5rem !important;
+    }
+    
+    /* 메인 컨텐츠 여백 조정 */
+    main.container-fluid {
+        margin-top: 1rem !important;
+    }
+}
+
+/* 태블릿 */
+@media (min-width: 577px) and (max-width: 768px) {
+    .container,
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1rem;
+        margin-left: 1.25rem;
+    }
+    
+    .card-body {
+        padding: 1.25rem;
+    }
+    
+    /* 태블릿 버튼 터치 영역 확대 */
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1.05rem;
+        min-height: 44px;
+    }
+    
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9375rem;
+        min-height: 40px;
+    }
+    
+    /* 카드 내부 아이콘 크기 */
+    .card-body .fa-3x {
+        font-size: 3rem !important;
+    }
+    
+    .display-4 {
+        font-size: 2rem;
+        line-height: 1.3;
+    }
+    
+    h1 {
+        font-size: 1.75rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    h3, h4, h5, h6 {
+        font-size: 1.35rem;
+    }
+    
+    .card-title {
+        font-size: 1.35rem;
+    }
+    
+    .card-text {
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+    
+    .jumbotron {
+        padding: 2.5rem !important;
+        margin-bottom: 3rem !important;
+    }
+    
+    .jumbotron .display-4 {
+        font-size: 2rem;
+        line-height: 1.3;
+    }
+    
+    .jumbotron p {
+        font-size: 1.05rem;
+        line-height: 1.7;
+    }
+    
+    .table {
+        font-size: 0.9rem;
+    }
+    
+    .form-control, .form-select {
+        font-size: 1rem;
+        padding: 0.625rem 0.875rem;
+        min-height: 44px;
+    }
+    
+    /* 네비게이션 바 태블릿 최적화 */
+    .navbar .btn {
+        padding: 0.5rem 0.875rem;
+        font-size: 0.875rem;
+        min-height: 40px;
+    }
+    
+    .navbar-nav .dropdown-item {
+        padding: 0.625rem 1rem;
+        min-height: 40px;
+    }
+}
+
+/* 작은 태블릿 및 큰 모바일 */
+@media (min-width: 577px) and (max-width: 991px) {
+    /* 네비게이션 바 드롭다운 최적화 */
+    .navbar-nav .nav-item {
+        margin-bottom: 0.25rem;
+    }
+    
+    .navbar-nav .dropdown-menu {
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+}
+
+/* 작은 데스크톱 */
+@media (min-width: 769px) and (max-width: 992px) {
+    .container,
+    .container-fluid {
+        max-width: 100%;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+    
+    /* 작은 데스크톱에서도 터치 친화적 버튼 */
+    .btn {
+        min-height: 38px;
+    }
+    
+    .btn-lg {
+        min-height: 44px;
+    }
+}
+
+/* 애니메이션 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* 커스텀 스크롤바 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #007bff;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #0056b3;
+}
+
+/* 코드 표시 스타일 */
+.code-display {
+    font-family: 'Courier New', monospace;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #800020;
+    background-color: #f8f9fa;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+}
+
+/* 옵션 아이템 스타일 */
+.option-item {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.option-item:hover {
+    border-color: #800020;
+    background-color: #f8f9fa;
+}
+
+.option-item.selected {
+    border-color: #800020;
+    background-color: rgba(128, 0, 32, 0.08);
+}
+
+/* 로딩 오버레이 */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* 성공/오류 메시지 */
+.message-success {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.message-error {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.message-warning {
+    color: #ffc107;
+    font-weight: 600;
+}
+
+/* 콤보박스 스타일 */
+.form-select {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+.form-select:focus {
+    border-color: #800020;
+    box-shadow: 0 0 0 0.2rem rgba(128, 0, 32, 0.25);
+}
+
+.form-select-lg {
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+}
+
+/* 옵션 상세 정보 스타일 */
+.option-detail {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.option-detail h6 {
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+/* 코드 표시 스타일 */
+code {
+    background-color: #ffffff;
+    color: #800020;
+    border: 1px solid #dee2e6;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+/* 카드 그리드 스타일 */
+.card.h-100 {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card.h-100:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 카드 헤더 스타일 */
+.card-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.card-header h6 {
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+/* 활성화된 카드의 헤더 텍스트 */
+.card:not([style*="opacity: 0.5"]) .card-header h6,
+.card:not([style*="opacity: 0.5"]) .card-header {
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+/* 세트가격입력 페이지 카드 헤더 스타일 */
+.card-header.bg-burgundy {
+    background-color: #800020 !important;
+}
+
+/* 버건디 배경의 카드 헤더 텍스트는 검은색으로 변경 */
+.card-header.bg-burgundy h5,
+.card-header.bg-burgundy h6 {
+    color: #1a1a1a !important;
+}
+
+/* 코드관리 페이지의 카테고리 헤더 텍스트는 흰색으로 */
+#optionsContainer .card-header.bg-burgundy h6 {
+    color: #ffffff !important;
+}
+
+/* 옵션 조회 페이지에서 파워소스 카드 헤더 텍스트는 흰색으로 */
+.card-header.bg-burgundy h5.text-white,
+.card-header.bg-burgundy h6.text-white {
+    color: #ffffff !important;
+}
+
+/* 수출견적서(스태프) 페이지의 요약/추가비용/제품정보 섹션 텍스트는 흰색으로 */
+.card-header.bg-burgundy h5[data-lang-kor="요약"],
+.card-header.bg-burgundy h5[data-lang-eng="Summary"],
+.card-header.bg-burgundy h5[data-lang-kor="추가비용"],
+.card-header.bg-burgundy h5[data-lang-eng="Additional Costs"],
+.card-header.bg-burgundy h5[data-lang-kor="제품 정보"],
+.card-header.bg-burgundy h5[data-lang-eng="Product Information"],
+.card-header.bg-burgundy h5[data-lang-kor="요약"] .lang-text,
+.card-header.bg-burgundy h5[data-lang-eng="Summary"] .lang-text,
+.card-header.bg-burgundy h5[data-lang-kor="추가비용"] .lang-text,
+.card-header.bg-burgundy h5[data-lang-eng="Additional Costs"] .lang-text,
+.card-header.bg-burgundy h5[data-lang-kor="제품 정보"] .lang-text,
+.card-header.bg-burgundy h5[data-lang-eng="Product Information"] .lang-text {
+    color: #ffffff !important;
+}
+
+/* 수출견적서(고객) 페이지의 추가비용 섹션 텍스트는 흰색으로 */
+.card-header.bg-burgundy h5[data-lang-kor="추가비용"] .lang-text,
+.card-header.bg-burgundy h5[data-lang-eng="Additional Costs"] .lang-text {
+    color: #ffffff !important;
+}
+
+.card-header.bg-burgundy h5 i,
+.card-header.bg-burgundy h6 i {
+    color: #1a1a1a !important;
+}
+
+.card-header.bg-burgundy h5.text-white i,
+.card-header.bg-burgundy h6.text-white i {
+    color: #ffffff !important;
+}
+
+/* 옵션 조회 페이지에서 파워소스 카드 헤더 - 회색 그라데이션 */
+.card-header.bg-gray-gradient {
+    background: linear-gradient(135deg, #e0e0e0, #b0b0b0) !important;
+}
+
+.card-header.bg-gray-gradient h5,
+.card-header.bg-gray-gradient h6 {
+    color: #1a1a1a !important;
+}
+
+.card-header.bg-gray-gradient h5 i,
+.card-header.bg-gray-gradient h6 i {
+    color: #1a1a1a !important;
+}
+
+/* 콤보박스 크기 조정 */
+.form-select {
+    font-size: 0.9rem;
+}
+
+/* 상세 정보 스타일 */
+.alert-info.p-2 {
+    font-size: 0.8rem;
+    margin-bottom: 0;
+}
+
+.alert-info.p-2 h6 {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.jumbotron {
+    color: inherit;
+}
+
+.jumbotron h1,
+.jumbotron p {
+    color: inherit;
+}
+
+.jumbotron.bg-burgundy {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #800020 0%, #a12f56 45%, #5c0015 100%);
+    color: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(128, 0, 32, 0.35);
+}
+
+.jumbotron.bg-burgundy::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.25), transparent 55%),
+                radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.15), transparent 50%);
+    opacity: 0.75;
+    pointer-events: none;
+}
+
+.jumbotron.bg-burgundy .display-4 {
+    position: relative;
+    z-index: 1;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.jumbotron.bg-burgundy p {
+    position: relative;
+    z-index: 1;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.05rem;
+    line-height: 1.7;
+}
+
+.jumbotron.bg-burgundy hr {
+    position: relative;
+    z-index: 1;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* 탭 배지 텍스트 색상 강제 설정 */
+.nav-tabs .nav-link .badge.bg-burgundy,
+.nav-tabs .nav-link .badge.bg-burgundy *,
+.nav-tabs .nav-link .badge.bg-burgundy.text-white,
+.nav-tabs .nav-link .badge.bg-burgundy.text-white *,
+#priceListTab .nav-link .badge.bg-burgundy,
+#priceListTab .nav-link .badge.bg-burgundy * {
+    color: #ffffff !important;
+}
+
+/* 네비게이션 바의 Code Lookup, Select Options (View), Home, Set Price View, Export Quotation 버튼 텍스트 색상 */
+#lookupNavLink .nav-text,
+#selectOptionsViewNavLink .nav-text,
+#homeNavLink .nav-text,
+#setPriceViewNavLinkPublic .nav-text,
+#setPriceViewNavLink .nav-text,
+#exportQuotationNavLink .nav-text {
+    color: #1a1a1a !important;
+}
+
+/* KOR 언어 선택 버튼 텍스트 색상 */
+#languageDropdown,
+#languageDropdown span {
+    color: #1a1a1a !important;
+}
+
+/* 네비게이션 바 브랜드 텍스트 색상 */
+.navbar-brand,
+.navbar-brand span {
+    color: #1a1a1a !important;
+}
+
+/* Instagram, LinkedIn 버튼 - 쿨그레이 포인트 */
+.navbar .btn-outline-light {
+    color: #6c757d !important; /* 쿨그레이 */
+    border-color: #6c757d !important;
+}
+
+.navbar .btn-outline-light:hover {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+}
+
+.navbar .btn-outline-light span {
+    color: inherit !important;
+}
+
+/* 로그인 버튼 - 버건디 배경, 흰색 텍스트 */
+.navbar .login-toggle-btn {
+    background-color: #800020 !important;
+    border-color: #800020 !important;
+    color: #ffffff !important;
+}
+
+.navbar .login-toggle-btn:hover {
+    background-color: #5c0015 !important;
+    border-color: #5c0015 !important;
+    color: #ffffff !important;
+}
+
+.navbar .login-toggle-btn span {
+    color: #ffffff !important;
+}
+
+.navbar .logout-btn {
+    background-color: #800020 !important;
+    border-color: #800020 !important;
+    color: #ffffff !important;
+}
+
+.navbar .logout-btn:hover {
+    background-color: #5c0015 !important;
+    border-color: #5c0015 !important;
+    color: #ffffff !important;
+}
+
+.navbar .logout-btn span {
+    color: #ffffff !important;
+}
+
+/* 언어 선택 버튼 - 버건디 배경, 흰색 텍스트 */
+.navbar #languageDropdown {
+    background-color: #800020 !important;
+    border-color: #800020 !important;
+    color: #ffffff !important;
+}
+
+.navbar #languageDropdown:hover {
+    background-color: #5c0015 !important;
+    border-color: #5c0015 !important;
+    color: #ffffff !important;
+}
+
+.navbar #languageDropdown span {
+    color: #ffffff !important;
+}
+
+/* 세트가격조회 페이지의 세트코드 링크 스타일 */
+.table a code {
+    transition: all 0.2s ease;
+}
+
+.table a:hover code {
+    color: #0056b3 !important;
+    background-color: #e7f3ff;
+    text-decoration: underline;
+}
+
+.table a:active code {
+    color: #004085 !important;
+}
