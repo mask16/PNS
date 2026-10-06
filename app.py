@@ -82,6 +82,12 @@ from option_view_image_service import (
     save_uploaded_images,
     update_image_type_code as update_option_view_image_type_code,
 )
+from call_arc_code_service import (
+    create_call_arc_code,
+    delete_call_arc_code,
+    list_call_arc_codes,
+    update_call_arc_code,
+)
 from set_price_service import (
     build_all_summaries,
     build_price_list,
@@ -103,7 +109,7 @@ if sys.platform.startswith('win'):
     locale.setlocale(locale.LC_ALL, 'ko_KR.UTF-8')
 
 app = Flask(__name__)
-app.config['JSON_AS_ASCII'] = False  # JSON 응답에서 한글 지원
+app.config['JSON_AS_ASCII'] = False  # JSON 응답에서 한글 지원11
 app.secret_key = 'welding_system_secret_key_2025'  # 세션을 위한 비밀키
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB 파일 크기 제한
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'part_images')
@@ -1598,6 +1604,57 @@ def activity_tracking_dashboard():
     if not session.get('pns_admin'):
         return redirect(url_for('index'))
     return render_template('activity_tracking.html')
+
+
+@app.route('/call_arc_code_management')
+def call_arc_code_management():
+    """콜아크코드관리 (PNS 관리자)"""
+    if not _is_pns_admin_session():
+        return redirect(url_for('index'))
+    return render_template('call_arc_code_management.html')
+
+
+@app.route('/api/call_arc_codes', methods=['GET', 'POST'])
+def api_call_arc_codes():
+    denied = _require_pns_admin_json()
+    if denied:
+        return denied
+    system = get_welding_system()
+    cursor = system.connection.cursor()
+    try:
+        if request.method == 'GET':
+            sheet = request.args.get("sheet") or "M"
+            return jsonify({"success": True, "rows": list_call_arc_codes(cursor, sheet)})
+        row = create_call_arc_code(cursor, request.get_json(silent=True) or {})
+        system.connection.commit()
+        return jsonify({"success": True, "row": row})
+    except Exception as e:
+        system.connection.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/call_arc_codes/<int:row_id>', methods=['PUT', 'DELETE'])
+def api_call_arc_code_item(row_id):
+    denied = _require_pns_admin_json()
+    if denied:
+        return denied
+    system = get_welding_system()
+    cursor = system.connection.cursor()
+    try:
+        if request.method == 'DELETE':
+            deleted = delete_call_arc_code(cursor, row_id)
+            system.connection.commit()
+            if not deleted:
+                return jsonify({"success": False, "error": "행을 찾을 수 없습니다."}), 404
+            return jsonify({"success": True})
+        row = update_call_arc_code(cursor, row_id, request.get_json(silent=True) or {})
+        system.connection.commit()
+        if not row:
+            return jsonify({"success": False, "error": "행을 찾을 수 없습니다."}), 404
+        return jsonify({"success": True, "row": row})
+    except Exception as e:
+        system.connection.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route('/db_backup')
@@ -7514,8 +7571,8 @@ def api_export_price_dashboard_new():
                 category_number_val = row[5] if len(row) > 5 else None
                 
                 # None 체크 및 float 변환
-                price_book_price = float(price_book_price_val) if price_book_price_val is not None else 0.0
-                purchase_price = float(purchase_price_val) if purchase_price_val is not None else 0.0
+                price_book_price = float(price_book_price_val) if price_book_price_val is not None else None
+                purchase_price = float(purchase_price_val) if purchase_price_val is not None else None
                 
                 # category_number 처리
                 category_number = None
@@ -7528,7 +7585,9 @@ def api_export_price_dashboard_new():
                 created_at = row[6] if len(row) > 6 else None
                 updated_at = row[7] if len(row) > 7 else None
                 
-                margin = price_book_price - purchase_price
+                margin = None
+                if price_book_price is not None or purchase_price is not None:
+                    margin = (price_book_price or 0) - (purchase_price or 0)
                 
                 # 카테고리명 매핑 (한글명으로 표시)
                 category_display_names = {
@@ -7653,9 +7712,9 @@ def api_export_price_dashboard_new():
                     'categoryName': category_name
                 })
                 
-                total_price_book += price_book_price
-                total_purchase += purchase_price
-                total_margin += margin
+                total_price_book += price_book_price or 0
+                total_purchase += purchase_price or 0
+                total_margin += margin or 0
             except Exception as e:
                 import traceback
                 print(f"제품 데이터 처리 오류: {e}")

@@ -1,0 +1,772 @@
+{% extends "base.html" %}
+
+{% block title %}콜아크코드관리 - 웰딩 장비 옵션 시스템{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        overflow-x: hidden;
+    }
+    .call-arc-page {
+        width: 100vw;
+        max-width: 100vw;
+        margin-left: calc(50% - 50vw);
+        padding: 0.4rem 0.6rem 0.8rem;
+        box-sizing: border-box;
+    }
+    .call-arc-sheet {
+        width: 100%;
+        border: 1.5px solid #c9b3bb;
+        border-radius: 0.625rem;
+        background: #fff;
+        overflow: hidden;
+    }
+    .call-arc-sheet__toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.55rem 0.85rem;
+        background: #a3475c;
+        border-bottom: 1px solid #8a3a4d;
+    }
+    .call-arc-sheet__title {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        min-width: 0;
+    }
+    .call-arc-sheet__toolbar h5 {
+        color: #fff;
+        font-weight: 600;
+        margin: 0;
+        white-space: nowrap;
+    }
+    .call-arc-tabs {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .call-arc-tabs button {
+        background: transparent;
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: 0.3rem;
+        padding: 0.12rem 0.55rem;
+        font-size: 0.82rem;
+        font-weight: 700;
+        line-height: 1.4;
+        min-width: 2.2rem;
+    }
+    .call-arc-tabs button:hover {
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+    }
+    .call-arc-tabs button.is-active {
+        background: #fff;
+        color: #800020;
+        border-color: #fff;
+    }
+    .call-arc-panel[hidden] {
+        display: none;
+    }
+    .call-arc-placeholder {
+        padding: 2.5rem 1rem;
+        text-align: center;
+        color: #666;
+    }
+    .call-arc-sheet__body {
+        padding: 0;
+        overflow: auto;
+        max-height: calc(100vh - 10.5rem);
+    }
+    .call-arc-table {
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+        font-family: "Malgun Gothic", "Segoe UI", sans-serif;
+        font-size: 12px;
+    }
+    .call-arc-table th,
+    .call-arc-table td {
+        border: 1px solid #b4b4b4;
+        text-align: center;
+        vertical-align: middle;
+        padding: 0.18rem 0.12rem;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+    .call-arc-table thead th {
+        position: sticky;
+        z-index: 3;
+    }
+    .call-arc-table .series th {
+        top: 0;
+        z-index: 5;
+        background: #8faadc;
+        color: #1f4e79;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        padding: 0.4rem;
+        border-color: #7f9dcc;
+    }
+    .call-arc-table .nums th {
+        background: #d6e3f0;
+        color: #1f4e79;
+        font-weight: 700;
+        font-size: 11px;
+        padding: 0.15rem 0.2rem;
+    }
+    .call-arc-table .labels th {
+        background: #ffe598;
+        color: #000;
+        font-weight: 700;
+        font-size: 11px;
+        padding: 0.28rem 0.08rem;
+    }
+    .call-arc-table .gap-head {
+        background: #ffe598;
+        color: #000;
+        font-weight: 700;
+        font-size: 13px;
+    }
+    .call-arc-table .len-mark {
+        color: #008000;
+        font-weight: 700;
+        background: #fff;
+    }
+    .call-arc-table .gap {
+        background: #fff2cc;
+        font-weight: 700;
+        font-size: 13px;
+    }
+    .call-arc-table .fixed {
+        background: #fff;
+        font-weight: 700;
+        color: #222;
+    }
+    .call-arc-table td.edit {
+        background: #fffde7;
+        padding: 0;
+    }
+    .call-arc-table select,
+    .call-arc-table input {
+        border: 0;
+        background: transparent;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 0.18rem 0.1rem;
+        width: 100%;
+        min-width: 0;
+        text-align: center;
+        box-sizing: border-box;
+        color: #111;
+    }
+    .call-arc-table select {
+        cursor: pointer;
+    }
+    .call-arc-table td:nth-child(14),
+    .call-arc-table td:nth-child(17),
+    .call-arc-table td:nth-child(20) {
+        overflow: visible;
+        padding-left: 0;
+        padding-right: 0;
+    }
+    .call-arc-table td:nth-child(14) select,
+    .call-arc-table td:nth-child(17) select,
+    .call-arc-table td:nth-child(20) select {
+        padding: 0.12rem 0.15rem 0.12rem 0;
+        text-align: center;
+    }
+    .call-arc-table input.call-arc-input {
+        text-align: center;
+        padding-left: 0.15rem;
+        padding-right: 0.15rem;
+        width: 100%;
+        font-weight: 600;
+    }
+    .call-arc-table .code-name {
+        background: #fff;
+        font-weight: 700;
+        text-align: center;
+        font-family: Consolas, "Malgun Gothic", monospace;
+        font-size: 12px;
+        padding-left: 0.15rem;
+        padding-right: 0.15rem;
+        color: #333;
+    }
+    .call-arc-table .code-name.is-target {
+        color: #008000;
+    }
+    .call-arc-table .btn {
+        font-size: 12px;
+        padding: 0.1rem 0.28rem;
+        line-height: 1.3;
+    }
+    .call-arc-table .row-actions {
+        white-space: nowrap;
+        padding-left: 0.15rem;
+        padding-right: 0.15rem;
+    }
+    .call-arc-table .row-actions .btn + .btn {
+        margin-left: 0.2rem;
+    }
+    .call-arc-table select:disabled,
+    .call-arc-table input:disabled {
+        color: #111;
+        opacity: 1;
+    }
+    .call-arc-empty {
+        padding: 0.8rem;
+        color: #666;
+    }
+    .btn-burgundy {
+        background: #800020;
+        border: 1px solid #800020;
+        color: #fff;
+    }
+    .btn-burgundy:hover {
+        background: #660019;
+        color: #fff;
+    }
+</style>
+
+<div class="call-arc-page">
+    <div class="call-arc-sheet">
+        <div class="call-arc-sheet__toolbar">
+            <div class="call-arc-sheet__title">
+                <h5>콜아크코드관리</h5>
+                <div class="call-arc-tabs" id="callArcTabs">
+                    <button type="button" class="is-active" data-tab="M">M</button>
+                    <button type="button" data-tab="M2">M2</button>
+                    <button type="button" data-tab="C">C</button>
+                    <button type="button" data-tab="C2">C2</button>
+                    <button type="button" data-tab="T">T</button>
+                    <button type="button" data-tab="T2">T2</button>
+                    <button type="button" data-tab="S">S</button>
+                    <button type="button" data-tab="S2">S2</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-light" id="addCallArcRowBtn">행 추가</button>
+        </div>
+        <div class="call-arc-sheet__body" data-tab-panel="sheet">
+            <table class="call-arc-table" id="callArcTable">
+                <colgroup>
+                    <col style="width:5.8%">
+                    <col style="width:2.2%">
+                    <col style="width:5.8%">
+                    <col style="width:1%">
+                    <col style="width:2.4%">
+                    <col style="width:5.6%">
+                    <col style="width:5.4%">
+                    <col style="width:5.2%">
+                    <col style="width:1%">
+                    <col style="width:4.6%">
+                    <col style="width:2%">
+                    <col style="width:1%">
+                    <col style="width:6.2%">
+                    <col style="width:3.2%">
+                    <col style="width:1%">
+                    <col style="width:4%">
+                    <col style="width:2.6%">
+                    <col style="width:1%">
+                    <col style="width:4.6%">
+                    <col style="width:2.6%">
+                    <col style="width:1%">
+                    <col style="width:8.2%">
+                    <col style="width:17.1%">
+                    <col style="width:6.5%">
+                </colgroup>
+                <thead>
+                    <tr class="series">
+                        <th colspan="24" id="callArcSeries">SUPER M SERIES</th>
+                    </tr>
+                    <tr class="nums">
+                        <th rowspan="2" class="gap-head">SAP코드</th>
+                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
+                        <th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th>
+                        <th>15</th><th>16</th><th>17</th><th>18</th><th>19</th><th>20</th><th>21</th>
+                        <th>코드명</th>
+                        <th rowspan="2"></th>
+                    </tr>
+                    <tr class="labels">
+                        <th id="callArcPrefixHead">M</th>
+                        <th>용량</th>
+                        <th>,</th>
+                        <th>타입</th>
+                        <th>WATER COOLER</th>
+                        <th>COOLANT</th>
+                        <th>TROLLEY</th>
+                        <th>,</th>
+                        <th>FEEDER</th>
+                        <th>WF</th>
+                        <th>,</th>
+                        <th>HOSE PACKAGE</th>
+                        <th>H</th>
+                        <th>,</th>
+                        <th>TORCH</th>
+                        <th>T</th>
+                        <th>,</th>
+                        <th>GROUND</th>
+                        <th>E</th>
+                        <th>_</th>
+                        <th>콜아크코드</th>
+                        <th class="len-mark">33자</th>
+                    </tr>
+                </thead>
+                <tbody id="callArcBody">
+                    <tr><td colspan="24" class="call-arc-empty">불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+const CALL_ARC_M_COLUMNS = [
+    { kind: 'prefix', num: '1', width: '2.2%' },
+    { kind: 'select', num: '2', label: '용량', field: 'capacity', width: '5.8%' },
+    { kind: 'fixed', num: '3', label: ',', text: ',', width: '1%' },
+    { kind: 'select', num: '4', label: '타입', field: 'type_code', width: '2.4%' },
+    { kind: 'select', num: '5', label: 'WATER COOLER', field: 'water_cooler', width: '5.6%' },
+    { kind: 'select', num: '6', label: 'COOLANT', field: 'coolant', width: '5.4%' },
+    { kind: 'select', num: '7', label: 'TROLLEY', field: 'trolley', width: '5.2%' },
+    { kind: 'fixed', num: '8', label: ',', text: ',', width: '1%' },
+    { kind: 'fixed', num: '9', label: 'FEEDER', text: 'WF', width: '4.6%' },
+    { kind: 'select', num: '10', label: 'WF', field: 'feeder', width: '2%' },
+    { kind: 'fixed', num: '11', label: ',', text: ',', width: '1%' },
+    { kind: 'fixed', num: '12', label: 'HOSE PACKAGE', text: 'H', width: '6.2%' },
+    { kind: 'select', num: '13', label: 'H', field: 'hose', width: '3.2%' },
+    { kind: 'fixed', num: '14', label: ',', text: ',', width: '1%' },
+    { kind: 'fixed', num: '15', label: 'TORCH', text: 'T', width: '4%' },
+    { kind: 'select', num: '16', label: 'T', field: 'torch', width: '2.6%' },
+    { kind: 'fixed', num: '17', label: ',', text: ',', width: '1%' },
+    { kind: 'fixed', num: '18', label: 'GROUND', text: 'E', width: '4.6%' },
+    { kind: 'select', num: '19', label: 'E', field: 'ground', width: '2.6%' },
+    { kind: 'fixed', num: '20', label: '_', text: '_', width: '1%' },
+    { kind: 'input', num: '21', label: '콜아크코드', field: 'call_arc_code', width: '8.2%' },
+    { kind: 'code', num: '코드명', width: '17.1%' }
+];
+const CALL_ARC_C_COLUMNS = [
+    { kind: 'prefix', num: '1', width: '2.2%' },
+    { kind: 'select', num: '2', label: '용량', field: 'capacity', width: '7.6%' },
+    { kind: 'fixed', num: '3', label: ',', text: ',', width: '1%' },
+    { kind: 'select', num: '4', label: '타입', field: 'type_code', width: '2.6%' },
+    { kind: 'select', num: '5', label: 'WATER COOLER', field: 'water_cooler', width: '7.2%' },
+    { kind: 'select', num: '6', label: 'COOLANT', field: 'coolant', width: '6.6%' },
+    { kind: 'select', num: '7', label: 'TROLLEY', field: 'trolley', width: '6.4%' },
+    { kind: 'fixed', num: '8', label: ',', text: ',', width: '1%' },
+    { kind: 'fixed', num: '9', label: 'TORCH', text: 'T', width: '4.6%' },
+    { kind: 'select', num: '10', label: 'T', field: 'torch', width: '2.8%' },
+    { kind: 'fixed', num: '11', label: ',', text: ',', width: '1%' },
+    { kind: 'fixed', num: '12', label: 'EARTH', text: 'E', width: '4.6%' },
+    { kind: 'select', num: '13', label: 'E', field: 'ground', width: '2.8%' },
+    { kind: 'fixed', num: '14', label: ',', text: ',', width: '1%' },
+    { kind: 'fixed', num: '15', label: 'GAS HOSE', text: 'G', width: '5.2%' },
+    { kind: 'select', num: '16', label: 'G', field: 'gas', width: '3.4%' },
+    { kind: 'fixed', num: '18', label: '_', text: '_', width: '1%' },
+    { kind: 'input', num: '19', label: '콜아크코드', field: 'call_arc_code', width: '9.2%' },
+    { kind: 'code', num: '코드명', width: '16.6%' }
+];
+const CALL_ARC_T_COLUMNS = [
+    { kind: 'prefix', num: '1', width: '2.2%' },
+    { kind: 'select', num: '2', label: '용량', field: 'capacity', width: '6.5%' },
+    { kind: 'fixed', num: '3', label: ',', text: ',', width: '1%' },
+    { kind: 'select', num: '4', label: '타입', field: 'type_code', width: '2.8%' },
+    { kind: 'select', num: '5', label: 'WATER COOLER', field: 'water_cooler', width: '7%' },
+    { kind: 'select', num: '6', label: 'COOLANT', field: 'coolant', width: '7.2%' },
+    { kind: 'select', num: '7', label: 'TROLLEY', field: 'trolley', width: '7%' },
+    { kind: 'fixed', num: '8', label: ',', text: ',', width: '1%' },
+    { kind: 'fixed', num: '9', label: 'T', text: 'T', width: '3.2%' },
+    { kind: 'select', num: '10', label: 'T', field: 'torch', width: '2.8%' },
+    { kind: 'fixed', num: '11', label: ',', text: ',', width: '1%' },
+    { kind: 'fixed', num: '12', label: 'GROUND(E)', text: 'E', width: '6.9%' },
+    { kind: 'select', num: '13', label: 'E', field: 'ground', width: '2.8%' },
+    { kind: 'fixed', num: '14', label: ',', text: ',', width: '1%' },
+    { kind: 'fixed', num: '15', label: 'GAS HOSE', text: 'G', width: '6.5%' },
+    { kind: 'select', num: '16', label: 'G', field: 'gas', width: '3.4%' },
+    { kind: 'input', num: '17', label: '콜아크코드', field: 'call_arc_code', width: '10%' },
+    { kind: 'code', num: '코드명', width: '14.5%' }
+];
+const CALL_ARC_S_COLUMNS = [
+    { kind: 'prefix', num: '1', width: '6%' },
+    { kind: 'select', num: '2', label: '용량', field: 'capacity', width: '6%' },
+    { kind: 'fixed', num: '3', label: ',', text: ',', width: '1.2%' },
+    { kind: 'select', num: '4', label: '타입', field: 'type_code', width: '4%' },
+    { kind: 'fixed', num: '5', label: ',', text: ',', width: '1.2%' },
+    { kind: 'fixed', num: '6', label: 'HOLDER', text: 'HO', width: '8%' },
+    { kind: 'select', num: '7', label: 'HO', field: 'holder', width: '4%' },
+    { kind: 'fixed', num: '8', label: ',', text: ',', width: '1.2%' },
+    { kind: 'fixed', num: '9', label: 'GROUND(E)', text: 'E', width: '8%' },
+    { kind: 'select', num: '10', label: 'E', field: 'ground', width: '4%' },
+    { kind: 'fixed', num: '11', label: '_', text: '_', width: '1.2%' },
+    { kind: 'input', num: '12', label: '콜아크코드', field: 'call_arc_code', width: '12%' },
+    { kind: 'code', num: '코드명', width: '28.2%' }
+];
+const CALL_ARC_SHEETS = {
+    M: {
+        prefix: 'M',
+        series: 'SUPER M SERIES',
+        targetLength: 33,
+        sapWidth: '5.8%',
+        actionWidth: '6.5%',
+        columns: CALL_ARC_M_COLUMNS,
+        capacity: ['35', '45', '50', '60', '50_R', '50_SH']
+    },
+    M2: {
+        prefix: 'MX',
+        series: 'SUPER M SERIES',
+        targetLength: 33,
+        sapWidth: '5.8%',
+        actionWidth: '6.5%',
+        columns: CALL_ARC_M_COLUMNS,
+        capacity: ['35', '45', '50', '50_S', '50_S_6C', '60', '50_R', '50_SH'],
+        hose: ['0', '2', '5', '10', '15', '20']
+    },
+    C: {
+        prefix: 'C',
+        series: 'SUPER C SERIES',
+        layout: 'c',
+        targetLength: 30,
+        sapWidth: '6.2%',
+        actionWidth: '7%',
+        columns: CALL_ARC_C_COLUMNS,
+        capacity: ['30', '30_S', '30_SH', '30_T', '30_15_T', '35'],
+        torch: ['0', '4'],
+        ground: ['0', '3', '5'],
+        gas: ['1.5']
+    },
+    C2: {
+        prefix: 'CX',
+        series: 'SUPER C SERIES',
+        layout: 'c',
+        targetLength: 30,
+        sapWidth: '6.2%',
+        actionWidth: '7%',
+        columns: CALL_ARC_C_COLUMNS,
+        capacity: ['22', '30', '35'],
+        torch: ['0', '4'],
+        ground: ['0', '3', '5'],
+        gas: ['1.5']
+    },
+    T: {
+        prefix: 'T',
+        series: 'SUPER T SERIES',
+        layout: 'c',
+        targetLength: 30,
+        sapWidth: '6.2%',
+        actionWidth: '7%',
+        columns: CALL_ARC_T_COLUMNS,
+        capacity: ['22', '27', '40'],
+        torch: ['0', '4'],
+        ground: ['0', '3', '5'],
+        gas: ['1.5']
+    },
+    T2: {
+        prefix: 'TX',
+        series: 'SUPER T SERIES',
+        layout: 'c',
+        targetLength: 30,
+        sapWidth: '6.2%',
+        actionWidth: '7%',
+        columns: CALL_ARC_T_COLUMNS,
+        capacity: ['22', '27', '40'],
+        torch: ['0', '4'],
+        ground: ['0', '3', '5'],
+        gas: ['1.5']
+    },
+    S: {
+        prefix: 'S',
+        prefixLabel: 'STICK',
+        series: 'SUPER S SERIES',
+        layout: 's',
+        targetLength: 22,
+        sapWidth: '7%',
+        actionWidth: '8%',
+        columns: CALL_ARC_S_COLUMNS,
+        capacity: ['20', '22', '27', '40'],
+        holder: ['5'],
+        ground: ['0', '3', '5']
+    },
+    S2: {
+        prefix: 'SX',
+        prefixLabel: 'STICK',
+        series: 'SUPER S SERIES',
+        layout: 's',
+        targetLength: 22,
+        sapWidth: '7%',
+        actionWidth: '8%',
+        columns: CALL_ARC_S_COLUMNS,
+        capacity: ['20', '22', '27', '40'],
+        holder: ['0', '5'],
+        ground: ['0', '3', '5']
+    }
+};
+let activeCallArcSheet = 'M';
+
+const CALL_ARC_OPTIONS = {
+    type_code: ['A', 'W'],
+    water_cooler: ['1', '0'],
+    coolant: ['1', '0'],
+    trolley: ['1', '0'],
+    feeder: ['4', '4S'],
+    hose: ['2', '5', '10', '15', '20'],
+    torch: ['0', '4'],
+    ground: ['0', '3', '5']
+};
+
+function callArcOptions(name) {
+    const sheetOptions = CALL_ARC_SHEETS[activeCallArcSheet][name];
+    if (sheetOptions) {
+        return sheetOptions;
+    }
+    return CALL_ARC_OPTIONS[name];
+}
+
+document.getElementById('callArcTabs').addEventListener('click', function (event) {
+    const button = event.target.closest('[data-tab]');
+    if (!button) return;
+    const tab = button.getAttribute('data-tab');
+    document.querySelectorAll('#callArcTabs [data-tab]').forEach(function (item) {
+        item.classList.toggle('is-active', item === button);
+    });
+    const sheetPanel = document.querySelector('[data-tab-panel="sheet"]');
+    const isSheet = !!CALL_ARC_SHEETS[tab];
+    sheetPanel.hidden = !isSheet;
+    document.querySelectorAll('.call-arc-panel[data-tab-panel]').forEach(function (panel) {
+        panel.hidden = panel.getAttribute('data-tab-panel') !== tab;
+    });
+    document.getElementById('addCallArcRowBtn').hidden = !isSheet;
+    if (!isSheet) return;
+    activeCallArcSheet = tab;
+    applySheetChrome();
+    loadRows().then(pinCallArcHeader);
+});
+
+function sheetSpec() {
+    return CALL_ARC_SHEETS[activeCallArcSheet];
+}
+
+function sheetColspan() {
+    return sheetSpec().columns.length + 2;
+}
+
+function applySheetChrome() {
+    const spec = sheetSpec();
+    const table = document.getElementById('callArcTable');
+    const cols = ['<col style="width:' + spec.sapWidth + '">'];
+    spec.columns.forEach(function (column) {
+        cols.push('<col style="width:' + column.width + '">');
+    });
+    cols.push('<col style="width:' + spec.actionWidth + '">');
+    table.querySelector('colgroup').innerHTML = cols.join('');
+    const nums = spec.columns.map(function (column) {
+        return '<th' + (column.kind === 'prefix' ? ' id="callArcPrefixHead"' : '') + '>' + column.num + '</th>';
+    }).join('');
+    const labels = spec.columns.map(function (column) {
+        if (column.kind === 'prefix') return '<th>' + (spec.prefixLabel || spec.prefix) + '</th>';
+        if (column.kind === 'code') return '<th class="len-mark">' + spec.targetLength + '자</th>';
+        return '<th>' + column.label + '</th>';
+    }).join('');
+    table.querySelector('thead').innerHTML =
+        '<tr class="series"><th colspan="' + sheetColspan() + '" id="callArcSeries">' + spec.series + '</th></tr>'
+        + '<tr class="nums"><th rowspan="2" class="gap-head">SAP코드</th>' + nums + '<th rowspan="2"></th></tr>'
+        + '<tr class="labels">' + labels + '</tr>';
+}
+
+function callArcSelect(name, value) {
+    const options = callArcOptions(name).map(function (item) {
+        const selected = String(item) === String(value) ? ' selected' : '';
+        return '<option value="' + item + '"' + selected + '>' + item + '</option>';
+    }).join('');
+    return '<select data-field="' + name + '" disabled>' + options + '</select>';
+}
+
+function setRowEditing(tr, editing) {
+    tr.querySelectorAll('[data-field]').forEach(function (el) {
+        el.disabled = !editing;
+    });
+    const button = tr.querySelector('[data-edit]');
+    if (!button) return;
+    button.textContent = editing ? '저장' : '수정';
+    button.classList.toggle('btn-outline-secondary', !editing);
+    button.classList.toggle('btn-outline-success', editing);
+}
+
+function buildCodeName(row) {
+    const spec = sheetSpec();
+    if (spec.layout === 's') {
+        return spec.prefix + row.capacity
+            + ',' + row.type_code
+            + ',HO' + (row.holder || '')
+            + ',E' + row.ground
+            + '_' + (row.call_arc_code || '');
+    }
+    const head = spec.prefix + row.capacity
+        + ',' + row.type_code + row.water_cooler + row.coolant + row.trolley;
+    if (spec.layout === 'c') {
+        return head
+            + ',T' + row.torch
+            + ',E' + row.ground
+            + ',G' + (row.gas || '')
+            + '_' + (row.call_arc_code || '');
+    }
+    return head
+        + ',WF' + row.feeder
+        + ',H' + row.hose
+        + ',T' + row.torch
+        + ',E' + row.ground
+        + '_' + (row.call_arc_code || '');
+}
+
+function readRow(tr) {
+    const data = { id: Number(tr.getAttribute('data-id')) };
+    tr.querySelectorAll('[data-field]').forEach(function (el) {
+        data[el.getAttribute('data-field')] = el.value;
+    });
+    return data;
+}
+
+function paintCodeName(cell, codeName) {
+    cell.textContent = codeName;
+    cell.className = codeName.length === sheetSpec().targetLength ? 'code-name is-target' : 'code-name';
+}
+
+function renderRows(rows) {
+    const body = document.getElementById('callArcBody');
+    const spec = sheetSpec();
+    if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="' + sheetColspan() + '" class="call-arc-empty">등록된 코드가 없습니다. 행 추가로 채번합니다.</td></tr>';
+        return;
+    }
+    body.innerHTML = rows.map(function (row) {
+        const codeName = row.code_name || buildCodeName(row);
+        const lengthClass = codeName.length === spec.targetLength ? 'code-name is-target' : 'code-name';
+        const cells = spec.columns.map(function (column) {
+            if (column.kind === 'prefix') return '<td class="fixed">' + spec.prefix + '</td>';
+            if (column.kind === 'select') return '<td class="edit">' + callArcSelect(column.field, row[column.field]) + '</td>';
+            if (column.kind === 'fixed') return '<td class="fixed">' + column.text + '</td>';
+            if (column.kind === 'input') {
+                return '<td class="edit"><input class="call-arc-input" data-field="call_arc_code" value="'
+                    + (row.call_arc_code || '').replace(/"/g, '&quot;') + '" maxlength="40" disabled></td>';
+            }
+            return '<td class="' + lengthClass + '" data-code-name>' + codeName + '</td>';
+        }).join('');
+        return '<tr data-id="' + row.id + '"><td class="gap">' + row.gap_code + '</td>' + cells
+            + '<td class="row-actions"><button type="button" class="btn btn-sm btn-outline-secondary" data-edit>수정</button><button type="button" class="btn btn-sm btn-outline-danger" data-delete>삭제</button></td></tr>';
+    }).join('');
+}
+
+function readApi(res) {
+    return res.text().then(function (text) {
+        let data = null;
+        try {
+            data = text ? JSON.parse(text) : null;
+        } catch (e) {
+            throw new Error('서버 응답을 해석하지 못했습니다. (' + res.status + ')');
+        }
+        if (!res.ok || !data || !data.success) {
+            throw new Error((data && data.error) || ('요청 실패 (' + res.status + ')'));
+        }
+        return data;
+    });
+}
+
+function pinCallArcHeader() {
+    const series = document.querySelector('.call-arc-table .series');
+    const nums = document.querySelector('.call-arc-table .nums');
+    if (!series || !nums) return;
+    const seriesHeight = series.getBoundingClientRect().height;
+    const numsCell = nums.querySelector('th:not(.gap-head)') || nums;
+    const numsHeight = numsCell.getBoundingClientRect().height;
+    nums.querySelectorAll('th').forEach(function (cell) {
+        cell.style.top = seriesHeight + 'px';
+    });
+    document.querySelectorAll('.call-arc-table .labels th').forEach(function (cell) {
+        cell.style.top = (seriesHeight + numsHeight) + 'px';
+    });
+}
+
+function loadRows() {
+    return fetch('/api/call_arc_codes?sheet=' + encodeURIComponent(activeCallArcSheet), { credentials: 'same-origin' })
+        .then(readApi)
+        .then(function (data) {
+            renderRows(data.rows || []);
+        })
+        .catch(function (err) {
+            document.getElementById('callArcBody').innerHTML =
+                '<tr><td colspan="' + sheetColspan() + '" class="call-arc-empty">' + err.message + '</td></tr>';
+        });
+}
+
+document.getElementById('callArcBody').addEventListener('change', function (event) {
+    const tr = event.target.closest('tr[data-id]');
+    if (!tr || event.target.disabled) return;
+    const cell = tr.querySelector('[data-code-name]');
+    paintCodeName(cell, buildCodeName(readRow(tr)));
+});
+
+document.getElementById('callArcBody').addEventListener('click', function (event) {
+    const editButton = event.target.closest('[data-edit]');
+    if (editButton) {
+        const tr = editButton.closest('tr[data-id]');
+        if (!tr) return;
+        if (editButton.textContent !== '저장') {
+            setRowEditing(tr, true);
+            return;
+        }
+        const payload = readRow(tr);
+        const cell = tr.querySelector('[data-code-name]');
+        editButton.disabled = true;
+        fetch('/api/call_arc_codes/' + payload.id, {
+            method: 'PUT',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(readApi).then(function (data) {
+            paintCodeName(cell, data.row.code_name);
+            setRowEditing(tr, false);
+        }).catch(function (err) {
+            alert(err.message || '수정 실패');
+        }).then(function () {
+            editButton.disabled = false;
+        });
+        return;
+    }
+
+    const button = event.target.closest('[data-delete]');
+    if (!button) return;
+    const tr = button.closest('tr[data-id]');
+    if (!tr || !confirm('이 행을 삭제할까요?')) return;
+    fetch('/api/call_arc_codes/' + tr.getAttribute('data-id'), {
+        method: 'DELETE',
+        credentials: 'same-origin'
+    }).then(readApi).then(function () {
+        loadRows();
+    }).catch(function (err) {
+        alert(err.message || '삭제 실패');
+    });
+});
+
+document.getElementById('addCallArcRowBtn').addEventListener('click', function () {
+    const button = document.getElementById('addCallArcRowBtn');
+    button.disabled = true;
+    fetch('/api/call_arc_codes', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sheet: activeCallArcSheet })
+    }).then(readApi).then(function () {
+        return loadRows();
+    }).catch(function (err) {
+        alert(err.message || '행 추가 실패');
+    }).then(function () {
+        button.disabled = false;
+    });
+});
+
+loadRows().then(pinCallArcHeader);
+window.addEventListener('resize', pinCallArcHeader);
+</script>
+{% endblock %}

@@ -743,13 +743,54 @@ let products = [];
 let exchangeRate = 1700; // 요약 KRW 환산용 (1 EUR = KRW)
 let usdPerEur = 1.15;    // 1 EUR = USD
 let selectedQuoteCurrency = 'KRW';
+
+function quoteDisplayFactor() {
+    if (selectedQuoteCurrency === 'USD') {
+        return Number(usdPerEur) > 0 ? Number(usdPerEur) : 1;
+    }
+    if (selectedQuoteCurrency === 'EUR') {
+        return 1;
+    }
+    return Number(exchangeRate) > 0 ? Number(exchangeRate) : 1;
+}
+
+function formatQuoteMoney(value, eurDigits) {
+    const digits = selectedQuoteCurrency === 'KRW' ? 0 : eurDigits;
+    const amount = (Number(value) || 0) * quoteDisplayFactor();
+    return amount.toLocaleString('en-US', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+    });
+}
+
+function quoteMoneyInput(value, eurDigits) {
+    const digits = selectedQuoteCurrency === 'KRW' ? 0 : eurDigits;
+    const amount = (Number(value) || 0) * quoteDisplayFactor();
+    return amount.toFixed(digits);
+}
+
+function formatBaseEuro(value) {
+    const amount = Number(value) || 0;
+    return amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
 let allAvailableProducts = []; // 조회 가능한 모든 제품 목록
 let setCodeInfo = null; // 세트코드 정보 (제품정보 카드 위에 표시)
 let setCodeNames = {}; // 세트코드별 이름 저장 (키: 세트코드, 값: 이름)
 
 function applyExchangeRateSelection(payload) {
     if (!payload) return;
-    const currency = (payload.currency || 'KRW').toUpperCase();
+    const rateCode = String(payload.rateCode || '').toUpperCase();
+    let currency = (payload.currency || 'KRW').toUpperCase();
+    if (rateCode === 'EURUSD') {
+        currency = 'USD';
+    } else if (rateCode === 'EUR' || rateCode === 'KRW') {
+        currency = 'KRW';
+    } else if (rateCode === 'USD') {
+        currency = 'USD';
+    }
     selectedQuoteCurrency = currency;
     const hidden = document.getElementById('selectedQuoteCurrency');
     if (hidden) hidden.value = currency;
@@ -1331,6 +1372,15 @@ async function flushPendingProductsFromUrl() {
     return pendingProductsFlushPromise;
 }
 
+function priceBookPriceFromSetView(index, fallback) {
+    const raw = new URLSearchParams(window.location.search).get('line_prices');
+    if (!raw) return fallback;
+    const values = raw.split(',');
+    if (index < 0 || index >= values.length) return fallback;
+    const price = parseFloat(values[index]);
+    return isNaN(price) ? fallback : price;
+}
+
 // SAP 코드로 제품 찾기 (인증 완료 시 즉시 추가)
 async function findProductsBySapCodes(sapCodes) {
     if (!sapCodes || sapCodes.length === 0) {
@@ -1344,7 +1394,7 @@ async function findProductsBySapCodes(sapCodes) {
     
     // allAvailableProducts에서 SAP 코드에 해당하는 제품 찾기
     const foundProducts = [];
-    sapCodes.forEach(sapCode => {
+    sapCodes.forEach((sapCode, index) => {
         const trimmedSapCode = sapCode.trim();
         console.log(`SAP 코드 "${trimmedSapCode}" 검색 중...`);
         
@@ -1367,7 +1417,7 @@ async function findProductsBySapCodes(sapCodes) {
             foundProducts.push({
                 code: product.code,
                 name: product.name || product.product_name || '',
-                priceBookPrice: product.priceBookPrice || product.price_book_price || 0,
+                priceBookPrice: priceBookPriceFromSetView(index, product.priceBookPrice || product.price_book_price || 0),
                 purchasePrice: product.purchasePrice || product.purchase_price || 0,
                 quantity: 1
             });
@@ -1413,7 +1463,7 @@ async function addProductsBySapCodes(sapCodes) {
     
     // allAvailableProducts에서 SAP 코드에 해당하는 제품 찾기
     const foundProducts = [];
-    sapCodes.forEach(sapCode => {
+    sapCodes.forEach((sapCode, index) => {
         const trimmedSapCode = sapCode.trim();
         console.log(`SAP 코드 "${trimmedSapCode}" 검색 중...`);
         
@@ -1436,7 +1486,7 @@ async function addProductsBySapCodes(sapCodes) {
             foundProducts.push({
                 code: product.code,
                 name: product.name || product.product_name || '',
-                priceBookPrice: product.priceBookPrice || product.price_book_price || 0,
+                priceBookPrice: priceBookPriceFromSetView(index, product.priceBookPrice || product.price_book_price || 0),
                 purchasePrice: product.purchasePrice || product.purchase_price || 0,
                 quantity: 1
             });
@@ -1687,15 +1737,18 @@ function updateSetCodeCard() {
         const discountRate = parseFloat(document.getElementById('discountRateSales').value) || 0;
         const discountedPrice = originalPrice * (1 - discountRate / 100);
         
+        const quoteCurrencyLabel = selectedQuoteCurrency === 'USD'
+            ? 'USD'
+            : (selectedQuoteCurrency === 'KRW' ? 'KRW' : 'EUR');
         if (originalPriceDisplay) {
             originalPriceDisplay.textContent = originalPrice > 0 
-                ? `${originalPrice.toFixed(2)} EUR` 
+                ? `${formatQuoteMoney(originalPrice, 2)} ${quoteCurrencyLabel}` 
                 : '-';
         }
         
         if (discountedPriceDisplay) {
             discountedPriceDisplay.textContent = discountedPrice > 0 
-                ? `${discountedPrice.toFixed(2)} EUR` 
+                ? `${formatQuoteMoney(discountedPrice, 2)} ${quoteCurrencyLabel}` 
                 : '-';
         }
         
@@ -1969,22 +2022,22 @@ function updateCalculations() {
                         소계 (${setCode})
                     </td>
                     <td class="text-center" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; border-right: 3px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.quantity}</td>
-                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.priceBookUnit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.priceBook.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatBaseEuro(subtotal.priceBookUnit)}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatBaseEuro(subtotal.priceBook)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
-                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.discounted.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(subtotal.discounted, 2)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
-                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${Math.round(subtotal.shippingSales).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(Math.round(subtotal.shippingSales), 0)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
-                    <td class="text-end" style="background-color: #b8daff !important; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.finalSales.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(subtotal.finalSales, 2)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
-                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.purchase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatBaseEuro(subtotal.purchase)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
-                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${Math.round(subtotal.shippingPurchase).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(Math.round(subtotal.shippingPurchase), 0)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
-                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${Math.round(subtotal.incidental).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(Math.round(subtotal.incidental), 0)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
-                    <td class="text-end" style="background-color: #b8daff !important; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.finalCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(subtotal.finalCost, 2)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subMarginRate}%</td>
                 </tr>
             `;
@@ -2084,27 +2137,27 @@ function updateCalculations() {
                            onchange="event.stopPropagation(); updateProductQuantity(${product.id}, this.value)" style="background-color: #ffcccc; width: 100%; font-size: 0.7rem; padding: 0.05rem;">
                 </td>
                 <td class="text-end" style="background-color: ${codeBgColor} !important; border: 2px solid #ffffff !important;">
-                    <input type="number" class="form-control form-control-sm text-end" value="${priceBookPrice.toFixed(2)}" step="0.01" min="0" 
+                    <input type="text" class="form-control form-control-sm text-end" value="${formatBaseEuro(priceBookPrice)}" 
                            disabled style="background-color: ${codeBgColor} !important; color: #000000 !important; font-weight: bold !important; font-size: 0.8rem; padding: 0.2rem;">
                 </td>
-                <td class="text-end" style="background-color: ${codeBgColor} !important; border: 2px solid #ffffff !important; font-weight: bold !important; color: #000000 !important;">${(priceBookPrice * quantity).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${discountedPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${(discountedPrice * quantity).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${shippingSalesPerProduct.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${Math.round(shippingSalesForProduct).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${finalSalesPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;">${finalSalesPriceTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end" style="background-color: ${codeBgColor} !important; border: 2px solid #ffffff !important; font-weight: bold !important; color: #000000 !important;">${formatBaseEuro(priceBookPrice * quantity)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(discountedPrice, 2)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(discountedPrice * quantity, 2)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(shippingSalesPerProduct, 0)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(Math.round(shippingSalesForProduct), 0)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(finalSalesPrice, 2)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;">${formatQuoteMoney(finalSalesPriceTotal, 2)}</td>
                 <td class="text-end" style="background-color: ${product.isSubItem ? '#d6e9ff' : '#e0e0e0'}; border: 2px solid #ffffff !important;">
-                    <input type="number" class="form-control form-control-sm text-end" value="${purchasePrice.toFixed(2)}" step="0.01" min="0" 
+                    <input type="text" class="form-control form-control-sm text-end" value="${formatBaseEuro(purchasePrice)}" 
                            disabled style="background-color: ${product.isSubItem ? '#d6e9ff' : '#e0e0e0'}; font-size: 0.8rem; padding: 0.2rem;">
                 </td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${(purchasePrice * quantity).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${shippingPurchasePerProduct.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${Math.round(shippingPurchaseForProduct).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${incidentalPurchasePerProduct.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${Math.round(incidentalForProduct).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${finalCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;">${finalCostTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatBaseEuro(purchasePrice * quantity)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(shippingPurchasePerProduct, 0)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(Math.round(shippingPurchaseForProduct), 0)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(incidentalPurchasePerProduct, 0)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(Math.round(incidentalForProduct), 0)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(finalCost, 2)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;">${formatQuoteMoney(finalCostTotal, 2)}</td>
                 <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${marginRate}%</td>
             </tr>
         `;
@@ -2158,24 +2211,24 @@ function updateCalculations() {
     // 합계 행 업데이트
     document.getElementById('totalQuantity').textContent = totalQuantity;
     // 프라이스북 단가 총합계 표시
-    document.getElementById('totalPriceBookUnit').textContent = totalPriceBookUnit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('totalPriceBookUnit').textContent = formatBaseEuro(totalPriceBookUnit);
     // 프라이스북 합계 표시
-    document.getElementById('totalPriceBook').textContent = totalPriceBook.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('totalPriceBook').textContent = formatBaseEuro(totalPriceBook);
     // 할인가 합계만 표시 (단가 칸은 빈칸)
-    document.getElementById('totalDiscounted').textContent = totalDiscounted.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('totalDiscounted').textContent = formatQuoteMoney(totalDiscounted, 2);
     // 운임(판매) 합계만 표시 (단가 칸은 빈칸)
-    document.getElementById('totalShippingSales').textContent = shippingSales.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('totalShippingSales').textContent = formatQuoteMoney(shippingSales, 2);
     // 최종 판매가 단가 총합계는 표시하지 않음 (빈칸)
     // 최종 판매가 합계 표시
-    document.getElementById('totalFinalSales').textContent = totalFinalSales.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('totalFinalSales').textContent = formatQuoteMoney(totalFinalSales, 2);
     // 구매가 원가 합계만 표시 (단가 칸은 빈칸)
-    document.getElementById('totalPurchase').textContent = totalPurchase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('totalPurchase').textContent = formatBaseEuro(totalPurchase);
     // 운임(구매) 합계만 표시 (단가 칸은 빈칸)
-    document.getElementById('totalShippingPurchase').textContent = shippingPurchase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('totalShippingPurchase').textContent = formatQuoteMoney(shippingPurchase, 2);
     // 부대비용 합계만 표시 (단가 칸은 빈칸)
-    document.getElementById('totalIncidental').textContent = incidentalExpensePurchase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('totalIncidental').textContent = formatQuoteMoney(incidentalExpensePurchase, 2);
     // 최종 원가 합계 표시
-    document.getElementById('totalFinalCost').textContent = totalFinalCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('totalFinalCost').textContent = formatQuoteMoney(totalFinalCost, 2);
     
     // 총합계 마진율 계산: (최종판매가 합계 - 최종원가 합계) / 최종판매가 합계 * 100%
     // 예시: (15,825 - 5,869) / 15,825 = 62.9%

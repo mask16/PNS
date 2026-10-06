@@ -583,12 +583,19 @@ function renderTable() {
     }
     
     tableBody.innerHTML = pageProducts.map((product, index) => {
-        const priceBookPrice = product.priceBookPrice || 0;
-        const purchasePrice = product.purchasePrice || 0;
+        const priceMissing = product.priceBookPrice == null;
+        const costMissing = product.purchasePrice == null;
+        const priceBookPrice = priceMissing ? 0 : Number(product.priceBookPrice);
+        const purchasePrice = costMissing ? 0 : Number(product.purchasePrice);
+        const amountsMissing = priceMissing && costMissing;
         const margin = priceBookPrice - purchasePrice;
         const marginRate = priceBookPrice > 0 
             ? ((margin / priceBookPrice) * 100).toFixed(2) 
             : '0.00';
+        const priceBookText = priceMissing ? '-' : ('€ ' + priceBookPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        const purchaseText = costMissing ? '-' : ('€ ' + purchasePrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        const marginText = amountsMissing ? '-' : ('€ ' + margin.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        const marginRateText = amountsMissing ? '-' : (marginRate + '%');
         
         // 카테고리 정보 표시
         const categoryNames = {
@@ -630,10 +637,10 @@ function renderTable() {
                 <td style="white-space: nowrap; width: 270px;"><strong>${product.code || '-'}</strong></td>
                 <td style="white-space: nowrap; width: 430px;">${product.name || '-'}</td>
                 <td style="white-space: nowrap; width: 300px;">${categoryDisplay}</td>
-                <td class="text-end" style="white-space: nowrap; width: 270px;">€ ${priceBookPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td class="text-end" style="white-space: nowrap; width: 270px;">€ ${purchasePrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td class="text-end ${margin >= 0 ? 'text-success' : 'text-danger'}" style="white-space: nowrap; width: 242px;">€ ${margin.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td class="text-end ${parseFloat(marginRate) >= 0 ? 'text-success' : 'text-danger'}" style="white-space: nowrap; width: 220px;">${marginRate}%</td>
+                <td class="text-end" style="white-space: nowrap; width: 270px;">${priceBookText}</td>
+                <td class="text-end" style="white-space: nowrap; width: 270px;">${purchaseText}</td>
+                <td class="text-end ${amountsMissing ? '' : (margin >= 0 ? 'text-success' : 'text-danger')}" style="white-space: nowrap; width: 242px;">${marginText}</td>
+                <td class="text-end ${amountsMissing ? '' : (parseFloat(marginRate) >= 0 ? 'text-success' : 'text-danger')}" style="white-space: nowrap; width: 220px;">${marginRateText}</td>
                 <td style="white-space: nowrap; width: 240px;">${product.createdAt ? new Date(product.createdAt).toLocaleDateString('ko-KR') : '-'}</td>
                 <td class="text-center" style="width: 150px;">
                     <button class="btn btn-sm btn-primary edit-btn" 

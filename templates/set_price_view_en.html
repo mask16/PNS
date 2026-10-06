@@ -1263,10 +1263,13 @@ function loadOptionPricesForView(setCode, targetId) {
                         // Collect SAP codes from option prices table
                         const optionRows = contentDiv.querySelectorAll('tbody tr[data-sap-code]');
                         const sapCodes = [];
+                        const linePrices = [];
                         optionRows.forEach(row => {
                             const sapCode = row.getAttribute('data-sap-code');
                             if (sapCode && sapCode.trim() !== '') {
                                 sapCodes.push(sapCode.trim());
+                                const originalPrice = parseFloat(row.getAttribute('data-option-original-price'));
+                                linePrices.push(isNaN(originalPrice) ? '0' : originalPrice.toFixed(2));
                             }
                         });
                         
@@ -1288,6 +1291,7 @@ function loadOptionPricesForView(setCode, targetId) {
                         const params = new URLSearchParams({
                             lang: currentLang,
                             sap_codes: sapCodesParam,
+                            line_prices: linePrices.join(','),
                             set_code: setCode,
                             original_price: totalOriginal.toFixed(2),
                             discounted_price: totalDiscounted.toFixed(2)
