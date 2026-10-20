@@ -149,10 +149,10 @@
             }
 
             const rows = [
-                { code: 'USD', label: 'USD / KRW', value: rates.usd_krw, digits: 2 },
-                { code: 'EUR', label: 'EUR / KRW', value: rates.eur_krw, digits: 2 },
+                { code: 'KRW', label: 'EUR', value: 1, digits: 0 },
                 { code: 'EURUSD', label: 'EUR / USD', value: rates.eur_usd, digits: 4 },
-                { code: 'KRW', label: 'KRW', value: 1, digits: 0 }
+                { code: 'EUR', label: 'EUR / KRW', value: rates.eur_krw, digits: 2 },
+                { code: 'USD', label: 'USD / KRW', value: rates.usd_krw, digits: 2 }
             ];
 
             const body = document.getElementById(containerId + 'Body');
@@ -173,31 +173,36 @@
                 '</button>' +
             '</td></tr>';
 
+            function emitSelection(code) {
+                const payload = {
+                    currency: code === 'EURUSD' ? 'USD' : code,
+                    rateCode: code,
+                    usd_krw: rates.usd_krw,
+                    eur_krw: rates.eur_krw,
+                    eur_usd: rates.eur_usd,
+                    rates: rates
+                };
+                if (typeof opts.onApply === 'function') {
+                    opts.onApply(payload);
+                }
+                window.dispatchEvent(new CustomEvent('exchangeRateSelected', { detail: payload }));
+            }
+
             Array.prototype.forEach.call(body.querySelectorAll('tr[data-fx-code]'), function (tr) {
                 tr.addEventListener('click', function () {
                     const radio = tr.querySelector('input[type="radio"]');
                     if (radio) radio.checked = true;
+                    emitSelection(tr.getAttribute('data-fx-code'));
                 });
             });
 
             const applyBtn = document.getElementById(containerId + 'ApplyBtn');
             if (applyBtn) {
-                applyBtn.addEventListener('click', function () {
+                applyBtn.addEventListener('click', function (event) {
+                    event.stopPropagation();
                     const selectedRadio = body.querySelector('input[type="radio"]:checked');
                     if (!selectedRadio) return;
-                    const code = selectedRadio.value;
-                    const payload = {
-                        currency: code === 'EURUSD' ? 'USD' : code,
-                        rateCode: code,
-                        usd_krw: rates.usd_krw,
-                        eur_krw: rates.eur_krw,
-                        eur_usd: rates.eur_usd,
-                        rates: rates
-                    };
-                    if (typeof opts.onApply === 'function') {
-                        opts.onApply(payload);
-                    }
-                    window.dispatchEvent(new CustomEvent('exchangeRateSelected', { detail: payload }));
+                    emitSelection(selectedRadio.value);
                 });
             }
         });

@@ -742,20 +742,39 @@ function updatePageLanguage() {
 let products = [];
 let exchangeRate = 1700; // 요약 KRW 환산용 (1 EUR = KRW)
 let usdPerEur = 1.15;    // 1 EUR = USD
+let usdKrwRate = 1400;   // 1 USD = KRW
 let selectedQuoteCurrency = 'KRW';
+let selectedRateCode = '';
+
+function activeRateInput() {
+    const input = document.getElementById('krwExchangeRate');
+    const value = input ? parseFloat(input.value) : NaN;
+    return Number.isFinite(value) && value > 0 ? value : null;
+}
 
 function quoteDisplayFactor() {
-    if (selectedQuoteCurrency === 'USD') {
-        return Number(usdPerEur) > 0 ? Number(usdPerEur) : 1;
+    const typed = activeRateInput();
+    if (selectedRateCode === 'KRW') return typed || 1;
+    if (selectedRateCode === 'EURUSD') return typed || (Number(usdPerEur) > 0 ? Number(usdPerEur) : 1);
+    if (selectedRateCode === 'EUR') return typed || (Number(exchangeRate) > 0 ? Number(exchangeRate) : 1);
+    if (selectedRateCode === 'USD') {
+        const usdKrw = typed || (Number(usdKrwRate) > 0 ? Number(usdKrwRate) : 1);
+        const eurUsd = Number(usdPerEur) > 0 ? Number(usdPerEur) : 1;
+        return eurUsd * usdKrw;
     }
-    if (selectedQuoteCurrency === 'EUR') {
-        return 1;
-    }
+    if (selectedQuoteCurrency === 'USD') return Number(usdPerEur) > 0 ? Number(usdPerEur) : 1;
+    if (selectedQuoteCurrency === 'EUR') return 1;
     return Number(exchangeRate) > 0 ? Number(exchangeRate) : 1;
 }
 
+function quoteMoneyDigits(eurDigits) {
+    if (selectedRateCode === 'EUR' || selectedRateCode === 'USD') return 0;
+    if (selectedRateCode === 'KRW' || selectedRateCode === 'EURUSD') return eurDigits;
+    return selectedQuoteCurrency === 'KRW' ? 0 : eurDigits;
+}
+
 function formatQuoteMoney(value, eurDigits) {
-    const digits = selectedQuoteCurrency === 'KRW' ? 0 : eurDigits;
+    const digits = quoteMoneyDigits(eurDigits);
     const amount = (Number(value) || 0) * quoteDisplayFactor();
     return amount.toLocaleString('en-US', {
         minimumFractionDigits: digits,
@@ -764,7 +783,7 @@ function formatQuoteMoney(value, eurDigits) {
 }
 
 function quoteMoneyInput(value, eurDigits) {
-    const digits = selectedQuoteCurrency === 'KRW' ? 0 : eurDigits;
+    const digits = quoteMoneyDigits(eurDigits);
     const amount = (Number(value) || 0) * quoteDisplayFactor();
     return amount.toFixed(digits);
 }
@@ -780,44 +799,62 @@ let allAvailableProducts = []; // 조회 가능한 모든 제품 목록
 let setCodeInfo = null; // 세트코드 정보 (제품정보 카드 위에 표시)
 let setCodeNames = {}; // 세트코드별 이름 저장 (키: 세트코드, 값: 이름)
 
+function highlightCurrencyForRate(rateCode) {
+    if (rateCode === 'EURUSD') return 'USD';
+    if (rateCode === 'EUR' || rateCode === 'USD') return 'KRW';
+    if (rateCode === 'KRW') return 'EUR';
+    return selectedQuoteCurrency;
+}
+
 function applyExchangeRateSelection(payload) {
     if (!payload) return;
-    const rateCode = String(payload.rateCode || '').toUpperCase();
-    let currency = (payload.currency || 'KRW').toUpperCase();
-    if (rateCode === 'EURUSD') {
-        currency = 'USD';
-    } else if (rateCode === 'EUR' || rateCode === 'KRW') {
-        currency = 'KRW';
-    } else if (rateCode === 'USD') {
-        currency = 'USD';
+    let rateCode = String(payload.rateCode || '').toUpperCase();
+    const headerCurrency = (payload.currency || '').toUpperCase();
+    if (!rateCode) {
+        if (headerCurrency === 'USD') rateCode = 'EURUSD';
+        else if (headerCurrency === 'EUR') rateCode = 'KRW';
+        else rateCode = 'EUR';
     }
-    selectedQuoteCurrency = currency;
+    selectedRateCode = rateCode;
+    if (rateCode === 'EURUSD') selectedQuoteCurrency = 'USD';
+    else if (rateCode === 'KRW') selectedQuoteCurrency = 'EUR';
+    else selectedQuoteCurrency = 'KRW';
     const hidden = document.getElementById('selectedQuoteCurrency');
-    if (hidden) hidden.value = currency;
+    if (hidden) hidden.value = selectedQuoteCurrency;
 
     if (payload.eur_krw) exchangeRate = Number(payload.eur_krw) || exchangeRate;
     if (payload.eur_usd) usdPerEur = Number(payload.eur_usd) || usdPerEur;
+    if (payload.usd_krw) usdKrwRate = Number(payload.usd_krw) || usdKrwRate;
 
     const rateInput = document.getElementById('krwExchangeRate');
     const prefix = document.getElementById('fxRatePrefix');
     const suffix = document.getElementById('fxRateSuffix');
+    if (rateInput) delete rateInput.dataset.userEdited;
 
-    if (currency === 'USD') {
+    if (rateCode === 'EURUSD') {
         if (rateInput) rateInput.value = Number(payload.eur_usd || usdPerEur).toFixed(4);
         if (prefix) prefix.textContent = '1 EUR =';
         if (suffix) suffix.textContent = 'USD';
-    } else if (currency === 'EUR') {
-        if (rateInput) rateInput.value = '1.0000';
-        if (prefix) prefix.textContent = '1 EUR =';
-        if (suffix) suffix.textContent = 'EUR';
-    } else {
+    } else if (rateCode === 'EUR') {
         if (rateInput) rateInput.value = Number(payload.eur_krw || exchangeRate).toFixed(2);
         if (prefix) prefix.textContent = '1 EUR =';
         if (suffix) suffix.textContent = 'KRW';
+    } else if (rateCode === 'USD') {
+        if (rateInput) rateInput.value = Number(payload.usd_krw || usdKrwRate).toFixed(2);
+        if (prefix) prefix.textContent = '1 USD =';
+        if (suffix) suffix.textContent = 'KRW';
+    } else {
+        if (rateInput) rateInput.value = '1';
+        if (prefix) prefix.textContent = '1 KRW =';
+        if (suffix) suffix.textContent = 'KRW';
     }
 
+    const radio = document.querySelector('#exportFxRateTable input[type="radio"][value="' + rateCode + '"]');
+    if (radio) radio.checked = true;
+
+    const highlight = highlightCurrencyForRate(rateCode);
     document.querySelectorAll('.currency-clickable').forEach(function (el) {
-        el.classList.toggle('table-warning', el.getAttribute('data-currency') === currency);
+        el.classList.toggle('table-warning', el.getAttribute('data-currency') === highlight);
     });
 
     updateCalculations();
@@ -870,15 +907,17 @@ function initExportQuotationFx() {
         const rates = e.detail || {};
         if (rates.eur_krw) exchangeRate = Number(rates.eur_krw);
         if (rates.eur_usd) usdPerEur = Number(rates.eur_usd);
-        if (selectedQuoteCurrency === 'KRW' && rates.eur_krw) {
-            const input = document.getElementById('krwExchangeRate');
-            if (input && !input.dataset.userEdited) {
-                input.value = Number(rates.eur_krw).toFixed(2);
-            }
-        } else if (selectedQuoteCurrency === 'USD' && rates.eur_usd) {
-            const input = document.getElementById('krwExchangeRate');
-            if (input && !input.dataset.userEdited) {
+        if (rates.usd_krw) usdKrwRate = Number(rates.usd_krw);
+        const input = document.getElementById('krwExchangeRate');
+        if (input && !input.dataset.userEdited) {
+            if (selectedRateCode === 'EURUSD' && rates.eur_usd) {
                 input.value = Number(rates.eur_usd).toFixed(4);
+            } else if (selectedRateCode === 'EUR' && rates.eur_krw) {
+                input.value = Number(rates.eur_krw).toFixed(2);
+            } else if (selectedRateCode === 'USD' && rates.usd_krw) {
+                input.value = Number(rates.usd_krw).toFixed(2);
+            } else if (!selectedRateCode && rates.eur_krw) {
+                input.value = Number(rates.eur_krw).toFixed(2);
             }
         }
         updateCalculations();
@@ -1804,14 +1843,11 @@ function updateCalculations() {
     const incidentalExpenseSales = 0; // 판매 쪽 부대비용은 사용하지 않음
     const incidentalExpensePurchase = parseFloat(document.getElementById('incidentalExpensePurchase').value) || 0;
     const rateInputValue = parseFloat(document.getElementById('krwExchangeRate').value);
-    if (selectedQuoteCurrency === 'USD' && Number.isFinite(rateInputValue) && rateInputValue > 0) {
-        usdPerEur = rateInputValue;
-    } else if (selectedQuoteCurrency === 'KRW' && Number.isFinite(rateInputValue) && rateInputValue > 0) {
-        exchangeRate = rateInputValue;
-    } else if (selectedQuoteCurrency === 'EUR') {
-        // EUR 선택 시 표시용 입력은 1.0 유지, KRW/USD 환산율은 캐시 값 사용
-    } else if (Number.isFinite(rateInputValue) && rateInputValue > 0) {
-        exchangeRate = rateInputValue;
+    if (Number.isFinite(rateInputValue) && rateInputValue > 0) {
+        if (selectedRateCode === 'EURUSD') usdPerEur = rateInputValue;
+        else if (selectedRateCode === 'EUR') exchangeRate = rateInputValue;
+        else if (selectedRateCode === 'USD') usdKrwRate = rateInputValue;
+        else if (!selectedRateCode && selectedQuoteCurrency === 'KRW') exchangeRate = rateInputValue;
     }
     
     if (products.length === 0) {
@@ -2022,8 +2058,8 @@ function updateCalculations() {
                         소계 (${setCode})
                     </td>
                     <td class="text-center" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; border-right: 3px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${subtotal.quantity}</td>
-                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatBaseEuro(subtotal.priceBookUnit)}</td>
-                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatBaseEuro(subtotal.priceBook)}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(subtotal.priceBookUnit, 2)}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(subtotal.priceBook, 2)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(subtotal.discounted, 2)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
@@ -2031,7 +2067,7 @@ function updateCalculations() {
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
                     <td class="text-end" style="background-color: #b8daff !important; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(subtotal.finalSales, 2)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
-                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatBaseEuro(subtotal.purchase)}</td>
+                    <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(subtotal.purchase, 2)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important; font-weight: bold !important;">${formatQuoteMoney(Math.round(subtotal.shippingPurchase), 0)}</td>
                     <td class="text-end" style="background-color: #b8daff !important; border: 2px solid #ffffff !important; padding: 0.5rem !important;"></td>
@@ -2137,10 +2173,10 @@ function updateCalculations() {
                            onchange="event.stopPropagation(); updateProductQuantity(${product.id}, this.value)" style="background-color: #ffcccc; width: 100%; font-size: 0.7rem; padding: 0.05rem;">
                 </td>
                 <td class="text-end" style="background-color: ${codeBgColor} !important; border: 2px solid #ffffff !important;">
-                    <input type="text" class="form-control form-control-sm text-end" value="${formatBaseEuro(priceBookPrice)}" 
+                    <input type="text" class="form-control form-control-sm text-end" value="${formatQuoteMoney(priceBookPrice, 2)}" 
                            disabled style="background-color: ${codeBgColor} !important; color: #000000 !important; font-weight: bold !important; font-size: 0.8rem; padding: 0.2rem;">
                 </td>
-                <td class="text-end" style="background-color: ${codeBgColor} !important; border: 2px solid #ffffff !important; font-weight: bold !important; color: #000000 !important;">${formatBaseEuro(priceBookPrice * quantity)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor} !important; border: 2px solid #ffffff !important; font-weight: bold !important; color: #000000 !important;">${formatQuoteMoney(priceBookPrice * quantity, 2)}</td>
                 <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(discountedPrice, 2)}</td>
                 <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(discountedPrice * quantity, 2)}</td>
                 <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(shippingSalesPerProduct, 0)}</td>
@@ -2148,10 +2184,10 @@ function updateCalculations() {
                 <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(finalSalesPrice, 2)}</td>
                 <td class="text-end" style="background-color: ${codeBgColor}; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important;">${formatQuoteMoney(finalSalesPriceTotal, 2)}</td>
                 <td class="text-end" style="background-color: ${product.isSubItem ? '#d6e9ff' : '#e0e0e0'}; border: 2px solid #ffffff !important;">
-                    <input type="text" class="form-control form-control-sm text-end" value="${formatBaseEuro(purchasePrice)}" 
+                    <input type="text" class="form-control form-control-sm text-end" value="${formatQuoteMoney(purchasePrice, 2)}" 
                            disabled style="background-color: ${product.isSubItem ? '#d6e9ff' : '#e0e0e0'}; font-size: 0.8rem; padding: 0.2rem;">
                 </td>
-                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatBaseEuro(purchasePrice * quantity)}</td>
+                <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(purchasePrice * quantity, 2)}</td>
                 <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(shippingPurchasePerProduct, 0)}</td>
                 <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(Math.round(shippingPurchaseForProduct), 0)}</td>
                 <td class="text-end" style="background-color: ${codeBgColor}; border: 2px solid #ffffff !important;">${formatQuoteMoney(incidentalPurchasePerProduct, 0)}</td>
@@ -2211,9 +2247,9 @@ function updateCalculations() {
     // 합계 행 업데이트
     document.getElementById('totalQuantity').textContent = totalQuantity;
     // 프라이스북 단가 총합계 표시
-    document.getElementById('totalPriceBookUnit').textContent = formatBaseEuro(totalPriceBookUnit);
+    document.getElementById('totalPriceBookUnit').textContent = formatQuoteMoney(totalPriceBookUnit, 2);
     // 프라이스북 합계 표시
-    document.getElementById('totalPriceBook').textContent = formatBaseEuro(totalPriceBook);
+    document.getElementById('totalPriceBook').textContent = formatQuoteMoney(totalPriceBook, 2);
     // 할인가 합계만 표시 (단가 칸은 빈칸)
     document.getElementById('totalDiscounted').textContent = formatQuoteMoney(totalDiscounted, 2);
     // 운임(판매) 합계만 표시 (단가 칸은 빈칸)
@@ -2222,7 +2258,7 @@ function updateCalculations() {
     // 최종 판매가 합계 표시
     document.getElementById('totalFinalSales').textContent = formatQuoteMoney(totalFinalSales, 2);
     // 구매가 원가 합계만 표시 (단가 칸은 빈칸)
-    document.getElementById('totalPurchase').textContent = formatBaseEuro(totalPurchase);
+    document.getElementById('totalPurchase').textContent = formatQuoteMoney(totalPurchase, 2);
     // 운임(구매) 합계만 표시 (단가 칸은 빈칸)
     document.getElementById('totalShippingPurchase').textContent = formatQuoteMoney(shippingPurchase, 2);
     // 부대비용 합계만 표시 (단가 칸은 빈칸)
