@@ -1585,16 +1585,22 @@ def api_auth_logout():
 @app.route('/api/admin/session', methods=['GET'])
 def api_auth_session():
     user_type = session.get('tracking_user_type')
-    logged_in = bool(session.get('auth_logged_in') or session.get('pns_admin') or session.get('tracking_user_id'))
+    user_id = session.get('tracking_user_id')
+    pns_admin = _is_pns_admin_session()
+    if pns_admin and not user_type:
+        user_type = 'admin'
+    if pns_admin and not user_id:
+        user_id = 'pns'
+    logged_in = bool(session.get('auth_logged_in') or pns_admin or user_id)
     return jsonify({
         "success": True,
         "logged_in": logged_in,
-        "user_id": session.get('tracking_user_id'),
+        "user_id": user_id,
         "user_type": user_type,
         "user_type_label": USER_TYPES.get(user_type, user_type) if user_type else None,
         "permissions": sorted(ROLE_PERMISSIONS.get(user_type, set())) if user_type else [],
         "tracking_session_id": session.get('tracking_session_id'),
-        "is_admin": bool(session.get('pns_admin')),
+        "is_admin": pns_admin,
     })
 
 
@@ -1894,12 +1900,29 @@ def api_pns_login():
         username = data.get('username', '').strip()
         password = data.get('password', '').strip()
         
-        # 인증 확인 (ID: pns, Password: pns@123)
-        if username == "pns" and password == "pns@123":
+        # 인증 확인 (ID: pns, Password: pns@123) — 상단 로그인과 같은 관리자 세션
+        if username.lower() == "pns" and password == "pns@123":
+            user = authenticate_tracking_user('pns', password)
+            system = get_welding_system()
+            cursor = system.connection.cursor()
+            ensure_user_tracking_tables(cursor)
+            tracking_session_id = create_tracking_session(
+                cursor, user['user_id'], user['user_type'],
+                request.headers.get('User-Agent'), request.remote_addr
+            )
+            system.connection.commit()
+            session['pns_admin'] = True
             session['pns_authenticated'] = True
+            session['auth_logged_in'] = True
+            session['tracking_user_id'] = user['user_id']
+            session['tracking_user_type'] = user['user_type']
+            session['tracking_session_id'] = tracking_session_id
             return jsonify({
                 "success": True,
-                "message": "인증 성공"
+                "message": "인증 성공",
+                "user_id": user['user_id'],
+                "user_type": user['user_type'],
+                "tracking_session_id": tracking_session_id,
             })
         else:
             return jsonify({
@@ -2787,10 +2810,12 @@ def export_quotation_new():
     user_type = _session_user_type()
     if user_type == 'customer':
         return redirect(url_for('export_quotation_new_public', lang=lang))
+    staff_session = user_type in ('admin', 'export_dept') or _is_pns_admin_session()
     return render_template(
         'export_quotation_new.html',
         lang=lang,
         can_view_export_cost=_session_can_view_export_cost(),
+        staff_session=staff_session,
     )
 
 @app.route('/export_quotation_new_public')

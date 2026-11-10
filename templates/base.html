@@ -1066,15 +1066,14 @@
 
         function syncAdminSessionFromServer() {
             const navbarLoggedIn = sessionStorage.getItem(AUTH_STORAGE_KEY) === 'true';
-            if (!navbarLoggedIn) {
-                updateLoginState(false);
-                return;
+            if (navbarLoggedIn) {
+                updateLoginState(true, sessionStorage.getItem(AUTH_ROLE_KEY), sessionStorage.getItem(AUTH_USER_KEY));
             }
 
             fetch('/api/auth/session', { credentials: 'same-origin' })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
-                    if (data.success && data.logged_in) {
+                    if (data.success && data.logged_in && data.user_id) {
                         sessionStorage.setItem(AUTH_STORAGE_KEY, 'true');
                         sessionStorage.setItem(AUTH_ROLE_KEY, data.user_type || '');
                         sessionStorage.setItem(AUTH_USER_KEY, data.user_id || '');
@@ -1090,10 +1089,9 @@
                     }
                 })
                 .catch(function() {
-                    sessionStorage.removeItem(AUTH_STORAGE_KEY);
-                    sessionStorage.removeItem(AUTH_ROLE_KEY);
-                    sessionStorage.removeItem(AUTH_USER_KEY);
-                    updateLoginState(false);
+                    if (!navbarLoggedIn) {
+                        updateLoginState(false);
+                    }
                 });
         }
 

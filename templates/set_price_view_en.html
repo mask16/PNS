@@ -83,7 +83,6 @@
                                             <small class="form-text text-muted" id="exchangeRateHelp">Enter exchange rate for 1 EUR</small>
                                         </div>
                                     </div>
-                                    <div class="mt-3" id="setPriceFxRateTable"></div>
                                 </div>
                             </div>
                         </div>
@@ -147,24 +146,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     loadPriceList();
-    if (window.PnsExchangeRates) {
-        window.PnsExchangeRates.buildSelectableTable('setPriceFxRateTable', {
-            selectedCurrency: 'EUR',
-            lang: 'eng',
-            onApply: function (payload) {
-                const currencySelect = document.getElementById('currencySelect');
-                const usdExchangeRateInput = document.getElementById('usdExchangeRate');
-                if (currencySelect) currencySelect.value = payload.currency;
-                if (usdExchangeRateInput) {
-                    if (payload.currency === 'USD') usdExchangeRateInput.value = Number(payload.eur_usd).toFixed(4);
-                    else if (payload.currency === 'KRW') usdExchangeRateInput.value = Number(payload.eur_krw).toFixed(2);
-                    else usdExchangeRateInput.value = '1.00';
-                }
-                currencySelect && currencySelect.dispatchEvent(new Event('change'));
-            }
-        });
-    }
-    
+
     // Currency selection and exchange rate input field event listeners
     const currencySelect = document.getElementById('currencySelect');
     const usdExchangeRateInput = document.getElementById('usdExchangeRate');

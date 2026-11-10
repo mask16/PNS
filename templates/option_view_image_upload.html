@@ -346,9 +346,9 @@
                         <label for="regionMapperCategory" class="form-label">매핑할 옵션 카테고리</label>
                         <select id="regionMapperCategory" class="form-select mb-2"></select>
                         <div class="btn-group w-100 mb-2" role="group" aria-label="매핑 도구">
-                            <input type="radio" class="btn-check" name="regionTool" id="regionToolMagic" value="magic" checked>
+                            <input type="radio" class="btn-check" name="regionTool" id="regionToolMagic" value="magic">
                             <label class="btn btn-outline-primary btn-sm" for="regionToolMagic">자동 누끼</label>
-                            <input type="radio" class="btn-check" name="regionTool" id="regionToolPencil" value="pencil">
+                            <input type="radio" class="btn-check" name="regionTool" id="regionToolPencil" value="pencil" checked>
                             <label class="btn btn-outline-secondary btn-sm" for="regionToolPencil">연필</label>
                             <input type="radio" class="btn-check" name="regionTool" id="regionToolRect" value="rect">
                             <label class="btn btn-outline-secondary btn-sm" for="regionToolRect">사각형</label>
@@ -358,14 +358,14 @@
                         <div id="regionMapperToleranceWrap" class="mb-2">
                             <label for="regionMapperTolerance" class="form-label mb-1">자동 누끼 허용 범위</label>
                             <input type="range" class="form-range" id="regionMapperTolerance" min="8" max="80" step="1" value="32">
-                            <div class="form-text">값이 클수록 비슷한 색을 더 넓게 포함합니다. (기본 32)</div>
+                            <div class="form-text">값이 클수록 가까이 떨어진 선도 한 부품으로 이어 붙입니다. (기본 32)</div>
                         </div>
                         <div id="regionMapperEraserWrap" class="mb-2" style="display:none;">
                             <label for="regionMapperEraserSize" class="form-label mb-1">지우개 크기</label>
                             <input type="range" class="form-range" id="regionMapperEraserSize" min="8" max="64" step="1" value="24">
                             <div class="form-text">값이 클수록 더 넓게 지웁니다.</div>
                         </div>
-                        <div class="form-text mb-3" id="regionMapperToolHelp">카테고리 선택 후 부품 안쪽을 클릭하면 자동으로 누끼 영역이 생성됩니다.</div>
+                        <div class="form-text mb-3" id="regionMapperToolHelp">원하는 부품 주변만 대충 둘러 그리면, 그 안의 그림 선을 따라 영역이 맞춰집니다.</div>
                         <button type="button" class="btn btn-sm btn-outline-secondary w-100 mb-3" id="regionMapperClearCategoryBtn">현재 카테고리 선택 초기화</button>
                         <div id="regionMapperList"></div>
                     </div>

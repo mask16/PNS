@@ -165,6 +165,7 @@
                 permissions: data.permissions || []
             });
             onPageEnter();
+            document.dispatchEvent(new CustomEvent('pnsAuthLoggedIn', { detail: data }));
             return data;
         });
     }
@@ -173,7 +174,8 @@
         return fetch('/api/auth/session', { credentials: 'same-origin' })
             .then(function (r) { return r.json(); })
             .then(function (data) {
-                if (data.success && data.logged_in && data.tracking_session_id) {
+                const staffSession = data.user_type === 'admin' || data.user_type === 'export_dept' || data.is_admin === true || String(data.user_id || '').toLowerCase() === 'pns';
+                if (data.success && data.logged_in && (data.tracking_session_id || staffSession)) {
                     const existing = getContext();
                     if (!existing || existing.session_id !== data.tracking_session_id) {
                         sessionStartAt = Date.now();

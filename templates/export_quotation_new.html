@@ -247,6 +247,10 @@ function updatePageLanguage() {
         const iconHtml = icon ? icon.outerHTML + ' ' : '';
         authBtn.innerHTML = iconHtml + t('authenticate');
     }
+
+    if (typeof markProductCurrencyHeaders === 'function') {
+        markProductCurrencyHeaders();
+    }
 }
 </script>
 <style>
@@ -451,7 +455,7 @@ function updatePageLanguage() {
                                         <input type="number" class="form-control" id="krwExchangeRate" value="1700.00" step="0.01" min="0.0001" onchange="updateCalculations()" style="background-color: #ffcccc;">
                                         <span class="input-group-text" id="fxRateSuffix">KRW</span>
                                     </div>
-                                    <div id="exportFxRateTable"></div>
+                                    <div id="exportFxRateTable" class="d-none" aria-hidden="true"></div>
                                     <input type="hidden" id="selectedQuoteCurrency" value="KRW">
                                 </td>
                             </tr>
@@ -624,8 +628,8 @@ function updatePageLanguage() {
                             <thead class="table-dark">
                                 <tr>
                                     <th colspan="3" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; color: #ffffff !important;" data-lang-kor="제품정보" data-lang-eng="Product Information">제품정보</th>
-                                    <th colspan="8" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; width: 38%;" data-lang-kor="판매가" data-lang-eng="Sales Price">판매가</th>
-                                    <th colspan="8" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; width: 38%;" data-lang-kor="원가" data-lang-eng="Cost">원가</th>
+                                    <th colspan="8" id="productSalesPriceHeader" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; width: 38%;" data-lang-kor="판매가" data-lang-eng="Sales Price">판매가</th>
+                                    <th colspan="8" id="productCostHeader" style="background-color: #800020 !important; text-align: center; border-right: 3px solid #ffffff !important; border: 2px solid #ffffff !important; width: 38%;" data-lang-kor="원가" data-lang-eng="Cost">원가</th>
                                     <th style="background-color: #800020 !important; text-align: center; vertical-align: middle; border: 2px solid #ffffff !important; width: 4%;" data-lang-kor="마진" data-lang-eng="Margin">마진</th>
                                 </tr>
                                 <tr>
@@ -806,6 +810,30 @@ function highlightCurrencyForRate(rateCode) {
     return selectedQuoteCurrency;
 }
 
+function activeQuoteCurrencyLabel() {
+    const code = selectedRateCode
+        ? highlightCurrencyForRate(selectedRateCode)
+        : (selectedQuoteCurrency || 'KRW');
+    if (code === 'EUR') return 'EURO';
+    if (code === 'USD') return 'USD';
+    return 'KRW';
+}
+
+function markProductCurrencyHeaders() {
+    const mark = ' (' + activeQuoteCurrencyLabel() + ')';
+    [
+        { id: 'productSalesPriceHeader', kor: '판매가', eng: 'Sales Price' },
+        { id: 'productCostHeader', kor: '원가', eng: 'Cost' }
+    ].forEach(function (item) {
+        const el = document.getElementById(item.id);
+        if (!el) return;
+        const base = (typeof currentLang !== 'undefined' && currentLang === 'ENG')
+            ? (el.getAttribute('data-lang-eng') || item.eng)
+            : (el.getAttribute('data-lang-kor') || item.kor);
+        el.textContent = base + mark;
+    });
+}
+
 function applyExchangeRateSelection(payload) {
     if (!payload) return;
     let rateCode = String(payload.rateCode || '').toUpperCase();
@@ -845,8 +873,8 @@ function applyExchangeRateSelection(payload) {
         if (suffix) suffix.textContent = 'KRW';
     } else {
         if (rateInput) rateInput.value = '1';
-        if (prefix) prefix.textContent = '1 KRW =';
-        if (suffix) suffix.textContent = 'KRW';
+        if (prefix) prefix.textContent = '1 EURO =';
+        if (suffix) suffix.textContent = 'EURO';
     }
 
     const radio = document.querySelector('#exportFxRateTable input[type="radio"][value="' + rateCode + '"]');
@@ -857,6 +885,7 @@ function applyExchangeRateSelection(payload) {
         el.classList.toggle('table-warning', el.getAttribute('data-currency') === highlight);
     });
 
+    markProductCurrencyHeaders();
     updateCalculations();
 }
 
@@ -2639,15 +2668,8 @@ window.exportToExcel = function exportToExcel() {
 // 인증 관련 변수
 let isAuthenticated = false;
 
-// 닫기 버튼 함수
 function closeAuthModal() {
-    const modal = bootstrap.Modal.getInstance(document.getElementById('authModal'));
-    if (modal) {
-        modal.hide();
-    }
-    setTimeout(() => {
-        window.location.href = '/';
-    }, 300);
+    window.location.href = '/';
 }
 
 // 인증 처리 함수
@@ -2721,8 +2743,34 @@ function processAuth() {
     return;
 }
 
-// 페이지 로드 시 인증 모달 표시
+function exportStaffSessionActive(data) {
+    if (!data) return false;
+    const userType = data.user_type;
+    const userId = String(data.user_id || '').toLowerCase();
+    return userType === 'export_dept' || userType === 'admin' || data.is_admin === true || userId === 'pns';
+}
+
+function finishExportQuotationAuth() {
+    isAuthenticated = true;
+    document.body.style.pointerEvents = 'auto';
+    document.body.classList.remove('modal-open');
+    document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
+        backdrop.remove();
+    });
+    if (setCodeInfo) {
+        updateSetCodeCard();
+    }
+    flushPendingProductsFromUrl();
+}
+
+// 페이지 로드 시 기존 로그인 세션이 있으면 인증 창을 다시 띄우지 않는다
 document.addEventListener('DOMContentLoaded', function() {
+    if ({{ staff_session|default(false)|tojson }}) {
+        finishExportQuotationAuth();
+        return;
+    }
+    document.body.style.pointerEvents = 'none';
+
     function showAuthModal() {
         const authModalElement = document.getElementById('authModal');
         if (!authModalElement) return;
@@ -2761,7 +2809,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    showAuthModal();
+    const restoreSession = window.PnsTracking && window.PnsTracking.restoreFromServer
+        ? window.PnsTracking.restoreFromServer()
+        : fetch('/api/auth/session', { credentials: 'same-origin' })
+            .then(function (response) { return response.json(); })
+            .catch(function () { return null; });
+
+    Promise.resolve(restoreSession).then(function (data) {
+        if (exportStaffSessionActive(data)) {
+            finishExportQuotationAuth();
+            return;
+        }
+        showAuthModal();
+    }).catch(function () {
+        showAuthModal();
+    });
 });
 
 // 제품정보 섹션 접기/펼치기 함수

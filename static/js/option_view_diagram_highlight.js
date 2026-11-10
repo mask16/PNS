@@ -5,7 +5,7 @@
     'use strict';
 
     var COLORS = {
-        current: { stroke: '#800020', fill: 'rgba(128, 0, 32, 0.18)' },
+        current: { stroke: '#800020', fill: 'rgba(128, 0, 32, 0.4)' },
         completed: { stroke: '#111111', fill: 'rgba(17, 17, 17, 0.12)' },
         unselected: { stroke: '#9ca3af', fill: 'rgba(156, 163, 175, 0.08)' }
     };

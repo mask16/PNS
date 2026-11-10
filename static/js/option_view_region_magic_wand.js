@@ -11,10 +11,6 @@
         ready: false
     };
 
-    function pixelLum(data, idx) {
-        return (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-    }
-
     function rebuildCache(img) {
         if (!img || !img.naturalWidth) {
             cache.ready = false;
@@ -33,33 +29,241 @@
         cache.data = imageData.data;
         cache.width = w;
         cache.height = h;
+        buildPartIndex(imageData.data, w, h);
         cache.ready = true;
         return true;
     }
 
-    function floodFill(sx, sy, tolerance) {
+    function isPaperPixel(data, idx) {
+        var r = data[idx];
+        var g = data[idx + 1];
+        var b = data[idx + 2];
+        var a = data[idx + 3];
+        if (a < 16) return true;
+        var max = r > g ? (r > b ? r : b) : (g > b ? g : b);
+        var min = r < g ? (r < b ? r : b) : (g < b ? g : b);
+        var lum = (r + g + b) / 3;
+        return lum >= 236 && (max - min) <= 26;
+    }
+
+    function buildPartIndex(data, w, h) {
+        var n = w * h;
+        var fg = new Uint8Array(n);
+        var labels = new Uint32Array(n);
+        for (var i = 0; i < n; i++) {
+            fg[i] = isPaperPixel(data, i * 4) ? 0 : 1;
+        }
+
+        var area = [0];
+        var bbox = [0, 0, 0, 0];
+        var touchesBorder = [0];
+        var nextId = 1;
+
+        for (var start = 0; start < n; start++) {
+            if (fg[start] || labels[start]) continue;
+            var stack = [start];
+            labels[start] = nextId;
+            var count = 0;
+            var x0 = start % w;
+            var x1 = x0;
+            var y0 = (start / w) | 0;
+            var y1 = y0;
+            var border = 0;
+            while (stack.length) {
+                var idx = stack.pop();
+                count++;
+                var x = idx % w;
+                var y = (idx / w) | 0;
+                if (x < x0) x0 = x;
+                if (x > x1) x1 = x;
+                if (y < y0) y0 = y;
+                if (y > y1) y1 = y;
+                if (x === 0 || y === 0 || x === w - 1 || y === h - 1) border = 1;
+                if (x > 0 && !fg[idx - 1] && !labels[idx - 1]) {
+                    labels[idx - 1] = nextId;
+                    stack.push(idx - 1);
+                }
+                if (x < w - 1 && !fg[idx + 1] && !labels[idx + 1]) {
+                    labels[idx + 1] = nextId;
+                    stack.push(idx + 1);
+                }
+                if (y > 0 && !fg[idx - w] && !labels[idx - w]) {
+                    labels[idx - w] = nextId;
+                    stack.push(idx - w);
+                }
+                if (y < h - 1 && !fg[idx + w] && !labels[idx + w]) {
+                    labels[idx + w] = nextId;
+                    stack.push(idx + w);
+                }
+            }
+            area.push(count);
+            bbox.push(x0, y0, x1, y1);
+            touchesBorder.push(border);
+            nextId++;
+        }
+
+        var backgroundId = 0;
+        var backgroundArea = -1;
+        for (var id = 1; id < nextId; id++) {
+            if (!touchesBorder[id]) continue;
+            if (area[id] > backgroundArea) {
+                backgroundArea = area[id];
+                backgroundId = id;
+            }
+        }
+
+        var adj = new Array(nextId);
+        for (var a = 0; a < nextId; a++) adj[a] = [];
+        var seenStamp = new Uint32Array(nextId);
+        var stamp = 1;
+        for (var y = 0; y < h; y++) {
+            for (var x = 0; x < w; x++) {
+                var pix = y * w + x;
+                if (!fg[pix]) continue;
+                stamp++;
+                if (stamp > 4000000000) {
+                    seenStamp = new Uint32Array(nextId);
+                    stamp = 1;
+                }
+                var found = [];
+                for (var oy = -4; oy <= 4; oy++) {
+                    var ny = y + oy;
+                    if (ny < 0 || ny >= h) continue;
+                    var row = ny * w;
+                    for (var ox = -4; ox <= 4; ox++) {
+                        var nx = x + ox;
+                        if (nx < 0 || nx >= w) continue;
+                        var lab = labels[row + nx];
+                        if (!lab || lab === backgroundId || seenStamp[lab] === stamp) continue;
+                        seenStamp[lab] = stamp;
+                        found.push(lab);
+                    }
+                }
+                for (var p = 0; p < found.length; p++) {
+                    for (var q = p + 1; q < found.length; q++) {
+                        var la = found[p];
+                        var lb = found[q];
+                        if (adj[la].indexOf(lb) === -1) adj[la].push(lb);
+                        if (adj[lb].indexOf(la) === -1) adj[lb].push(la);
+                    }
+                }
+            }
+        }
+
+        cache.foreground = fg;
+        cache.labels = labels;
+        cache.area = area;
+        cache.bbox = bbox;
+        cache.adj = adj;
+        cache.backgroundId = backgroundId;
+        cache.componentCount = nextId - 1;
+    }
+
+    function isBridge(id, tolerance) {
+        var area = cache.area[id];
+        if (!area || area < 36) return false;
+        var o = id * 4;
+        var bw = cache.bbox[o + 2] - cache.bbox[o] + 1;
+        var bh = cache.bbox[o + 3] - cache.bbox[o + 1] + 1;
+        var minor = Math.min(bw, bh);
+        var major = Math.max(bw, bh);
+        var limit = Math.max(8, Math.round(36 - tolerance * 0.45));
+        return major >= minor * 4 && minor <= limit;
+    }
+
+    function collectPart(seed, tolerance) {
+        var selected = new Uint8Array(cache.componentCount + 1);
+        if (!seed || seed === cache.backgroundId) return selected;
+        selected[seed] = 1;
+        if (isBridge(seed, tolerance)) return selected;
+        var stack = [seed];
+        var adj = cache.adj;
+        while (stack.length) {
+            var cur = stack.pop();
+            var neighbors = adj[cur];
+            for (var i = 0; i < neighbors.length; i++) {
+                var nb = neighbors[i];
+                if (selected[nb] || nb === cache.backgroundId || isBridge(nb, tolerance)) continue;
+                selected[nb] = 1;
+                stack.push(nb);
+            }
+        }
+        return selected;
+    }
+
+    function findNearbyPart(px, py, tolerance) {
         var w = cache.width;
         var h = cache.height;
-        var data = cache.data;
-        var start = sy * w + sx;
-        var seedLum = pixelLum(data, start * 4);
-        var mask = new Uint8Array(w * h);
-        var stack = [start];
-        var filled = 0;
+        var labels = cache.labels;
+        var bg = cache.backgroundId;
+        var reach = Math.max(14, Math.round(12 + tolerance * 0.2));
+        var best = 0;
+        var bestArea = -1;
+        var thinBest = 0;
+        var thinDist = 1e9;
+        var y0 = Math.max(0, py - reach);
+        var y1 = Math.min(h - 1, py + reach);
+        var x0 = Math.max(0, px - reach);
+        var x1 = Math.min(w - 1, px + reach);
+        for (var y = y0; y <= y1; y++) {
+            var row = y * w;
+            for (var x = x0; x <= x1; x++) {
+                var lab = labels[row + x];
+                if (!lab || lab === bg) continue;
+                var dist = Math.max(Math.abs(x - px), Math.abs(y - py));
+                if (dist > reach) continue;
+                if (isBridge(lab, tolerance)) {
+                    if (dist < thinDist) {
+                        thinDist = dist;
+                        thinBest = lab;
+                    }
+                } else if (cache.area[lab] > bestArea) {
+                    bestArea = cache.area[lab];
+                    best = lab;
+                }
+            }
+        }
+        return best || thinBest || 0;
+    }
 
-        while (stack.length) {
-            var idx = stack.pop();
-            if (mask[idx]) continue;
-            var lum = pixelLum(data, idx * 4);
-            if (Math.abs(lum - seedLum) > tolerance) continue;
-            mask[idx] = 1;
-            filled++;
-            var x = idx % w;
-            var y = (idx / w) | 0;
-            if (x > 0) stack.push(idx - 1);
-            if (x < w - 1) stack.push(idx + 1);
-            if (y > 0) stack.push(idx - w);
-            if (y < h - 1) stack.push(idx + w);
+    function maskFromSelection(selected) {
+        var w = cache.width;
+        var h = cache.height;
+        var labels = cache.labels;
+        var fg = cache.foreground;
+        var n = w * h;
+        var mask = new Uint8Array(n);
+        var filled = 0;
+        for (var i = 0; i < n; i++) {
+            var lab = labels[i];
+            if (lab && selected[lab]) {
+                mask[i] = 1;
+                filled++;
+            }
+        }
+        for (var y = 0; y < h; y++) {
+            for (var x = 0; x < w; x++) {
+                var idx = y * w + x;
+                if (mask[idx] || !fg[idx]) continue;
+                var hit = false;
+                for (var oy = -3; oy <= 3 && !hit; oy++) {
+                    var ny = y + oy;
+                    if (ny < 0 || ny >= h) continue;
+                    for (var ox = -3; ox <= 3; ox++) {
+                        var nx = x + ox;
+                        if (nx < 0 || nx >= w) continue;
+                        var near = labels[ny * w + nx];
+                        if (near && selected[near]) {
+                            hit = true;
+                            break;
+                        }
+                    }
+                }
+                if (hit) {
+                    mask[idx] = 1;
+                    filled++;
+                }
+            }
         }
         return { mask: mask, filled: filled };
     }
@@ -301,17 +505,29 @@
             var h = cache.height;
             var px = Math.max(0, Math.min(w - 1, Math.round(normX * (w - 1))));
             var py = Math.max(0, Math.min(h - 1, Math.round(normY * (h - 1))));
-
-            var fill = floodFill(px, py, tolerance);
             var total = w * h;
+            var clickLabel = cache.labels[py * w + px];
+            var seed = 0;
+            if (clickLabel && clickLabel !== cache.backgroundId) {
+                seed = clickLabel;
+            } else {
+                seed = findNearbyPart(px, py, tolerance);
+            }
+            if (!seed) {
+                return { error: '빈 배경입니다. 부품 안쪽을 한 번 클릭해 주세요.' };
+            }
+
+            var selected = collectPart(seed, tolerance);
+            var fill = maskFromSelection(selected);
+
             var minArea = Math.max(80, total * 0.00005);
-            var maxArea = total * (options.maxAreaRatio || 0.42);
+            var maxArea = total * (options.maxAreaRatio || 0.55);
 
             if (fill.filled < minArea) {
-                return { error: '선택 영역이 너무 작습니다. 부품 안쪽(흰색/밝은 영역)을 클릭해 주세요.' };
+                return { error: '선택 영역이 너무 작습니다. 부품의 선이나 면 위를 클릭해 주세요.' };
             }
             if (fill.filled > maxArea) {
-                return { error: '선택 영역이 너무 큽니다. 특정 부품 안쪽을 클릭하거나 허용 범위를 낮춰 주세요.' };
+                return { error: '선택 영역이 너무 큽니다. 부품 위를 클릭하거나 허용 범위를 낮춰 주세요.' };
             }
 
             var contour = traceContour(fill.mask, w, h);
@@ -321,6 +537,51 @@
             }
 
             return { points: points, filled: fill.filled };
+        },
+
+        extractInside: function (guidePoints) {
+            if (!cache.ready) {
+                return { error: '이미지 분석 데이터가 준비되지 않았습니다.' };
+            }
+            if (!Array.isArray(guidePoints) || guidePoints.length < 3) {
+                return { error: '영역을 더 길게 그려 주세요.' };
+            }
+
+            var w = cache.width;
+            var h = cache.height;
+            var userMask = rasterizePolygonsToMask([guidePoints], w, h);
+            var counts = new Uint32Array(cache.componentCount + 1);
+            var inside = 0;
+            var n = w * h;
+            for (var i = 0; i < n; i++) {
+                if (!userMask[i]) continue;
+                inside++;
+                var lab = cache.labels[i];
+                if (lab && lab !== cache.backgroundId) counts[lab]++;
+            }
+            if (inside < 80) {
+                return { error: '그린 범위가 너무 작습니다.' };
+            }
+
+            var selected = new Uint8Array(cache.componentCount + 1);
+            var chosen = 0;
+            for (var id = 1; id <= cache.componentCount; id++) {
+                if (!counts[id] || !cache.area[id]) continue;
+                if (counts[id] / cache.area[id] >= 0.5) {
+                    selected[id] = 1;
+                    chosen++;
+                }
+            }
+            if (!chosen) {
+                return { error: '그린 범위 안에서 부품 선을 찾지 못했습니다.' };
+            }
+
+            var fill = maskFromSelection(selected);
+            var polygons = extractPolygonsFromMask(fill.mask, w, h);
+            if (!polygons.length) {
+                return { error: '그림 윤곽을 만들지 못했습니다.' };
+            }
+            return { polygons: polygons, filled: fill.filled };
         },
 
         eraseStroke: function (polygons, strokePoints, radiusNorm) {

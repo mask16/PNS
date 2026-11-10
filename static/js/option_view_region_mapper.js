@@ -205,7 +205,7 @@
         appendMagicPolygon(state.activeCategory, result.points);
     }
 
-    function appendMagicPolygon(categoryNumber, newPoints) {
+    function appendMagicPolygon(categoryNumber, newPoints, source) {
         var simplified = simplifyPath(newPoints, MIN_POINT_DIST);
         if (simplified.length < 3) {
             return;
@@ -227,7 +227,30 @@
             });
         }
         polygons.push(normalized);
-        upsertRegion(categoryNumber, 'polygon', { polygons: polygons }, 'magic');
+        upsertRegion(categoryNumber, 'polygon', { polygons: polygons }, source || 'magic');
+    }
+
+    function ensureMagicReady() {
+        if (!window.OptionViewMagicWand) return false;
+        if (!OptionViewMagicWand.isReady()) rebuildMagicCache();
+        return OptionViewMagicWand.isReady();
+    }
+
+    function applyManualSnap(categoryNumber, guidePoints, fallback) {
+        if (ensureMagicReady() && OptionViewMagicWand.extractInside) {
+            var result = OptionViewMagicWand.extractInside(guidePoints);
+            if (result && result.polygons && result.polygons.length) {
+                result.polygons.forEach(function (poly) {
+                    appendMagicPolygon(categoryNumber, poly, 'pencil');
+                });
+                return;
+            }
+        }
+        if (fallback && fallback.type === 'rect') {
+            upsertRectRegion(categoryNumber, fallback.rect);
+            return;
+        }
+        upsertPolygonRegion(categoryNumber, guidePoints, 'pencil');
     }
 
     function clearActiveCategoryRegion() {
@@ -334,13 +357,13 @@
         var help = document.getElementById('regionMapperToolHelp');
         if (!help) return;
         if (state.tool === 'magic') {
-            help.innerHTML = '카테고리 선택 후 <strong>부품 안쪽을 여러 번 클릭</strong>하면 클릭할 때마다 누끼 영역이 추가됩니다.';
+            help.innerHTML = '카테고리 선택 후 <strong>부품을 한 번 클릭</strong>하면 그 부품 영역이 자동으로 지정됩니다. 떨어진 부품은 한 번 더 클릭하면 추가됩니다.';
         } else if (state.tool === 'eraser') {
             help.innerHTML = '<strong>영역을 클릭</strong>하면 해당 조각이 삭제되고, <strong>드래그</strong>하면 현재 카테고리 영역을 부분적으로 지웁니다.';
         } else if (state.tool === 'pencil') {
-            help.innerHTML = '카테고리 선택 후 도면 위를 <strong>연필처럼 따라 그려</strong> 누끼 영역을 지정합니다.';
+            help.innerHTML = '원하는 부품 <strong>주변만 대충 둘러 그리면</strong>, 그 안의 그림 선을 따라 영역이 맞춰집니다. 범위 밖 부품은 포함되지 않습니다.';
         } else {
-            help.innerHTML = '카테고리 선택 후 도면 위를 <strong>드래그</strong>하여 사각 영역을 지정합니다.';
+            help.innerHTML = '원하는 부품 주변을 <strong>드래그</strong>하면, 그 안의 그림 선을 따라 영역이 맞춰집니다.';
         }
         var toleranceWrap = document.getElementById('regionMapperToleranceWrap');
         if (toleranceWrap) {
@@ -575,7 +598,7 @@
                 var points = state.draftPoints.slice();
                 state.draftPoints = [];
                 if (points.length >= MIN_POLYGON_POINTS) {
-                    upsertPolygonRegion(state.activeCategory, points);
+                    applyManualSnap(state.activeCategory, points);
                 } else {
                     renderRegionsOnSvg();
                     alert('누끼 영역을 더 길게 그려 주세요.');
@@ -594,7 +617,16 @@
                 { x: pt.x, y: pt.y }
             );
             state.draftRect = null;
-            upsertRectRegion(state.activeCategory, rect);
+            if (rect.w < 0.01 || rect.h < 0.01) {
+                renderRegionsOnSvg();
+                return;
+            }
+            applyManualSnap(state.activeCategory, [
+                [rect.x, rect.y],
+                [rect.x + rect.w, rect.y],
+                [rect.x + rect.w, rect.y + rect.h],
+                [rect.x, rect.y + rect.h]
+            ], { type: 'rect', rect: rect });
         }
 
         svg.addEventListener('click', function (e) {
@@ -771,7 +803,7 @@
                 };
             });
             state.activeCategory = null;
-            state.tool = 'magic';
+            state.tool = 'pencil';
             state.drawing = false;
             state.draftRect = null;
             state.draftPoints = [];

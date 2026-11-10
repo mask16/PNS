@@ -29,12 +29,15 @@
         padding: 0.5rem;
         cursor: zoom-in;
         position: relative;
+        overflow: hidden;
     }
     .option-view-diagram-wrap {
         position: relative;
         display: inline-block;
         width: 100%;
         line-height: 0;
+        transform-origin: 0 0;
+        transition: transform 0.35s ease;
     }
     .option-view-diagram-wrap img {
         display: block;
@@ -52,45 +55,14 @@
         stroke-width: 2.5;
         fill-opacity: 1;
     }
-    .option-view-spec-panel {
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        background: #fff;
-        margin-bottom: 0.65rem;
-        overflow: hidden;
-    }
-    .option-view-spec-panel__header {
-        padding: 0.55rem 0.75rem;
-        background-color: #800020;
-        color: #fff;
-        font-size: 0.8125rem;
-        font-weight: 600;
-    }
-    .option-view-spec-panel__body {
-        padding: 0.55rem 0.75rem;
-        max-height: 160px;
-        overflow-y: auto;
-    }
-    .option-view-spec-table {
-        width: 100%;
-        font-size: 0.75rem;
-        margin: 0;
-    }
-    .option-view-spec-table td {
-        padding: 0.2rem 0.35rem;
-        vertical-align: top;
-        border-bottom: 1px solid #f3f4f6;
-    }
-    .option-view-spec-table td:first-child {
-        color: #6b7280;
-        white-space: nowrap;
-        width: 38%;
+    svg.option-view-region-overlay .option-view-region[data-state="current"] {
+        stroke-width: 4;
     }
     .option-view-legend {
         display: flex;
         flex-wrap: wrap;
         gap: 0.65rem;
-        margin-top: 0.55rem;
+        margin-top: 0;
         font-size: 0.75rem;
         color: #4b5563;
     }
@@ -105,7 +77,7 @@
         border-radius: 2px;
         border: 2px solid transparent;
     }
-    .option-view-legend__swatch.is-current { border-color: #800020; background: rgba(128,0,32,0.18); }
+    .option-view-legend__swatch.is-current { border-color: #800020; background: rgba(128,0,32,0.4); }
     .option-view-legend__swatch.is-completed { border-color: #111; background: rgba(17,17,17,0.12); }
     .option-view-legend__swatch.is-unselected { border-color: #9ca3af; background: rgba(156,163,175,0.08); }
     .power-source-image-thumbs {
@@ -171,24 +143,19 @@
 <div class="row g-4" id="optionsLayoutRow">
     <div class="col-12 col-xl-5 option-view-image-col d-none" id="powerSourceImageCol">
         <div class="power-source-image-panel" id="powerSourceImagePanel">
-            <div class="option-view-spec-panel" id="optionViewSpecPanel">
-                <div class="option-view-spec-panel__header">용접기 세트 사양 요약</div>
-                <div class="option-view-spec-panel__body">
-                    <table class="option-view-spec-table" id="optionViewSpecTable">
-                        <tbody><tr><td colspan="2" class="text-muted">파워소스를 선택하면 사양이 표시됩니다.</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
             <div id="powerSourceImageViewer" class="power-source-image-viewer d-none">
                 <div class="option-view-diagram-wrap" id="optionViewDiagramWrap">
                     <img id="powerSourceMainImage" src="" alt="파워소스 이미지">
                     <svg id="optionViewRegionOverlay" class="option-view-region-overlay" aria-hidden="true"></svg>
                 </div>
             </div>
-            <div class="option-view-legend d-none" id="optionViewLegend">
-                <span class="option-view-legend__item"><span class="option-view-legend__swatch is-current"></span>현재 선택</span>
-                <span class="option-view-legend__item"><span class="option-view-legend__swatch is-completed"></span>선택 완료</span>
-                <span class="option-view-legend__item"><span class="option-view-legend__swatch is-unselected"></span>미선택</span>
+            <div class="d-flex justify-content-between align-items-start gap-2 mt-2">
+                <div class="option-view-legend d-none mt-0" id="optionViewLegend">
+                    <span class="option-view-legend__item"><span class="option-view-legend__swatch is-current"></span>현재 선택</span>
+                    <span class="option-view-legend__item"><span class="option-view-legend__swatch is-completed"></span>선택 완료</span>
+                    <span class="option-view-legend__item"><span class="option-view-legend__swatch is-unselected"></span>미선택</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary d-none flex-shrink-0" id="optionViewZoomReset">전체 보기</button>
             </div>
             <div id="powerSourceImageThumbs" class="power-source-image-thumbs d-none"></div>
         </div>
@@ -421,8 +388,7 @@ function updateSelection(selectElement) {
     
     // 옵션 스타일 적용 (드롭다운에서 활성화된 옵션 텍스트를 버건디 색으로)
     applyOptionStyles(selectElement);
-    
-    updateOptionViewSpecSummary();
+
     updateDiagramHighlights();
     updateProgress();
 }
@@ -443,26 +409,88 @@ function collectSelectedCategoryNumbers() {
     return selected;
 }
 
-function updateOptionViewSpecSummary() {
-    const tbody = document.querySelector('#optionViewSpecTable tbody');
-    if (!tbody) return;
-    const rows = [];
-    categoryNumbers.forEach(function (num) {
-        const select = getSelect(num);
-        if (!select || select.disabled) return;
-        if (!select.value || select.value === NONE_VALUE) return;
-        const label = categoryLabels[num] || ('[' + num + ']');
-        rows.push('<tr><td>' + label + '</td><td>' + select.value + '</td></tr>');
+function regionBoundsForCategory(categoryNumber) {
+    const bounds = { x0: 1, y0: 1, x1: 0, y1: 0, ok: false };
+    function addPoint(x, y) {
+        x = parseFloat(x);
+        y = parseFloat(y);
+        if (isNaN(x) || isNaN(y)) return;
+        bounds.x0 = Math.min(bounds.x0, x);
+        bounds.y0 = Math.min(bounds.y0, y);
+        bounds.x1 = Math.max(bounds.x1, x);
+        bounds.y1 = Math.max(bounds.y1, y);
+        bounds.ok = true;
+    }
+    currentDiagramRegions.forEach(function (region) {
+        if (parseInt(region.category_number, 10) !== categoryNumber) return;
+        const data = region.region_json || {};
+        const type = String(region.region_type || 'rect').toLowerCase();
+        if (type === 'polygon') {
+            const polys = Array.isArray(data.polygons) && data.polygons.length
+                ? data.polygons
+                : (Array.isArray(data.points) ? [data.points] : []);
+            polys.forEach(function (poly) {
+                (poly || []).forEach(function (point) {
+                    addPoint(point[0], point[1]);
+                });
+            });
+            return;
+        }
+        const x = parseFloat(data.x);
+        const y = parseFloat(data.y);
+        const w = parseFloat(data.w);
+        const h = parseFloat(data.h);
+        addPoint(x, y);
+        addPoint(x + w, y + h);
     });
-    tbody.innerHTML = rows.length
-        ? rows.join('')
-        : '<tr><td colspan="2" class="text-muted">선택된 옵션이 없습니다.</td></tr>';
+    return bounds.ok ? bounds : null;
+}
+
+function resetDiagramZoom() {
+    const wrap = document.getElementById('optionViewDiagramWrap');
+    const resetBtn = document.getElementById('optionViewZoomReset');
+    if (wrap) wrap.style.transform = '';
+    if (resetBtn) resetBtn.classList.add('d-none');
+}
+
+function zoomDiagramToCategory(categoryNumber) {
+    const wrap = document.getElementById('optionViewDiagramWrap');
+    const resetBtn = document.getElementById('optionViewZoomReset');
+    const selected = collectSelectedCategoryNumbers();
+    if (!wrap || !categoryNumber || !selected.has(categoryNumber)) {
+        resetDiagramZoom();
+        return;
+    }
+    const bounds = regionBoundsForCategory(categoryNumber);
+    const width = wrap.offsetWidth;
+    const height = wrap.offsetHeight;
+    if (!bounds || width < 20 || height < 20) {
+        resetDiagramZoom();
+        return;
+    }
+    const pad = 0.06;
+    const bw = Math.max(0.12, Math.min(1, bounds.x1 + pad) - Math.max(0, bounds.x0 - pad));
+    const bh = Math.max(0.12, Math.min(1, bounds.y1 + pad) - Math.max(0, bounds.y0 - pad));
+    const scale = Math.max(1, Math.min(3.2, 0.9 / Math.max(bw, bh)));
+    if (scale < 1.08) {
+        resetDiagramZoom();
+        return;
+    }
+    const cx = (bounds.x0 + bounds.x1) / 2;
+    const cy = (bounds.y0 + bounds.y1) / 2;
+    const tx = width / 2 - cx * width * scale;
+    const ty = height / 2 - cy * height * scale;
+    wrap.style.transform = 'translate(' + tx.toFixed(1) + 'px, ' + ty.toFixed(1) + 'px) scale(' + scale.toFixed(3) + ')';
+    if (resetBtn) resetBtn.classList.remove('d-none');
 }
 
 function updateDiagramHighlights() {
     const svg = document.getElementById('optionViewRegionOverlay');
     const wrap = document.getElementById('optionViewDiagramWrap');
-    if (!svg || !currentDiagramRegions.length) return;
+    if (!svg || !currentDiagramRegions.length) {
+        resetDiagramZoom();
+        return;
+    }
     if (window.OptionViewDiagramHighlight) {
         OptionViewDiagramHighlight.syncOverlaySize(wrap);
         OptionViewDiagramHighlight.updateHighlights(
@@ -472,6 +500,7 @@ function updateDiagramHighlights() {
             categoryLabels
         );
     }
+    zoomDiagramToCategory(lastChangedCategory);
 }
 
 function applyDiagramRegions(regions) {
@@ -580,6 +609,7 @@ function resetPowerSourceImageViewer() {
     if (viewer) viewer.classList.add('d-none');
     if (svg) svg.innerHTML = '';
     if (legend) legend.classList.add('d-none');
+    resetDiagramZoom();
     if (thumbs) {
         thumbs.classList.add('d-none');
         thumbs.innerHTML = '';
@@ -659,6 +689,7 @@ function loadPowerSourceImages() {
 }
 
 document.getElementById('powerSourceImageViewer').addEventListener('click', openPowerSourceImageModal);
+document.getElementById('optionViewZoomReset').addEventListener('click', resetDiagramZoom);
 document.getElementById('powerSourceImageThumbs').addEventListener('click', function (e) {
     const btn = e.target.closest('.power-source-image-thumb');
     if (!btn) return;
