@@ -398,6 +398,51 @@ function updatePageLanguage() {
         color: #ffffff !important;
         border-color: #0a58ca !important;
     }
+    .summary-currency-hint {
+        margin: 0 0 0.55rem;
+        color: #800020;
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+    .summary-currency-table thead th:first-child {
+        background: #fff !important;
+        border-color: #e5e7eb !important;
+    }
+    .table thead th.currency-clickable {
+        background: #fff !important;
+        color: #800020 !important;
+        border-color: #e5e7eb !important;
+        padding: 0.4rem !important;
+        cursor: pointer;
+        vertical-align: middle;
+    }
+    .currency-choice {
+        display: block;
+        border: 1.5px solid #800020;
+        border-radius: 0.4rem;
+        background: #fff;
+        color: #800020;
+        font-weight: 700;
+        line-height: 1.15;
+        padding: 0.35rem 0.25rem 0.28rem;
+    }
+    .currency-choice small {
+        display: block;
+        margin-top: 0.12rem;
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: #9a4a5e;
+    }
+    .currency-clickable:hover .currency-choice {
+        background: #f8e8ec;
+    }
+    .currency-clickable.is-selected .currency-choice {
+        background: #800020;
+        color: #fff;
+    }
+    .currency-clickable.is-selected .currency-choice small {
+        color: #f3d5dc;
+    }
 </style>
 <div class="container-fluid" style="overflow-x: visible !important;">
     <div class="row mb-3">
@@ -419,13 +464,22 @@ function updatePageLanguage() {
                     </h5>
                 </div>
                 <div class="card-body">
-                    <table class="table table-bordered">
+                    <p class="summary-currency-hint" data-lang-kor="EURO, USD, KRW를 클릭하면 제품 금액이 그 통화로 바뀝니다." data-lang-eng="Click EURO, USD, or KRW to change the product amounts to that currency.">
+                        <span class="lang-text">EURO, USD, KRW를 클릭하면 제품 금액이 그 통화로 바뀝니다.</span>
+                    </p>
+                    <table class="table table-bordered summary-currency-table">
                         <thead>
                             <tr>
                                 <th></th>
-                                <th class="text-center currency-clickable" data-currency="EUR" style="cursor:pointer;" title="EUR 환율 적용">EURO</th>
-                                <th class="text-center currency-clickable" data-currency="USD" style="cursor:pointer;" title="USD 환율 적용">USD</th>
-                                <th class="text-center currency-clickable" data-currency="KRW" style="cursor:pointer;" title="KRW 환율 적용">KRW</th>
+                                <th class="text-center currency-clickable" data-currency="EUR" role="button" tabindex="0" title="EURO 클릭 시 금액 변경">
+                                    <span class="currency-choice">EURO<small data-lang-kor="클릭" data-lang-eng="Click"><span class="lang-text">클릭</span></small></span>
+                                </th>
+                                <th class="text-center currency-clickable" data-currency="USD" role="button" tabindex="0" title="USD 클릭 시 금액 변경">
+                                    <span class="currency-choice">USD<small data-lang-kor="클릭" data-lang-eng="Click"><span class="lang-text">클릭</span></small></span>
+                                </th>
+                                <th class="text-center currency-clickable" data-currency="KRW" role="button" tabindex="0" title="KRW 클릭 시 금액 변경">
+                                    <span class="currency-choice">KRW<small data-lang-kor="클릭" data-lang-eng="Click"><span class="lang-text">클릭</span></small></span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -803,6 +857,14 @@ let allAvailableProducts = []; // 조회 가능한 모든 제품 목록
 let setCodeInfo = null; // 세트코드 정보 (제품정보 카드 위에 표시)
 let setCodeNames = {}; // 세트코드별 이름 저장 (키: 세트코드, 값: 이름)
 
+function markCurrencyHeader(currency) {
+    document.querySelectorAll('.currency-clickable').forEach(function (el) {
+        const on = el.getAttribute('data-currency') === currency;
+        el.classList.toggle('is-selected', on);
+        el.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+}
+
 function highlightCurrencyForRate(rateCode) {
     if (rateCode === 'EURUSD') return 'USD';
     if (rateCode === 'EUR' || rateCode === 'USD') return 'KRW';
@@ -880,10 +942,7 @@ function applyExchangeRateSelection(payload) {
     const radio = document.querySelector('#exportFxRateTable input[type="radio"][value="' + rateCode + '"]');
     if (radio) radio.checked = true;
 
-    const highlight = highlightCurrencyForRate(rateCode);
-    document.querySelectorAll('.currency-clickable').forEach(function (el) {
-        el.classList.toggle('table-warning', el.getAttribute('data-currency') === highlight);
-    });
+    markCurrencyHeader(highlightCurrencyForRate(rateCode));
 
     markProductCurrencyHeaders();
     updateCalculations();
@@ -911,7 +970,7 @@ function initExportQuotationFx() {
     });
 
     document.querySelectorAll('.currency-clickable').forEach(function (el) {
-        el.addEventListener('click', function () {
+        function chooseCurrency() {
             const currency = el.getAttribute('data-currency');
             window.PnsExchangeRates.fetch(false).then(function (rates) {
                 applyExchangeRateSelection({
@@ -922,8 +981,16 @@ function initExportQuotationFx() {
                     rates: rates
                 });
             });
+        }
+        el.addEventListener('click', chooseCurrency);
+        el.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                chooseCurrency();
+            }
         });
     });
+    markCurrencyHeader(highlightCurrencyForRate(selectedRateCode));
 
     const rateInput = document.getElementById('krwExchangeRate');
     if (rateInput) {
